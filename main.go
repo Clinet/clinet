@@ -188,8 +188,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					s.ChannelMessageSend(m.ChannelID, "Left voice channel.")
 				}
 			}
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Unknown command.")
 		}
-	} else if strings.Contains(m.Content, botName) {
+	} else if (strings.Contains(m.Content, botName) || strings.Contains(m.Content, strings.ToLower(botName))) {
 		if strings.HasSuffix(m.Content, "?") {
 			s.ChannelTyping(m.ChannelID) // Send a typing event
 			
@@ -197,6 +199,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			
 			// Sanitize for Wolfram|Alpha
 			query = strings.Replace(query, botName, "", -1)
+			query = strings.Replace(query, strings.ToLower(botName), "", -1)
 			query = strings.Replace(query, ",", "", -1)
 			
 			result, err := wolframClient.GetShortAnswerQuery(query, 0, 0)
