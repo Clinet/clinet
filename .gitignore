@@ -1,0 +1,9 @@
+# Bot configuration
+config.json
+
+# Output executables (not accounting for Linux builds because fuck file extensions)
+*.exe
+*.app
+
+# OS leftovers
+desktop.ini

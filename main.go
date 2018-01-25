@@ -127,6 +127,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	fmt.Println("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + m.Author.Username + "#" + m.Author.Discriminator + ": " + m.ContentWithMentionsReplaced())
 	
 	if strings.HasPrefix(m.Content, botPrefix) {
+		s.ChannelTyping(m.ChannelID) // Send a typing event
+
 		if strings.HasPrefix(m.Content, botPrefix + "play ") {
 			url := strings.Replace(m.Content, botPrefix + "play ", "", -1)
 			if url == "" {
@@ -166,6 +168,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			for _, vs := range g.VoiceStates {
 				if vs.UserID == m.Author.ID {
 					stopSound(g.ID, vs.ChannelID)
+					s.ChannelMessageSend(m.ChannelID, "Stopped playing sound.")
 				}
 			}
 		} else if strings.HasPrefix(m.Content, botPrefix + "leave") {
@@ -182,14 +185,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			for _, vs := range g.VoiceStates {
 				if vs.UserID == m.Author.ID {
 					voiceLeave(s, g.ID, vs.ChannelID)
+					s.ChannelMessageSend(m.ChannelID, "Left voice channel.")
 				}
 			}
 		}
 	} else if strings.Contains(m.Content, botName) {
 		if strings.HasSuffix(m.Content, "?") {
+			s.ChannelTyping(m.ChannelID) // Send a typing event
+			
 			query := m.Content
 			
-			//Sanitize for Wolfram|Alpha
+			// Sanitize for Wolfram|Alpha
 			query = strings.Replace(query, botName, "", -1)
 			query = strings.Replace(query, ",", "", -1)
 			
@@ -199,6 +205,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 			fmt.Println("Wolfram: " + result)
+			
+			// Make nicer for Discord
+			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
+			
 			s.ChannelMessageSend(m.ChannelID, result)
 		}
 	}
