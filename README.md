@@ -18,10 +18,10 @@ After the `Clinet` bot is invited to your Discord server, it will immediately
 begin listening for certain keywords within conversations to trigger certain
 events.
 
-Currently, `Clinet` will listen for its name (must be capitalized) and a question
-mark (?) at the end of a message to detect when it is being queried a question. It
-will then query Wolfram|Alpha with the question and then send a message with the
-response to the text channel it was queried in.
+Currently, `Clinet` will listen for its name and a question mark (?) at the end of
+a message to detect when it is being queried a question. It will then query
+Wolfram|Alpha with the question and then send a message with the response to the
+text channel it was queried in.
 
 **Note: Clinet is not yet ready for use in public servers. You have been warned.**
 
