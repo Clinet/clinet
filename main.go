@@ -310,7 +310,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		fmt.Println("1F> Storing video metadata...")
 		title := videoInfo.Title
 		author := videoInfo.Author
-		imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
+		//imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
 		thumbnailURL := videoInfo.GetThumbnailURL("default").String()
 		
 		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
@@ -339,13 +339,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		playbackStopped = append(playbackStopped, false)
 		index = len(playbackStopped) - 1
 		
+		duration := Round(stream.PlaybackPosition(), time.Second)
 		embed := NewEmbed().
 			SetTitle(title).
 			SetDescription(author).
-			SetImage(imageURL).
+			AddField("Duration", duration.String()).
+			//SetImage(imageURL).
 			SetThumbnail(thumbnailURL).
 			SetColor(0xff0000).MessageEmbed
-		s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessage, _ := s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessageID := embedMessage.ID
 		
 		ticker := time.NewTicker(time.Second)
 		
@@ -358,6 +361,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				encodingSession.Cleanup()
 				fmt.Println("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 				voiceConnection.Speaking(false)
+				ticker.Stop()
 				return nil
 			}
 			select {
@@ -370,13 +374,19 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 						encodingSession.Truncate()
 						fmt.Println("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 						voiceConnection.Speaking(false)
+						ticker.Stop()
 						return err
 					}
 				case <- ticker.C:
-					stats := encodingSession.Stats()
-					playbackPosition := stream.PlaybackPosition()
-
-					fmt.Printf("Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
+					duration := Round(stream.PlaybackPosition(), time.Second)
+					embed = NewEmbed().
+						SetTitle(title).
+						SetDescription(author).
+						AddField("Duration", duration.String()).
+						//SetImage(imageURL).
+						SetThumbnail(thumbnailURL).
+						SetColor(0xff0000).MessageEmbed
+					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
 			}
 		}
 		
@@ -387,6 +397,8 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 
 		fmt.Println("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
+		
+		ticker.Stop()
 
 		return nil
 	} else {
@@ -415,7 +427,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		fmt.Println("2F> Storing video metadata...")
 		title := videoInfo.Title
 		author := videoInfo.Author
-		imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
+		//imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
 		thumbnailURL := videoInfo.GetThumbnailURL("default").String()
 		
 		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
@@ -437,13 +449,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		done := make(chan error)
 		stream := dca.NewStream(encodingSession, voiceConnection, done)
 		
+		duration := Round(stream.PlaybackPosition(), time.Second)
 		embed := NewEmbed().
 			SetTitle(title).
 			SetDescription(author).
-			SetImage(imageURL).
+			AddField("Duration", duration.String()).
+			//SetImage(imageURL).
 			SetThumbnail(thumbnailURL).
 			SetColor(0xff0000).MessageEmbed
-		s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessage, _ := s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessageID := embedMessage.ID
 		
 		fmt.Println("2L> Setting playbackStopped to false...")
 		playbackStopped[index] = false
@@ -459,6 +474,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				encodingSession.Cleanup()
 				fmt.Println("2S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 				voiceConnection.Speaking(false)
+				ticker.Stop()
 				return nil
 			}
 			select {
@@ -471,13 +487,26 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 						encodingSession.Truncate()
 						fmt.Println("2O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 						voiceConnection.Speaking(false)
+						ticker.Stop()
 						return err
 					}
 				case <- ticker.C:
+					duration := Round(stream.PlaybackPosition(), time.Second)
+					embed = NewEmbed().
+						SetTitle(title).
+						SetDescription(author).
+						AddField("Duration", duration.String()).
+						//SetImage(imageURL).
+						SetThumbnail(thumbnailURL).
+						SetColor(0xff0000).MessageEmbed
+					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					
+					
 					stats := encodingSession.Stats()
 					playbackPosition := stream.PlaybackPosition()
 
 					fmt.Printf("Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
+					
 			}
 		}
 		
@@ -488,7 +517,28 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 
 		fmt.Println("2U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
+		
+		ticker.Stop()
 
 		return nil
 	}
+}
+
+func Round(d, r time.Duration) time.Duration {
+	if r <= 0 {
+		return d
+	}
+	neg := d < 0
+	if neg {
+		d = -d
+	}
+	if m := d % r; m+m < r {
+		d = d - m
+	} else {
+		d = d + r - m
+	}
+	if neg {
+		return -d
+	}
+	return d
 }
