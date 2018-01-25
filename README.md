@@ -33,7 +33,8 @@ cli$stop - Stops the currently playing audio
 cli$leave - Leaves the current voice chat
 ```
 
-Here's a [list of supported sites](https://rg3.github.io/youtube-dl/supportedsites.html) under YouTube-DL.
+~~Here's a [list of supported sites](https://rg3.github.io/youtube-dl/supportedsites.html) under YouTube-DL.~~
+**Note: Under the current setup, Clinet is only prepared to play audio from YouTube.**
 
 ----
 
