@@ -28,7 +28,8 @@ text channel it was queried in.
 ## Commands
 
 ```
-cli$play url - Plays the specified URL in a voice channel via YouTube-DL
+cli$play (url) - Plays the specified URL in a voice channel via YouTube-DL
+cli$youtube search (query) - Searches for the queried video and plays it in a voice channel via YouTube-DL
 cli$stop - Stops the currently playing audio
 cli$leave - Leaves the current voice chat
 ```
