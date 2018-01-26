@@ -9,12 +9,15 @@ import (
 	"time"
 	"strings"
 	"strconv"
+	"net/http"
 
-	"github.com/paked/configure"
-	"github.com/bwmarrin/discordgo"
-	"github.com/Krognol/go-wolfram"
-	"github.com/jonas747/dca"
-	"github.com/rylio/ytdl"
+	"github.com/paked/configure" // Allows configuration of the program via external sources
+	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
+	"github.com/Krognol/go-wolfram" // Allows usage of the Wolfram|Alpha API
+	"github.com/jonas747/dca" // Allows the encoding/decoding of the Discord Audio format
+	"github.com/rylio/ytdl" // Allows the fetching of YouTube video metadata and download URLs
+	"google.golang.org/api/googleapi/transport" // Allows the making of authenticated API requests to Google
+	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
 )
 
 var (
@@ -23,10 +26,12 @@ var (
 	confBotName = conf.String("botName", "", "Bot Name")
 	confBotPrefix = conf.String("botPrefix", "", "Bot Prefix")
 	confWolframAppID = conf.String("wolframAppID", "", "Wolfram AppID")
+	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
 	botToken string = ""
 	botName string = ""
 	botPrefix string = ""
 	wolframAppID string = ""
+	youtubeAPIKey string = ""
 
 	Token string
 	
@@ -52,7 +57,8 @@ func main() {
 	botName = *confBotName
 	botPrefix = *confBotPrefix
 	wolframAppID = *confWolframAppID
-	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "") {
+	youtubeAPIKey = *confYouTubeAPIKey
+	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || youtubeAPIKey == "") {
 		fmt.Println("> Configuration not properly setup, exiting...")
 		return
 	} else {
@@ -61,6 +67,7 @@ func main() {
 		fmt.Println("botName: " + botName)
 		fmt.Println("botPrefix: " + botPrefix)
 		fmt.Println("wolframAppID: " + wolframAppID)
+		fmt.Println("youtubeAPIKey: " + youtubeAPIKey)
 	}
 	
 	fmt.Println("> Creating a new Discord session...")
@@ -132,6 +139,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if strings.HasPrefix(m.Content, botPrefix + "play ") {
 			url := strings.Replace(m.Content, botPrefix + "play ", "", -1)
 			if url == "" {
+				s.ChannelMessageSend(m.ChannelID, "You must specify a valid URL.")
 				return
 			}
 			c, err := s.State.Channel(m.ChannelID)
@@ -188,6 +196,56 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					s.ChannelMessageSend(m.ChannelID, "Left voice channel.")
 				}
 			}
+		} else if strings.HasPrefix(m.Content, botPrefix + "youtube search ") {
+			c, err := s.State.Channel(m.ChannelID)
+			if err != nil {
+				// Could not find channel.
+				return
+			}
+			g, err := s.State.Guild(c.GuildID)
+			if err != nil {
+				// Could not find guild.
+				return
+			}
+			query := strings.Replace(m.Content, botPrefix + "youtube search ", "", -1)
+			if query == "" {
+				s.ChannelMessageSend(m.ChannelID, "You must specify a valid search query.")
+				return
+			}
+			client := &http.Client{
+				Transport: &transport.APIKey{Key: youtubeAPIKey},
+			}
+			service, err := youtube.New(client)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "There was an error creating a new YouTube client.")
+				return
+			}
+			call := service.Search.List("id,snippet").
+					Q(query).
+					MaxResults(1)
+			response, err := call.Do()
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
+				return
+			}
+			for _, item := range response.Items {
+				switch item.Id.Kind {
+					case "youtube#video":
+						url := "https://youtube.com/watch?v=" + item.Id.VideoId
+						for _, vs := range g.VoiceStates {
+							if vs.UserID == m.Author.ID {
+								err := playSound(s, g.ID, vs.ChannelID, m.ChannelID, url)
+								if err != nil {
+									fmt.Println("Error playing YouTube sound:", err)
+									s.ChannelMessageSend(m.ChannelID, "There was an error playing the queried YouTube video.")
+									return
+								}
+							}
+						}
+					default:
+						s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
+				}
+			}
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Unknown command.")
 		}
@@ -211,6 +269,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			
 			// Make nicer for Discord
 			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
+			result = strings.Replace(result, "Wolfram Alpha", botName, -1)
+			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
 			
 			s.ChannelMessageSend(m.ChannelID, result)
 		}
