@@ -222,7 +222,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			call := service.Search.List("id,snippet").
 					Q(query).
-					MaxResults(1)
+					MaxResults(50)
 			response, err := call.Do()
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
@@ -238,14 +238,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 								if err != nil {
 									fmt.Println("Error playing YouTube sound:", err)
 									s.ChannelMessageSend(m.ChannelID, "There was an error playing the queried YouTube video.")
-									return
 								}
 							}
 						}
-					default:
-						s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
+						return
 				}
 			}
+			s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Unknown command.")
 		}
@@ -253,19 +252,81 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if strings.HasSuffix(m.Content, "?") {
 			s.ChannelTyping(m.ChannelID) // Send a typing event
 			
+			fmt.Println("### [START] Wolfram")
+			
 			query := m.Content
+			fmt.Println("Original query: " + query)
 			
 			// Sanitize for Wolfram|Alpha
 			query = strings.Replace(query, botName, "", -1)
 			query = strings.Replace(query, strings.ToLower(botName), "", -1)
 			query = strings.Replace(query, ",", "", -1)
+			fmt.Println("Sanitized query: " + query)
 			
-			result, err := wolframClient.GetShortAnswerQuery(query, 0, 0)
+			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Error processing request.")
+				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
+				fmt.Sprintf("Error getting query result: %v\n", err)
 				return
 			}
-			fmt.Println("Wolfram: " + result)
+			
+			pods := queryResultObject.QueryResult.Pods
+			
+			if len(pods) < 1 {
+				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
+				fmt.Sprintf("Error getting pods from query")
+				return
+			}
+			
+			result := ""
+			
+			for _, pod := range pods {
+				podTitle := pod.Title
+				switch podTitle {
+					case "Input interpretation":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "Locations":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "Local map":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "Inferred local map":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "Inferred nearest city center":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "IP address":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+					case "IP address registrant":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
+				}
+				
+				subPods := pod.SubPods
+				if len(subPods) > 0 {
+					for _, subPod := range subPods {
+						plaintext := subPod.Plaintext
+						if plaintext != "" {
+							fmt.Println("Found result from pod [" + podTitle + "]: " + plaintext)
+							if result != "" {
+								result = result + "\n" + plaintext
+							} else {
+								result = plaintext
+							}
+						}
+					}
+				}
+			}
+			
+			if result == "" {
+				s.ChannelMessageSend(m.ChannelID, botName + " was either unable to process your request or was denied permission from doing so.")
+				fmt.Println("Error getting legal data from available pods")
+				return
+			}
 			
 			// Make nicer for Discord
 			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
@@ -273,6 +334,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
 			
 			s.ChannelMessageSend(m.ChannelID, result)
+			
+			fmt.Println("### [END]")
 		}
 	}
 }
