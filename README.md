@@ -68,7 +68,7 @@ $WolframAppID$ - The AppID for your Wolfram|Alpha account
 
 | [configure](https://github.com/paked/configure) |
 | [DiscordGo](https://github.com/bwmarrin/discordgo) |
-| [go-wolfram](https://github.com/Krognol/go-wolfram) |
+| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
 | [dca](https://github.com/jonas747/dca) |
 | [ytdl](https://github.com/rylio/ytdl) |
 

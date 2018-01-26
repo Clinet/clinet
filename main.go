@@ -13,7 +13,7 @@ import (
 
 	"github.com/paked/configure" // Allows configuration of the program via external sources
 	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
-	"github.com/Krognol/go-wolfram" // Allows usage of the Wolfram|Alpha API
+	"github.com/JoshuaDoes/go-wolfram" // Allows usage of the Wolfram|Alpha API
 	"github.com/jonas747/dca" // Allows the encoding/decoding of the Discord Audio format
 	"github.com/rylio/ytdl" // Allows the fetching of YouTube video metadata and download URLs
 	"google.golang.org/api/googleapi/transport" // Allows the making of authenticated API requests to Google
