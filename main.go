@@ -415,6 +415,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			stream = streams[i]
 			playbackStopped[i] = true
 			index = i
+			break
 		}
 	}
 	
@@ -444,7 +445,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		//imageURL := ""
 		thumbnailURL := ""
 		
-		regexpHasYouTube, _ := regexp.MatchString("(.*?)youtube(.*?)", url)
+		regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
 		if regexpHasYouTube {
 			videoInfo, err := ytdl.GetVideoInfo(url)
 			if err != nil {
@@ -587,7 +588,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		//imageURL := ""
 		thumbnailURL := ""
 		
-		regexpHasYouTube, _ := regexp.MatchString("(.*?)youtube(.*?)", url)
+		regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
 		if regexpHasYouTube {
 			videoInfo, err := ytdl.GetVideoInfo(url)
 			if err != nil {
@@ -638,13 +639,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 
 		done := make(chan error)
 		stream := dca.NewStream(encodingSession, voiceConnection, done)
-		
-		fmt.Println("1L> Storing voiceConnection, encodingSession, stream, and playbackStopped handles/states in memory...")
-		voiceConnections = append(voiceConnections, voiceConnection)
-		encodingSessions = append(encodingSessions, encodingSession)
-		streams = append(streams, stream)
-		playbackStopped = append(playbackStopped, false)
-		index = len(playbackStopped) - 1
 		
 		ticker := time.NewTicker(time.Second)
 		
