@@ -21,6 +21,11 @@ import (
 	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
 )
 
+type message struct {
+    ID  string
+    ChannelID string   
+}
+
 var (
 	conf = configure.New()
 	confBotToken = conf.String("botToken", "", "Bot Token")
@@ -44,6 +49,10 @@ var (
 	encodingSessions []*dca.EncodeSession
 	streams []*dca.StreamingSession
 	playbackStopped []bool
+	
+	//messages map[string]chan message
+	messages = make(map[string]chan message)
+	responses = make(map[string] string)
 )
 
 func init() {
@@ -124,21 +133,43 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 }
 
 func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
+	fmt.Println("1")
 	if m.Content == "" {
+		fmt.Println("2")
 		return //No need to continue if there's no message
 	}
 
 	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
+		fmt.Println("3")
 		return //Don't want the bot to reply to itself or to thin air
 	}
 	
 	if m.ChannelID == "" {
+		fmt.Println("4")
 		return //Where did this message even come from!?
 	}
 	
 	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
 
-	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID)
+	doesMessageExist := false
+	for _, v := range messages {
+		for obj := range v {
+			if (obj.ChannelID == m.ChannelID && obj.ID == m.ID) {
+				fmt.Println("5")
+				doesMessageExist = true
+				break
+			}
+		}
+		if doesMessageExist {
+			fmt.Println("6")
+			break
+		} else {
+			fmt.Println("7")
+			return
+		}
+	}
+
+	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, true)
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -155,11 +186,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	
 	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
+	
+	if messages[m.ChannelID] == nil {
+		messages[m.ChannelID] = make(chan message, 0)
+	}
+	go func() {
+		messages[m.ChannelID] <- message{ID:m.ID, ChannelID:m.ChannelID}
+	}()
 
-	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID)
+	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, false)
 }
 
-func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string) {
+func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string, messageID string, updateMessage bool) {
 	guildDetails, _ := guildDetails(channelID, session)
 	channelDetails, _ := channelDetails(channelID, session)
 
@@ -373,7 +411,15 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			result = strings.Replace(result, "Wolfram Alpha", botName, -1)
 			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoesession.", -1)
 			
-			session.ChannelMessageSend(channelID, result)
+			if updateMessage {
+				message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
+				responses[messageID] = message.ID
+			} else {
+				message, err := session.ChannelMessageSend(channelID, result)
+				if err == nil {
+					responses[messageID] = message.ID
+				}
+			}
 			
 			fmt.Println("### [END]")
 		}
