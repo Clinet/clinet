@@ -84,6 +84,9 @@ func main() {
 	fmt.Println("> Registering MessageCreate callback handler...")
 	dg.AddHandler(messageCreate)
 	
+	fmt.Println("> Registering MessageUpdate callback handler...")
+	dg.AddHandler(messageUpdate)
+	
 	fmt.Println("> Registering GuildJoin callback handler...")
 	dg.AddHandler(guildCreate)
 
@@ -120,97 +123,125 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
 }
 
+func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
+	if m.Content == "" {
+		return //No need to continue if there's no message
+	}
+
+	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
+		return //Don't want the bot to reply to itself or to thin air
+	}
+	
+	if m.ChannelID == "" {
+		return //Where did this message even come from!?
+	}
+	
+	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
+
+	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID)
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Content == "" {
 		return //No need to continue if there's no message
 	}
 
-	if m.Author.ID == s.State.User.ID {
-		return //Don't want the bot to reply to itself
+	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
+		return //Don't want the bot to reply to itself or to thin air
 	}
-
-	guildDetails, _ := guildDetails(m.ChannelID, s)
-	channelDetails, _ := channelDetails(m.ChannelID, s)
-
-	fmt.Println("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + m.Author.Username + "#" + m.Author.Discriminator + ": " + m.ContentWithMentionsReplaced())
 	
-	if strings.HasPrefix(m.Content, botPrefix) {
-		s.ChannelTyping(m.ChannelID) // Send a typing event
+	if m.ChannelID == "" {
+		return //Where did this message even come from!?
+	}
+	
+	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
 
-		if strings.HasPrefix(m.Content, botPrefix + "play ") {
-			url := strings.Replace(m.Content, botPrefix + "play ", "", -1)
+	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID)
+}
+
+func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string) {
+	guildDetails, _ := guildDetails(channelID, session)
+	channelDetails, _ := channelDetails(channelID, session)
+
+	fmt.Println("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
+	
+	if strings.HasPrefix(content, botPrefix) {
+		session.ChannelTyping(channelID) // Send a typing event
+
+		if strings.HasPrefix(content, botPrefix + "play ") {
+			url := strings.Replace(content, botPrefix + "play ", "", -1)
 			if url == "" {
-				s.ChannelMessageSend(m.ChannelID, "You must specify a valid URL.")
+				session.ChannelMessageSend(channelID, "You must specify a valid URL.")
 				return
 			}
-			c, err := s.State.Channel(m.ChannelID)
+			c, err := session.State.Channel(channelID)
 			if err != nil {
 				// Could not find channel.
 				return
 			}
-			g, err := s.State.Guild(c.GuildID)
+			g, err := session.State.Guild(c.GuildID)
 			if err != nil {
 				// Could not find guild.
 				return
 			}
 			for _, vs := range g.VoiceStates {
-				if vs.UserID == m.Author.ID {
-					err := playSound(s, g.ID, vs.ChannelID, m.ChannelID, url)
+				if vs.UserID == authorID {
+					err := playSound(session, g.ID, vs.ChannelID, channelID, url)
 					if err != nil {
 						fmt.Println("Error playing sound:", err)
-						s.ChannelMessageSend(m.ChannelID, "Error playing sound.")
+						session.ChannelMessageSend(channelID, "Error playing sound.")
 						return
 					}
 				}
 			}
-		} else if strings.HasPrefix(m.Content, botPrefix + "stop") {
-			c, err := s.State.Channel(m.ChannelID)
+		} else if strings.HasPrefix(content, botPrefix + "stop") {
+			c, err := session.State.Channel(channelID)
 			if err != nil {
 				// Could not find channel.
 				return
 			}
-			g, err := s.State.Guild(c.GuildID)
+			g, err := session.State.Guild(c.GuildID)
 			if err != nil {
 				// Could not find guild.
 				return
 			}
 			for _, vs := range g.VoiceStates {
-				if vs.UserID == m.Author.ID {
+				if vs.UserID == authorID {
 					stopSound(g.ID, vs.ChannelID)
-					s.ChannelMessageSend(m.ChannelID, "Stopped playing sound.")
+					session.ChannelMessageSend(channelID, "Stopped playing sound.")
 				}
 			}
-		} else if strings.HasPrefix(m.Content, botPrefix + "leave") {
-			c, err := s.State.Channel(m.ChannelID)
+		} else if strings.HasPrefix(content, botPrefix + "leave") {
+			c, err := session.State.Channel(channelID)
 			if err != nil {
 				// Could not find channel.
 				return
 			}
-			g, err := s.State.Guild(c.GuildID)
+			g, err := session.State.Guild(c.GuildID)
 			if err != nil {
 				// Could not find guild.
 				return
 			}
 			for _, vs := range g.VoiceStates {
-				if vs.UserID == m.Author.ID {
-					voiceLeave(s, g.ID, vs.ChannelID)
-					s.ChannelMessageSend(m.ChannelID, "Left voice channel.")
+				if vs.UserID == authorID {
+					voiceLeave(session, g.ID, vs.ChannelID)
+					session.ChannelMessageSend(channelID, "Left voice channel.")
 				}
 			}
-		} else if strings.HasPrefix(m.Content, botPrefix + "youtube search ") {
-			c, err := s.State.Channel(m.ChannelID)
+		} else if strings.HasPrefix(content, botPrefix + "youtube search ") {
+			c, err := session.State.Channel(channelID)
 			if err != nil {
 				// Could not find channel.
 				return
 			}
-			g, err := s.State.Guild(c.GuildID)
+			g, err := session.State.Guild(c.GuildID)
 			if err != nil {
 				// Could not find guild.
 				return
 			}
-			query := strings.Replace(m.Content, botPrefix + "youtube search ", "", -1)
+			query := strings.Replace(content, botPrefix + "youtube search ", "", -1)
 			if query == "" {
-				s.ChannelMessageSend(m.ChannelID, "You must specify a valid search query.")
+				session.ChannelMessageSend(channelID, "You must specify a valid search query.")
 				return
 			}
 			client := &http.Client{
@@ -218,7 +249,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			service, err := youtube.New(client)
 			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "There was an error creating a new YouTube client.")
+				session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
 				return
 			}
 			call := service.Search.List("id,snippet").
@@ -226,7 +257,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					MaxResults(50)
 			response, err := call.Do()
 			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
+				session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
 				return
 			}
 			for _, item := range response.Items {
@@ -234,29 +265,29 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					case "youtube#video":
 						url := "https://youtube.com/watch?v=" + item.Id.VideoId
 						for _, vs := range g.VoiceStates {
-							if vs.UserID == m.Author.ID {
-								err := playSound(s, g.ID, vs.ChannelID, m.ChannelID, url)
+							if vs.UserID == authorID {
+								err := playSound(session, g.ID, vs.ChannelID, channelID, url)
 								if err != nil {
 									fmt.Println("Error playing YouTube sound:", err)
-									s.ChannelMessageSend(m.ChannelID, "There was an error playing the queried YouTube video.")
+									session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
 								}
 							}
 						}
 						return
 				}
 			}
-			s.ChannelMessageSend(m.ChannelID, "There was an error searching YouTube for the specified query.")
+			session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
 		} else {
-			s.ChannelMessageSend(m.ChannelID, "Unknown command.")
+			session.ChannelMessageSend(channelID, "Unknown command.")
 		}
 	} else {
-		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", m.Content)
-		if regexpBotName && strings.HasSuffix(m.Content, "?") {
-			s.ChannelTyping(m.ChannelID) // Send a typing event
+		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
+		if regexpBotName && strings.HasSuffix(content, "?") {
+			session.ChannelTyping(channelID) // Send a typing event
 			
 			fmt.Println("### [START] Wolfram")
 			
-			query := m.Content
+			query := content
 			fmt.Println("Original query: " + query)
 			
 			// Sanitize for Wolfram|Alpha
@@ -275,8 +306,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			
 			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 			if err != nil {
-				//s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.\n" + fmt.Sprintf("%v", err))
-				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
+				//session.ChannelMessageSend(channelID, botName + " was unable to process your request.\n" + fmt.Sprintf("%v", err))
+				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
 				fmt.Println(fmt.Sprintf("Error getting query result: %v", err))
 				return
 			}
@@ -285,7 +316,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			pods := queryResult.Pods
 			
 			if len(pods) < 1 {
-				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
+				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
 				fmt.Println("Error getting pods from query")
 				return
 			}
@@ -332,7 +363,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			
 			if result == "" {
-				s.ChannelMessageSend(m.ChannelID, botName + " was either unable to process your request or was denied permission from doing so.")
+				session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
 				fmt.Println("Error getting legal data from available pods")
 				return
 			}
@@ -340,9 +371,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// Make nicer for Discord
 			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
 			result = strings.Replace(result, "Wolfram Alpha", botName, -1)
-			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
+			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoesession.", -1)
 			
-			s.ChannelMessageSend(m.ChannelID, result)
+			session.ChannelMessageSend(channelID, result)
 			
 			fmt.Println("### [END]")
 		}
