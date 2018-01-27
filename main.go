@@ -321,11 +321,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 						plaintext := subPod.Plaintext
 						if plaintext != "" {
 							fmt.Println("Found result from pod [" + podTitle + "]: " + plaintext)
-							plaintext = strings.Replace(plaintext, "\n", " ", -1)
 							if result != "" {
-								result = result + "\n" + podTitle + ": " + plaintext
+								result = result + "\n\n[" + podTitle + "]\n" + plaintext
 							} else {
-								result = plaintext
+								result = "[" + podTitle + "]\n" + plaintext
 							}
 						}
 					}
@@ -437,28 +436,57 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		options.Bitrate = 96
 		options.Application = "lowdelay"
 		
-		videoInfo, err := ytdl.GetVideoInfo(url)
-		if err != nil {
-			fmt.Println("1E> Error getting video info from [" + url + "]")
-			return err
+		mediaURL := url
+		var embedMessage *discordgo.Message
+		embedMessageID := ""
+		title := ""
+		author := ""
+		//imageURL := ""
+		thumbnailURL := ""
+		
+		regexpHasYouTube, _ := regexp.MatchString("(.*?)youtube(.*?)", url)
+		if regexpHasYouTube {
+			videoInfo, err := ytdl.GetVideoInfo(url)
+			if err != nil {
+				fmt.Println("1E> Error getting video info from [" + url + "]")
+				return err
+			}
+			
+			fmt.Println("1F> Storing video metadata...")
+			title = videoInfo.Title
+			author = videoInfo.Author
+			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
+			thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+			
+			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
+			downloadURL, err := videoInfo.GetDownloadURL(format)
+			if err != nil {
+				fmt.Println("1G> Error getting download URL from [" + url + "]")
+				return err
+			}
+			mediaURL = downloadURL.String()
+			
+			embed := NewEmbed().
+				SetTitle(title).
+				SetDescription(author).
+				AddField("Duration", "0s").
+				//SetImage(imageURL).
+				SetThumbnail(thumbnailURL).
+				SetColor(0xff0000).MessageEmbed
+			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+			embedMessageID = embedMessage.ID
+		} else {
+			embed := NewEmbed().
+				AddField("URL", mediaURL).
+				AddField("Duration", "0s").
+				SetColor(0xffffff).MessageEmbed
+			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+			embedMessageID = embedMessage.ID
 		}
 		
-		fmt.Println("1F> Storing video metadata...")
-		title := videoInfo.Title
-		author := videoInfo.Author
-		//imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
-		thumbnailURL := videoInfo.GetThumbnailURL("default").String()
-		
-		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-		downloadURL, err := videoInfo.GetDownloadURL(format)
+		encodingSession, err := dca.EncodeFile(mediaURL, options)
 		if err != nil {
-			fmt.Println("1G> Error getting download URL from [" + url + "]")
-			return err
-		}
-		
-		encodingSession, err := dca.EncodeFile(downloadURL.String(), options)
-		if err != nil {
-			fmt.Println("1I> Error encoding file [" + downloadURL.String() + "]")
+			fmt.Println("1I> Error encoding file [" + mediaURL + "]")
 			return err
 		}
 
@@ -474,17 +502,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		streams = append(streams, stream)
 		playbackStopped = append(playbackStopped, false)
 		index = len(playbackStopped) - 1
-		
-		duration := Round(stream.PlaybackPosition(), time.Second)
-		embed := NewEmbed().
-			SetTitle(title).
-			SetDescription(author).
-			AddField("Duration", duration.String()).
-			//SetImage(imageURL).
-			SetThumbnail(thumbnailURL).
-			SetColor(0xff0000).MessageEmbed
-		embedMessage, _ := s.ChannelMessageSendEmbed(callerChannelID, embed)
-		embedMessageID := embedMessage.ID
 		
 		ticker := time.NewTicker(time.Second)
 		
@@ -515,14 +532,22 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 					}
 				case <- ticker.C:
 					duration := Round(stream.PlaybackPosition(), time.Second)
-					embed = NewEmbed().
-						SetTitle(title).
-						SetDescription(author).
-						AddField("Duration", duration.String()).
-						//SetImage(imageURL).
-						SetThumbnail(thumbnailURL).
-						SetColor(0xff0000).MessageEmbed
-					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					if regexpHasYouTube {
+						embed := NewEmbed().
+							SetTitle(title).
+							SetDescription(author).
+							AddField("Duration", duration.String()).
+							//SetImage(imageURL).
+							SetThumbnail(thumbnailURL).
+							SetColor(0xff0000).MessageEmbed
+						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					} else {
+						embed := NewEmbed().
+							AddField("URL", mediaURL).
+							AddField("Duration", duration.String()).
+							SetColor(0xffffff).MessageEmbed
+						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					}
 			}
 		}
 		
@@ -554,61 +579,83 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		options.Bitrate = 96
 		options.Application = "lowdelay"
 		
-		videoInfo, err := ytdl.GetVideoInfo(url)
-		if err != nil {
-			fmt.Println("2E> Error getting video info from [" + url + "]")
-			return err
+		mediaURL := url
+		var embedMessage *discordgo.Message
+		embedMessageID := ""
+		title := ""
+		author := ""
+		//imageURL := ""
+		thumbnailURL := ""
+		
+		regexpHasYouTube, _ := regexp.MatchString("(.*?)youtube(.*?)", url)
+		if regexpHasYouTube {
+			videoInfo, err := ytdl.GetVideoInfo(url)
+			if err != nil {
+				fmt.Println("1E> Error getting video info from [" + url + "]")
+				return err
+			}
+			
+			fmt.Println("1F> Storing video metadata...")
+			title = videoInfo.Title
+			author = videoInfo.Author
+			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
+			thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+			
+			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
+			downloadURL, err := videoInfo.GetDownloadURL(format)
+			if err != nil {
+				fmt.Println("1G> Error getting download URL from [" + url + "]")
+				return err
+			}
+			mediaURL = downloadURL.String()
+			
+			embed := NewEmbed().
+				SetTitle(title).
+				SetDescription(author).
+				AddField("Duration", "0s").
+				//SetImage(imageURL).
+				SetThumbnail(thumbnailURL).
+				SetColor(0xff0000).MessageEmbed
+			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+			embedMessageID = embedMessage.ID
+		} else {
+			embed := NewEmbed().
+				AddField("URL", mediaURL).
+				AddField("Duration", "0s").
+				SetColor(0xffffff).MessageEmbed
+			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+			embedMessageID = embedMessage.ID
 		}
 		
-		fmt.Println("2F> Storing video metadata...")
-		title := videoInfo.Title
-		author := videoInfo.Author
-		//imageURL := videoInfo.GetThumbnailURL("maxresdefault").String()
-		thumbnailURL := videoInfo.GetThumbnailURL("default").String()
-		
-		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-		downloadURL, err := videoInfo.GetDownloadURL(format)
+		encodingSession, err := dca.EncodeFile(mediaURL, options)
 		if err != nil {
-			fmt.Println("2G> Error getting download URL from [" + url + "]")
+			fmt.Println("1I> Error encoding file [" + mediaURL + "]")
 			return err
 		}
-		
-		encodingSession, err := dca.EncodeFile(downloadURL.String(), options)
-		if err != nil {
-			fmt.Println("2I> Error encoding file [" + downloadURL.String() + "]")
-			return err
-		}
-		
-		fmt.Println("2K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+
+		fmt.Println("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(true)
 
 		done := make(chan error)
 		stream := dca.NewStream(encodingSession, voiceConnection, done)
 		
-		duration := Round(stream.PlaybackPosition(), time.Second)
-		embed := NewEmbed().
-			SetTitle(title).
-			SetDescription(author).
-			AddField("Duration", duration.String()).
-			//SetImage(imageURL).
-			SetThumbnail(thumbnailURL).
-			SetColor(0xff0000).MessageEmbed
-		embedMessage, _ := s.ChannelMessageSendEmbed(callerChannelID, embed)
-		embedMessageID := embedMessage.ID
-		
-		fmt.Println("2L> Setting playbackStopped to false...")
-		playbackStopped[index] = false
+		fmt.Println("1L> Storing voiceConnection, encodingSession, stream, and playbackStopped handles/states in memory...")
+		voiceConnections = append(voiceConnections, voiceConnection)
+		encodingSessions = append(encodingSessions, encodingSession)
+		streams = append(streams, stream)
+		playbackStopped = append(playbackStopped, false)
+		index = len(playbackStopped) - 1
 		
 		ticker := time.NewTicker(time.Second)
 		
 		for {
 			if playbackStopped[index] == true {
 				ticker.Stop()
-				fmt.Println("2Q> Stopping encoding session...")
+				fmt.Println("1Q> Stopping encoding session...")
 				encodingSession.Stop()
-				fmt.Println("2R> Cleaning up encoding session...")
+				fmt.Println("1R> Cleaning up encoding session...")
 				encodingSession.Cleanup()
-				fmt.Println("2S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+				fmt.Println("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 				voiceConnection.Speaking(false)
 				ticker.Stop()
 				return nil
@@ -616,42 +663,43 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			select {
 				case err := <- done:
 					if err != nil && err != io.EOF {
-						fmt.Println("2M> Error creating stream")
-						fmt.Println("2N> Cleaning up encoding session...")
+						fmt.Println("1M> Error creating stream")
+						fmt.Println("1N> Cleaning up encoding session...")
 						encodingSession.Stop()
 						encodingSession.Cleanup()
 						encodingSession.Truncate()
-						fmt.Println("2O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+						fmt.Println("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 						voiceConnection.Speaking(false)
 						ticker.Stop()
 						return err
 					}
 				case <- ticker.C:
 					duration := Round(stream.PlaybackPosition(), time.Second)
-					embed = NewEmbed().
-						SetTitle(title).
-						SetDescription(author).
-						AddField("Duration", duration.String()).
-						//SetImage(imageURL).
-						SetThumbnail(thumbnailURL).
-						SetColor(0xff0000).MessageEmbed
-					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-					
-					
-					stats := encodingSession.Stats()
-					playbackPosition := stream.PlaybackPosition()
-
-					fmt.Printf("Playback: %10s, Transcode Stats: Time: %5s, Size: %5dkB, Bitrate: %6.2fkB, Speed: %5.1fx\r", playbackPosition, stats.Duration.String(), stats.Size, stats.Bitrate, stats.Speed)
-					
+					if regexpHasYouTube {
+						embed := NewEmbed().
+							SetTitle(title).
+							SetDescription(author).
+							AddField("Duration", duration.String()).
+							//SetImage(imageURL).
+							SetThumbnail(thumbnailURL).
+							SetColor(0xff0000).MessageEmbed
+						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					} else {
+						embed := NewEmbed().
+							AddField("URL", mediaURL).
+							AddField("Duration", duration.String()).
+							SetColor(0xffffff).MessageEmbed
+						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+					}
 			}
 		}
 		
-		fmt.Println("2T> Cleaning up encoding session...")
+		fmt.Println("1T> Cleaning up encoding session...")
 		encodingSession.Stop()
 		encodingSession.Cleanup()
 		encodingSession.Truncate()
 
-		fmt.Println("2U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		fmt.Println("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
 		ticker.Stop()
