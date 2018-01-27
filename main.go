@@ -10,6 +10,7 @@ import (
 	"strings"
 	"strconv"
 	"net/http"
+	"regexp"
 
 	"github.com/paked/configure" // Allows configuration of the program via external sources
 	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
@@ -248,8 +249,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Unknown command.")
 		}
-	} else if (strings.Contains(m.Content, botName) || strings.Contains(m.Content, strings.ToLower(botName))) {
-		if strings.HasSuffix(m.Content, "?") {
+	} else {
+		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", m.Content)
+		if regexpBotName && strings.HasSuffix(m.Content, "?") {
 			s.ChannelTyping(m.ChannelID) // Send a typing event
 			
 			fmt.Println("### [START] Wolfram")
@@ -258,23 +260,33 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			fmt.Println("Original query: " + query)
 			
 			// Sanitize for Wolfram|Alpha
-			query = strings.Replace(query, botName, "", -1)
-			query = strings.Replace(query, strings.ToLower(botName), "", -1)
-			query = strings.Replace(query, ",", "", -1)
+			replace := NewCaseInsensitiveReplacer("Clinet", "")
+			query = replace.Replace(query)
+			for {
+				if strings.HasPrefix(query, " ") {
+					query = strings.Replace(query, " ", "", 1)
+				} else if strings.HasPrefix(query, ",") {
+					query = strings.Replace(query, ",", "", 1)
+				} else {
+					break
+				}
+			}
 			fmt.Println("Sanitized query: " + query)
 			
 			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 			if err != nil {
+				//s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.\n" + fmt.Sprintf("%v", err))
 				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
-				fmt.Sprintf("Error getting query result: %v\n", err)
+				fmt.Println(fmt.Sprintf("Error getting query result: %v", err))
 				return
 			}
 			
-			pods := queryResultObject.QueryResult.Pods
+			queryResult := queryResultObject.QueryResult
+			pods := queryResult.Pods
 			
 			if len(pods) < 1 {
 				s.ChannelMessageSend(m.ChannelID, botName + " was unable to process your request.")
-				fmt.Sprintf("Error getting pods from query")
+				fmt.Println("Error getting pods from query")
 				return
 			}
 			
@@ -283,9 +295,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			for _, pod := range pods {
 				podTitle := pod.Title
 				switch podTitle {
-					case "Input interpretation":
-						fmt.Println("Denied pod: " + podTitle)
-						continue
 					case "Locations":
 						fmt.Println("Denied pod: " + podTitle)
 						continue
@@ -312,8 +321,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 						plaintext := subPod.Plaintext
 						if plaintext != "" {
 							fmt.Println("Found result from pod [" + podTitle + "]: " + plaintext)
+							plaintext = strings.Replace(plaintext, "\n", " ", -1)
 							if result != "" {
-								result = result + "\n" + plaintext
+								result = result + "\n" + podTitle + ": " + plaintext
 							} else {
 								result = plaintext
 							}
@@ -667,4 +677,20 @@ func Round(d, r time.Duration) time.Duration {
 		return -d
 	}
 	return d
+}
+
+type CaseInsensitiveReplacer struct {
+	toReplace   *regexp.Regexp
+	replaceWith string
+}
+
+func NewCaseInsensitiveReplacer(toReplace, with string) *CaseInsensitiveReplacer {
+	return &CaseInsensitiveReplacer{
+		toReplace:   regexp.MustCompile("(?i)" + toReplace),
+		replaceWith: with,
+	}
+}
+
+func (cir *CaseInsensitiveReplacer) Replace(str string) string {
+	return cir.toReplace.ReplaceAllString(str, cir.replaceWith)
 }

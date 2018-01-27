@@ -41,8 +41,8 @@ cli$leave - Leaves the current voice chat
 
 ## Rolling your own locally
  
-In order to run `Clinet` locally, you will need to edit the JSON configuration file
-`config.json` with the appropriate values.
+In order to run `Clinet` locally, you will need to create a JSON configuration
+file called `config.json` with the appropriate values.
 
 In the below configuration template, use the following keymap:
 ```
