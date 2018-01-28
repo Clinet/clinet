@@ -235,6 +235,17 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 		cmdMsg := strings.Replace(content, botPrefix, "", 1)
 		cmd := strings.Split(cmdMsg, " ")
 		switch cmd[0] {
+			case "help":
+				helpEmbed := NewEmbed().
+					SetTitle(botName + " - Help").
+					SetDescription("A list of available commands for " + botName + ".").
+					AddField(botPrefix + "help", "Displays this help message.").
+					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
+					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
+					AddField(botPrefix + "stop", "Stops the currently playing audio.").
+					AddField(botPrefix + "leave", "Leaves the current voice channel.").
+					SetColor(0xfafafa).MessageEmbed
+				session.ChannelMessageSendEmbed(channelID, helpEmbed)
 			case "play":
 				if len(cmd) < 2 {
 					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
@@ -279,6 +290,14 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					return
 				}
 				switch cmd[1] {
+					case "help":
+						helpYouTubeEmbed := NewEmbed().
+							SetTitle(botName + " - YouTube Help").
+							SetDescription("A list of available YouTube commands for " + botName + ".").
+							AddField(botPrefix + "youtube help", "Displays this YouTube help message.").
+							AddField(botPrefix + "youtube search (query)", "Searches for the queried video and plays it in the user's current voice channel.").
+							SetColor(0xff0000).MessageEmbed
+						session.ChannelMessageSendEmbed(channelID, helpYouTubeEmbed)
 					case "search":
 						query := strings.Replace(content, botPrefix + "youtube search", "", -1)
 						for {
@@ -326,10 +345,10 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 						}
 						session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
 					default:
-						session.ChannelMessageSend(channelID, "Unknown YouTube command.")
+						session.ChannelMessageSend(channelID, "Unknown YouTube command. Type ``cli$youtube help`` for a list of YouTube commands.")
 				}
 			default:
-				session.ChannelMessageSend(channelID, "Unknown command.")
+				session.ChannelMessageSend(channelID, "Unknown command. Type ``cli$help`` for a list of commands.")
 		}
 	} else {
 		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
