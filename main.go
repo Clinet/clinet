@@ -371,6 +371,9 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					case "Locations":
 						fmt.Println("Denied pod: " + podTitle)
 						continue
+					case "Nearby locations":
+						fmt.Println("Denied pod: " + podTitle)
+						continue
 					case "Local map":
 						fmt.Println("Denied pod: " + podTitle)
 						continue
