@@ -67,7 +67,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Clinet-Discord © JoshuaDoes\n")
+	fmt.Println("Clinet-Discord © JoshuaDoes: 2018.\n")
 
 	fmt.Println("> Loading configuration...")
 	conf.Parse()
