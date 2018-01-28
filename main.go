@@ -200,6 +200,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string, messageID string, updateMessage bool) {
 	guildDetails, _ := guildDetails(channelID, session)
 	channelDetails, _ := channelDetails(channelID, session)
+	
+	if guildDetails == nil || channelDetails == nil {
+		return
+	}
 
 	fmt.Println("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
 	
