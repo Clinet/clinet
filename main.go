@@ -55,12 +55,20 @@ var (
 	responses = make(map[string] string)
 )
 
+func debugLog(msg string) {
+	if debugMode {
+		fmt.Println(msg)
+	}
+}
+
 func init() {
 	conf.Use(configure.NewFlag())
 	conf.Use(configure.NewJSONFromFile("config.json"))
 }
 
 func main() {
+	fmt.Println("Clinet-Discord © JoshuaDoes\n")
+
 	fmt.Println("> Loading configuration...")
 	conf.Parse()
 	botToken = *confBotToken
@@ -68,41 +76,43 @@ func main() {
 	botPrefix = *confBotPrefix
 	wolframAppID = *confWolframAppID
 	youtubeAPIKey = *confYouTubeAPIKey
+	debugMode = *confDebugMode
 	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || youtubeAPIKey == "") {
 		fmt.Println("> Configuration not properly setup, exiting...")
 		return
 	} else {
 		fmt.Println("> Successfully loaded configuration.")
-		fmt.Println("botToken: " + botToken)
-		fmt.Println("botName: " + botName)
-		fmt.Println("botPrefix: " + botPrefix)
-		fmt.Println("wolframAppID: " + wolframAppID)
-		fmt.Println("youtubeAPIKey: " + youtubeAPIKey)
+		debugLog("botToken: " + botToken)
+		debugLog("botName: " + botName)
+		debugLog("botPrefix: " + botPrefix)
+		debugLog("wolframAppID: " + wolframAppID)
+		debugLog("youtubeAPIKey: " + youtubeAPIKey)
+		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
 	}
 	
-	fmt.Println("> Creating a new Discord session...")
+	debugLog("> Creating a new Discord session...")
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
-		fmt.Println("Error creating Discord session: ", err)
+		fmt.Println("Error creating Discord session: " + fmt.Sprintf("%v", err))
 		return
 	}
 	
-	fmt.Println("> Registering Ready callback handler...")
+	debugLog("> Registering Ready callback handler...")
 	dg.AddHandler(ready)
 
-	fmt.Println("> Registering MessageCreate callback handler...")
+	debugLog("> Registering MessageCreate callback handler...")
 	dg.AddHandler(messageCreate)
 	
-	fmt.Println("> Registering MessageUpdate callback handler...")
+	debugLog("> Registering MessageUpdate callback handler...")
 	dg.AddHandler(messageUpdate)
 	
-	fmt.Println("> Registering GuildJoin callback handler...")
+	debugLog("> Registering GuildJoin callback handler...")
 	dg.AddHandler(guildCreate)
 
-	fmt.Println("> Establishing a websocket connection to Discord...")
+	fmt.Println("> Establishing a connection to Discord...")
 	err = dg.Open()
 	if err != nil {
-		fmt.Println("Error opening connection: ", err)
+		fmt.Println("Error opening connection: " + fmt.Sprintf("%v", err))
 		return
 	}
 	
@@ -115,10 +125,14 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	for _, voiceConnectionRow := range voiceConnections {
-		voiceConnectionRow.Close()
+	if len(voiceConnections) > 0 {
+		debugLog("> Closing any active voice connections...")
+		for _, voiceConnectionRow := range voiceConnections {
+			voiceConnectionRow.Close()
+		}
 	}
 	
+	fmt.Println("> Closing the connection to Discord...")
 	dg.Close()
 }
 
@@ -133,19 +147,19 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 }
 
 func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
-	fmt.Println("1")
+	debugLog("1")
 	if m.Content == "" {
-		fmt.Println("2")
+		debugLog("2")
 		return //No need to continue if there's no message
 	}
 
 	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
-		fmt.Println("3")
+		debugLog("3")
 		return //Don't want the bot to reply to itself or to thin air
 	}
 	
 	if m.ChannelID == "" {
-		fmt.Println("4")
+		debugLog("4")
 		return //Where did this message even come from!?
 	}
 	
@@ -155,16 +169,16 @@ func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
 	for _, v := range messages {
 		for obj := range v {
 			if (obj.ChannelID == m.ChannelID && obj.ID == m.ID) {
-				fmt.Println("5")
+				debugLog("5")
 				doesMessageExist = true
 				break
 			}
 		}
 		if doesMessageExist {
-			fmt.Println("6")
+			debugLog("6")
 			break
 		} else {
-			fmt.Println("7")
+			debugLog("7")
 			return
 		}
 	}
@@ -205,7 +219,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 		return
 	}
 
-	fmt.Println("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
+	debugLog("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
 	
 	if strings.HasPrefix(content, botPrefix) {
 		session.ChannelTyping(channelID) // Send a typing event
@@ -230,7 +244,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				if vs.UserID == authorID {
 					err := playSound(session, g.ID, vs.ChannelID, channelID, url)
 					if err != nil {
-						fmt.Println("Error playing sound:", err)
+						debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
 						session.ChannelMessageSend(channelID, "Error playing sound.")
 						return
 					}
@@ -310,7 +324,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 							if vs.UserID == authorID {
 								err := playSound(session, g.ID, vs.ChannelID, channelID, url)
 								if err != nil {
-									fmt.Println("Error playing YouTube sound:", err)
+									debugLog("Error playing YouTube sound:" + fmt.Sprintf("%v", err))
 									session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
 								}
 							}
@@ -327,10 +341,10 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 		if regexpBotName && strings.HasSuffix(content, "?") {
 			session.ChannelTyping(channelID) // Send a typing event
 			
-			fmt.Println("### [START] Wolfram")
+			debugLog("### [START] Wolfram")
 			
 			query := content
-			fmt.Println("Original query: " + query)
+			debugLog("Original query: " + query)
 			
 			// Sanitize for Wolfram|Alpha
 			replace := NewCaseInsensitiveReplacer("Clinet", "")
@@ -344,13 +358,13 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					break
 				}
 			}
-			fmt.Println("Sanitized query: " + query)
+			debugLog("Sanitized query: " + query)
 			
 			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 			if err != nil {
 				//session.ChannelMessageSend(channelID, botName + " was unable to process your request.\n" + fmt.Sprintf("%v", err))
 				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-				fmt.Println(fmt.Sprintf("Error getting query result: %v", err))
+				debugLog(fmt.Sprintf("Error getting query result: %v", err))
 				return
 			}
 			
@@ -359,7 +373,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			
 			if len(pods) < 1 {
 				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-				fmt.Println("Error getting pods from query")
+				debugLog("Error getting pods from query")
 				return
 			}
 			
@@ -369,25 +383,25 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				podTitle := pod.Title
 				switch podTitle {
 					case "Locations":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "Nearby locations":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "Local map":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "Inferred local map":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "Inferred nearest city center":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "IP address":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 					case "IP address registrant":
-						fmt.Println("Denied pod: " + podTitle)
+						debugLog("Denied pod: " + podTitle)
 						continue
 				}
 				
@@ -396,7 +410,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					for _, subPod := range subPods {
 						plaintext := subPod.Plaintext
 						if plaintext != "" {
-							fmt.Println("Found result from pod [" + podTitle + "]: " + plaintext)
+							debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
 							if result != "" {
 								result = result + "\n\n[" + podTitle + "]\n" + plaintext
 							} else {
@@ -409,7 +423,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			
 			if result == "" {
 				session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
-				fmt.Println("Error getting legal data from available pods")
+				debugLog("Error getting legal data from available pods")
 				return
 			}
 			
@@ -428,7 +442,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				}
 			}
 			
-			fmt.Println("### [END]")
+			debugLog("### [END]")
 		}
 	}
 }
@@ -465,7 +479,7 @@ func clearVoiceSession(i int) {
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
-			fmt.Println("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
+			debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
 			playbackStopped[i] = true
 			voiceConnectionRow.Disconnect()
 			
@@ -479,7 +493,7 @@ func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 func stopSound(guildID, channelID string) {
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
-			fmt.Println("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
+			debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
 			playbackStopped[i] = true
 			return
 		}
@@ -493,7 +507,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var index int = -1
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
-			fmt.Println("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
+			debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
 			voiceConnection = voiceConnections[i]
 			encodingSession = encodingSessions[i]
 			stream = streams[i]
@@ -506,14 +520,14 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	time.Sleep(1000 * time.Millisecond)
 
 	if voiceConnection == nil {
-		fmt.Println("1B> Connecting to voice channel [" + guildID + ":" + channelID + "]...")
+		debugLog("1B> Connecting to voice channel [" + guildID + ":" + channelID + "]...")
 		voiceConnection, err := s.ChannelVoiceJoin(guildID, channelID, false, false)
 		if err != nil {
-			fmt.Println("1C> Error connecting to voice channel [" + guildID + ":" + channelID + "]")
+			debugLog("1C> Error connecting to voice channel [" + guildID + ":" + channelID + "]")
 			return err
 		}
 		
-		fmt.Println("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
 		options := dca.StdEncodeOptions
@@ -533,11 +547,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		if regexpHasYouTube {
 			videoInfo, err := ytdl.GetVideoInfo(url)
 			if err != nil {
-				fmt.Println("1E> Error getting video info from [" + url + "]")
+				debugLog("1E> Error getting video info from [" + url + "]")
 				return err
 			}
 			
-			fmt.Println("1F> Storing video metadata...")
+			debugLog("1F> Storing video metadata...")
 			title = videoInfo.Title
 			author = videoInfo.Author
 			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
@@ -546,7 +560,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
 			downloadURL, err := videoInfo.GetDownloadURL(format)
 			if err != nil {
-				fmt.Println("1G> Error getting download URL from [" + url + "]")
+				debugLog("1G> Error getting download URL from [" + url + "]")
 				return err
 			}
 			mediaURL = downloadURL.String()
@@ -571,17 +585,17 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		
 		encodingSession, err := dca.EncodeFile(mediaURL, options)
 		if err != nil {
-			fmt.Println("1I> Error encoding file [" + mediaURL + "]")
+			debugLog("1I> Error encoding file [" + mediaURL + "]")
 			return err
 		}
 
-		fmt.Println("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(true)
 
 		done := make(chan error)
 		stream := dca.NewStream(encodingSession, voiceConnection, done)
 		
-		fmt.Println("1L> Storing voiceConnection, encodingSession, stream, and playbackStopped handles/states in memory...")
+		debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackStopped handles/states in memory...")
 		voiceConnections = append(voiceConnections, voiceConnection)
 		encodingSessions = append(encodingSessions, encodingSession)
 		streams = append(streams, stream)
@@ -593,11 +607,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		for {
 			if playbackStopped[index] == true {
 				ticker.Stop()
-				fmt.Println("1Q> Stopping encoding session...")
+				debugLog("1Q> Stopping encoding session...")
 				encodingSession.Stop()
-				fmt.Println("1R> Cleaning up encoding session...")
+				debugLog("1R> Cleaning up encoding session...")
 				encodingSession.Cleanup()
-				fmt.Println("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+				debugLog("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 				voiceConnection.Speaking(false)
 				ticker.Stop()
 				return nil
@@ -605,12 +619,12 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			select {
 				case err := <- done:
 					if err != nil && err != io.EOF {
-						fmt.Println("1M> Error creating stream")
-						fmt.Println("1N> Cleaning up encoding session...")
+						debugLog("1M> Error creating stream")
+						debugLog("1N> Cleaning up encoding session...")
 						encodingSession.Stop()
 						encodingSession.Cleanup()
 						encodingSession.Truncate()
-						fmt.Println("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+						debugLog("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 						voiceConnection.Speaking(false)
 						ticker.Stop()
 						return err
@@ -636,27 +650,27 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			}
 		}
 		
-		fmt.Println("1T> Cleaning up encoding session...")
+		debugLog("1T> Cleaning up encoding session...")
 		encodingSession.Stop()
 		encodingSession.Cleanup()
 		encodingSession.Truncate()
 
-		fmt.Println("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
 		ticker.Stop()
 
 		return nil
 	} else {
-		fmt.Println("2B> Pausing stream...")
+		debugLog("2B> Pausing stream...")
 		stream.SetPaused(true)
 		
-		fmt.Println("2C> Cleaning up encoding session...")
+		debugLog("2C> Cleaning up encoding session...")
 		encodingSession.Stop()
 		encodingSession.Cleanup()
 		encodingSession.Truncate()
 
-		fmt.Println("2D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("2D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
 		options := dca.StdEncodeOptions
@@ -676,11 +690,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		if regexpHasYouTube {
 			videoInfo, err := ytdl.GetVideoInfo(url)
 			if err != nil {
-				fmt.Println("1E> Error getting video info from [" + url + "]")
+				debugLog("1E> Error getting video info from [" + url + "]")
 				return err
 			}
 			
-			fmt.Println("1F> Storing video metadata...")
+			debugLog("1F> Storing video metadata...")
 			title = videoInfo.Title
 			author = videoInfo.Author
 			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
@@ -689,7 +703,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
 			downloadURL, err := videoInfo.GetDownloadURL(format)
 			if err != nil {
-				fmt.Println("1G> Error getting download URL from [" + url + "]")
+				debugLog("1G> Error getting download URL from [" + url + "]")
 				return err
 			}
 			mediaURL = downloadURL.String()
@@ -714,11 +728,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		
 		encodingSession, err := dca.EncodeFile(mediaURL, options)
 		if err != nil {
-			fmt.Println("1I> Error encoding file [" + mediaURL + "]")
+			debugLog("1I> Error encoding file [" + mediaURL + "]")
 			return err
 		}
 
-		fmt.Println("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(true)
 
 		done := make(chan error)
@@ -729,11 +743,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		for {
 			if playbackStopped[index] == true {
 				ticker.Stop()
-				fmt.Println("1Q> Stopping encoding session...")
+				debugLog("1Q> Stopping encoding session...")
 				encodingSession.Stop()
-				fmt.Println("1R> Cleaning up encoding session...")
+				debugLog("1R> Cleaning up encoding session...")
 				encodingSession.Cleanup()
-				fmt.Println("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+				debugLog("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 				voiceConnection.Speaking(false)
 				ticker.Stop()
 				return nil
@@ -741,12 +755,12 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			select {
 				case err := <- done:
 					if err != nil && err != io.EOF {
-						fmt.Println("1M> Error creating stream")
-						fmt.Println("1N> Cleaning up encoding session...")
+						debugLog("1M> Error creating stream")
+						debugLog("1N> Cleaning up encoding session...")
 						encodingSession.Stop()
 						encodingSession.Cleanup()
 						encodingSession.Truncate()
-						fmt.Println("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+						debugLog("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 						voiceConnection.Speaking(false)
 						ticker.Stop()
 						return err
@@ -772,12 +786,12 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			}
 		}
 		
-		fmt.Println("1T> Cleaning up encoding session...")
+		debugLog("1T> Cleaning up encoding session...")
 		encodingSession.Stop()
 		encodingSession.Cleanup()
 		encodingSession.Truncate()
 
-		fmt.Println("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
 		ticker.Stop()
