@@ -33,13 +33,13 @@ var (
 	confBotPrefix = conf.String("botPrefix", "", "Bot Prefix")
 	confWolframAppID = conf.String("wolframAppID", "", "Wolfram AppID")
 	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
+	confDebugMode = conf.Bool("debugMode", false, "Debug Mode")
 	botToken string = ""
 	botName string = ""
 	botPrefix string = ""
 	wolframAppID string = ""
 	youtubeAPIKey string = ""
-
-	Token string
+	debugMode bool = false
 	
 	wolframClient *wolfram.Client
 	
