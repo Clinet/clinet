@@ -219,119 +219,117 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 	debugLog("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
 	
 	if strings.HasPrefix(content, botPrefix) {
+		c, err := session.State.Channel(channelID)
+		if err != nil {
+			// Could not find channel.
+			return
+		}
+		g, err := session.State.Guild(c.GuildID)
+		if err != nil {
+			// Could not find guild.
+			return
+		}
+		
 		session.ChannelTyping(channelID) // Send a typing event
-
-		if strings.HasPrefix(content, botPrefix + "play ") {
-			url := strings.Replace(content, botPrefix + "play ", "", -1)
-			if url == "" {
-				session.ChannelMessageSend(channelID, "You must specify a valid URL.")
-				return
-			}
-			c, err := session.State.Channel(channelID)
-			if err != nil {
-				// Could not find channel.
-				return
-			}
-			g, err := session.State.Guild(c.GuildID)
-			if err != nil {
-				// Could not find guild.
-				return
-			}
-			for _, vs := range g.VoiceStates {
-				if vs.UserID == authorID {
-					err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-					if err != nil {
-						debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
-						session.ChannelMessageSend(channelID, "Error playing sound.")
+		
+		cmdMsg := strings.Replace(content, botPrefix, "", 1)
+		cmd := strings.Split(cmdMsg, " ")
+		switch cmd[0] {
+			case "play":
+				if len(cmd) < 2 {
+					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
+					return
+				}
+				url := cmd[1]
+				if url == "" {
+					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
+					return
+				}
+				for _, vs := range g.VoiceStates {
+					if vs.UserID == authorID {
+						err := playSound(session, g.ID, vs.ChannelID, channelID, url)
+						if err != nil {
+							debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
+							session.ChannelMessageSend(channelID, "Error playing sound.")
+							return
+						}
+					}
+				}
+			case "stop":
+				for _, vs := range g.VoiceStates {
+					if vs.UserID == authorID {
+						stopSound(g.ID, vs.ChannelID)
+						session.ChannelMessageSend(channelID, "Stopped playing sound.")
 						return
 					}
 				}
-			}
-		} else if strings.HasPrefix(content, botPrefix + "stop") {
-			c, err := session.State.Channel(channelID)
-			if err != nil {
-				// Could not find channel.
-				return
-			}
-			g, err := session.State.Guild(c.GuildID)
-			if err != nil {
-				// Could not find guild.
-				return
-			}
-			for _, vs := range g.VoiceStates {
-				if vs.UserID == authorID {
-					stopSound(g.ID, vs.ChannelID)
-					session.ChannelMessageSend(channelID, "Stopped playing sound.")
+				session.ChannelMessageSend(channelID, "Error finding voice channel to stop audio playback in.")
+			case "leave":
+				for _, vs := range g.VoiceStates {
+					if vs.UserID == authorID {
+						voiceLeave(session, g.ID, vs.ChannelID)
+						session.ChannelMessageSend(channelID, "Left voice channel.")
+						return
+					}
 				}
-			}
-		} else if strings.HasPrefix(content, botPrefix + "leave") {
-			c, err := session.State.Channel(channelID)
-			if err != nil {
-				// Could not find channel.
-				return
-			}
-			g, err := session.State.Guild(c.GuildID)
-			if err != nil {
-				// Could not find guild.
-				return
-			}
-			for _, vs := range g.VoiceStates {
-				if vs.UserID == authorID {
-					voiceLeave(session, g.ID, vs.ChannelID)
-					session.ChannelMessageSend(channelID, "Left voice channel.")
+				session.ChannelMessageSend(channelID, "Error finding voice channel to leave.")
+			case "youtube":
+				if len(cmd) < 2 {
+					session.ChannelMessageSend(channelID, "You must specify a YouTube command.")
+					return
 				}
-			}
-		} else if strings.HasPrefix(content, botPrefix + "youtube search ") {
-			c, err := session.State.Channel(channelID)
-			if err != nil {
-				// Could not find channel.
-				return
-			}
-			g, err := session.State.Guild(c.GuildID)
-			if err != nil {
-				// Could not find guild.
-				return
-			}
-			query := strings.Replace(content, botPrefix + "youtube search ", "", -1)
-			if query == "" {
-				session.ChannelMessageSend(channelID, "You must specify a valid search query.")
-				return
-			}
-			client := &http.Client{
-				Transport: &transport.APIKey{Key: youtubeAPIKey},
-			}
-			service, err := youtube.New(client)
-			if err != nil {
-				session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
-				return
-			}
-			call := service.Search.List("id,snippet").
-					Q(query).
-					MaxResults(50)
-			response, err := call.Do()
-			if err != nil {
-				session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
-				return
-			}
-			for _, item := range response.Items {
-				switch item.Id.Kind {
-					case "youtube#video":
-						url := "https://youtube.com/watch?v=" + item.Id.VideoId
-						for _, vs := range g.VoiceStates {
-							if vs.UserID == authorID {
-								err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-								if err != nil {
-									debugLog("Error playing YouTube sound:" + fmt.Sprintf("%v", err))
-									session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
-								}
+				switch cmd[1] {
+					case "search":
+						query := strings.Replace(content, botPrefix + "youtube search", "", -1)
+						for {
+							if strings.HasPrefix(query, " ") {
+								query = strings.Replace(query, " ", "", 1)
+							} else {
+								break
 							}
 						}
-						return
+						if query == "" {
+							session.ChannelMessageSend(channelID, "You must specify a valid search query.")
+							return
+						}
+						client := &http.Client{
+							Transport: &transport.APIKey{Key: youtubeAPIKey},
+						}
+						service, err := youtube.New(client)
+						if err != nil {
+							session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
+							return
+						}
+						call := service.Search.List("id,snippet").
+								Q(query).
+								MaxResults(50)
+						response, err := call.Do()
+						if err != nil {
+							session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
+							return
+						}
+						for _, item := range response.Items {
+							switch item.Id.Kind {
+								case "youtube#video":
+									url := "https://youtube.com/watch?v=" + item.Id.VideoId
+									for _, vs := range g.VoiceStates {
+										if vs.UserID == authorID {
+											err := playSound(session, g.ID, vs.ChannelID, channelID, url)
+											if err != nil {
+												debugLog("Error playing YouTube sound:" + fmt.Sprintf("%v", err))
+												session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
+											}
+										}
+									}
+									return
+							}
+						}
+						session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
+					default:
+						session.ChannelMessageSend(channelID, "Unknown YouTube command.")
 				}
-			}
-			session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
-		} else {
-			session.ChannelMessageSend(channelID, "Unknown command.")
+			default:
+				session.ChannelMessageSend(channelID, "Unknown command.")
 		}
 	} else {
 		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
