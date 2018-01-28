@@ -46,10 +46,12 @@ file called `config.json` with the appropriate values.
 
 In the below configuration template, use the following keymap:
 ```
-$BotToken$ - The bot token assigned to your bot application by Discord
-$BotName$ - The name of your bot; used to detect queries
-$BotPrefix$ - The prefix to use for various commands, ex. "cli$" for "cli$play"
-$WolframAppID$ - The AppID for your Wolfram|Alpha account
+$BotToken$ - The bot token assigned to your bot application by Discord (string)
+$BotName$ - The name of your bot; used to detect queries (string)
+$BotPrefix$ - The prefix to use for various commands, ex. "cli$" for "cli$play" (string)
+$WolframAppID$ - The AppID for your Wolfram|Alpha account (string)
+$YouTubeAPIKey$ - The API key to use for YouTube API v3 (string)
+$DebugMode$ - Whether or not to enable debug mode (bool, optional)
 ```
 
 **Configuration template:**
@@ -58,7 +60,9 @@ $WolframAppID$ - The AppID for your Wolfram|Alpha account
 	"botToken": "$BotToken$",
 	"botName": "$BotName$",
 	"botPrefix": "$BotPrefix$",
-	"wolframAppID": "$WolframAppID"
+	"wolframAppID": "$WolframAppID",
+	"youtubeAPIKey": "$YouTubeAPIKey$",
+	"debugMode": $DebugMode$
 }
 ```
 
