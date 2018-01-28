@@ -99,15 +99,14 @@ func main() {
 	
 	debugLog("> Registering Ready callback handler...")
 	dg.AddHandler(ready)
-
 	debugLog("> Registering MessageCreate callback handler...")
 	dg.AddHandler(messageCreate)
-	
 	debugLog("> Registering MessageUpdate callback handler...")
 	dg.AddHandler(messageUpdate)
-	
 	debugLog("> Registering GuildJoin callback handler...")
 	dg.AddHandler(guildCreate)
+	debugLog("> Registering GuildDelete callback handler...")
+	dg.AddHandler(guildDelete)
 
 	fmt.Println("> Establishing a connection to Discord...")
 	err = dg.Open()
@@ -142,6 +141,11 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 }
 
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
+	guildCount = len(s.State.Guilds)
+	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
+}
+
+func guildDelete(s *discordgo.Session, event *discordgo.GuildDelete) {
 	guildCount = len(s.State.Guilds)
 	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
 }
