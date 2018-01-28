@@ -131,7 +131,7 @@ func main() {
 		}
 	}
 	
-	fmt.Println("> Closing the connection to Discord...")
+	fmt.Println("> Closing Discord session...")
 	dg.Close()
 }
 
@@ -151,19 +151,15 @@ func guildDelete(s *discordgo.Session, event *discordgo.GuildDelete) {
 }
 
 func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
-	debugLog("1")
 	if m.Content == "" {
-		debugLog("2")
 		return //No need to continue if there's no message
 	}
 
 	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
-		debugLog("3")
 		return //Don't want the bot to reply to itself or to thin air
 	}
 	
 	if m.ChannelID == "" {
-		debugLog("4")
 		return //Where did this message even come from!?
 	}
 	
@@ -173,16 +169,13 @@ func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
 	for _, v := range messages {
 		for obj := range v {
 			if (obj.ChannelID == m.ChannelID && obj.ID == m.ID) {
-				debugLog("5")
 				doesMessageExist = true
 				break
 			}
 		}
 		if doesMessageExist {
-			debugLog("6")
 			break
 		} else {
-			debugLog("7")
 			return
 		}
 	}
@@ -366,8 +359,13 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			
 			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 			if err != nil {
-				//session.ChannelMessageSend(channelID, botName + " was unable to process your request.\n" + fmt.Sprintf("%v", err))
-				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+				message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+				if err == nil {
+					responses[messageID] = message.ID
+					session.MessageReactionAdd(channelID, messageID, "\u274C")
+				} else {
+					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+				}
 				debugLog(fmt.Sprintf("Error getting query result: %v", err))
 				return
 			}
@@ -376,7 +374,13 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			pods := queryResult.Pods
 			
 			if len(pods) < 1 {
-				session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+				message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+				if err == nil {
+					responses[messageID] = message.ID
+					session.MessageReactionAdd(channelID, messageID, "\u274C")
+				} else {
+					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+				}
 				debugLog("Error getting pods from query")
 				return
 			}
@@ -426,7 +430,13 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			}
 			
 			if result == "" {
-				session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
+				message, err := session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
+				if err == nil {
+					responses[messageID] = message.ID
+					session.MessageReactionAdd(channelID, messageID, "\u274C")
+				} else {
+					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+				}
 				debugLog("Error getting legal data from available pods")
 				return
 			}
@@ -438,11 +448,19 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			
 			if updateMessage {
 				message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
-				responses[messageID] = message.ID
+				if err == nil {
+					responses[messageID] = message.ID
+					session.MessageReactionAdd(channelID, messageID, "\u2705")
+				} else {
+					debugLog("Error updating message [" + messageID + "] in [" + guildDetails.ID + ":" + channelID + "]")
+				}
 			} else {
 				message, err := session.ChannelMessageSend(channelID, result)
 				if err == nil {
 					responses[messageID] = message.ID
+					session.MessageReactionAdd(channelID, messageID, "\u2705")
+				} else {
+					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
 				}
 			}
 			
