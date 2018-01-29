@@ -44,6 +44,7 @@ var (
 	wolframClient *wolfram.Client
 	
 	guildCount int
+	guilds = make(map[string] string)
 	
 	voiceConnections []*discordgo.VoiceConnection
 	encodingSessions []*dca.EncodeSession
@@ -137,17 +138,41 @@ func main() {
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	guildCount = len(s.State.Guilds)
+	debugLog("Server count: " + strconv.Itoa(guildCount))
 	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
+
+	guilds = make(map[string] string)
+
+	for _, guildRow := range s.State.Guilds {
+		guilds[guildRow.ID] = guildRow.Name
+		debugLog(guildRow.ID + ": " + guildRow.Name)
+	}
 }
 
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 	guildCount = len(s.State.Guilds)
+	debugLog("Server count: " + strconv.Itoa(guildCount))
 	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
+
+	guilds = make(map[string] string)
+
+	for _, guildRow := range s.State.Guilds {
+		guilds[guildRow.ID] = guildRow.Name
+		debugLog(guildRow.ID + ": " + guildRow.Name)
+	}
 }
 
 func guildDelete(s *discordgo.Session, event *discordgo.GuildDelete) {
 	guildCount = len(s.State.Guilds)
+	debugLog("Server count: " + strconv.Itoa(guildCount))
 	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
+
+	guilds = make(map[string] string)
+
+	for _, guildRow := range s.State.Guilds {
+		guilds[guildRow.ID] = guildRow.Name
+		debugLog(guildRow.ID + ": " + guildRow.Name)
+	}
 }
 
 func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
