@@ -486,7 +486,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			// Make nicer for Discord
 			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
 			result = strings.Replace(result, "Wolfram Alpha", botName, -1)
-			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoesession.", -1)
+			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
 			
 			if updateMessage {
 				message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
