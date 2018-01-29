@@ -49,7 +49,7 @@ var (
 	voiceConnections []*discordgo.VoiceConnection
 	encodingSessions []*dca.EncodeSession
 	streams []*dca.StreamingSession
-	playbackStopped []bool
+	playbackRunning []bool
 	
 	//messages map[string]chan message
 	messages = make(map[string]chan message)
@@ -360,7 +360,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 										if vs.UserID == authorID {
 											err := playSound(session, g.ID, vs.ChannelID, channelID, url)
 											if err != nil {
-												debugLog("Error playing YouTube sound:" + fmt.Sprintf("%v", err))
+												debugLog("Error playing YouTube sound: " + fmt.Sprintf("%v", err))
 												session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
 											}
 										}
@@ -544,7 +544,7 @@ func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
 			debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
-			playbackStopped[i] = true
+			playbackRunning[i] = false
 			voiceConnectionRow.Disconnect()
 			
 			clearVoiceSession(i)
@@ -558,7 +558,7 @@ func stopSound(guildID, channelID string) {
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
 			debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-			playbackStopped[i] = true
+			playbackRunning[i] = false
 			return
 		}
 	}
@@ -569,14 +569,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var encodingSession *dca.EncodeSession = nil
 	var stream *dca.StreamingSession = nil
 	var index int = -1
+	var newRows bool = true
 	for i, voiceConnectionRow := range voiceConnections {
 		if voiceConnectionRow.ChannelID == channelID {
 			debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
 			voiceConnection = voiceConnections[i]
 			encodingSession = encodingSessions[i]
 			stream = streams[i]
-			playbackStopped[i] = true
+			playbackRunning[i] = true
 			index = i
+			newRows = false
 			break
 		}
 	}
@@ -585,11 +587,13 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 
 	if voiceConnection == nil {
 		debugLog("1B> Connecting to voice channel [" + guildID + ":" + channelID + "]...")
-		voiceConnection, err := s.ChannelVoiceJoin(guildID, channelID, false, false)
+		voiceConnection, err = s.ChannelVoiceJoin(guildID, channelID, false, false)
 		if err != nil {
 			debugLog("1C> Error connecting to voice channel [" + guildID + ":" + channelID + "]")
+			voiceConnection.Disconnect()
 			return err
 		}
+	}
 		
 		debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
@@ -647,7 +651,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			embedMessageID = embedMessage.ID
 		}
 		
-		encodingSession, err := dca.EncodeFile(mediaURL, options)
+		encodingSession, err = dca.EncodeFile(mediaURL, options)
 		if err != nil {
 			debugLog("1I> Error encoding file [" + mediaURL + "]")
 			return err
@@ -657,41 +661,25 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		voiceConnection.Speaking(true)
 
 		done := make(chan error)
-		stream := dca.NewStream(encodingSession, voiceConnection, done)
+		stream = dca.NewStream(encodingSession, voiceConnection, done)
 		
-		debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackStopped handles/states in memory...")
-		voiceConnections = append(voiceConnections, voiceConnection)
-		encodingSessions = append(encodingSessions, encodingSession)
-		streams = append(streams, stream)
-		playbackStopped = append(playbackStopped, false)
-		index = len(playbackStopped) - 1
+		if newRows {
+			debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
+			voiceConnections = append(voiceConnections, voiceConnection)
+			encodingSessions = append(encodingSessions, encodingSession)
+			streams = append(streams, stream)
+			playbackRunning = append(playbackRunning, true)
+			index = len(playbackRunning) - 1
+		}
 		
 		ticker := time.NewTicker(time.Second)
 		
-		for {
-			if playbackStopped[index] == true {
-				ticker.Stop()
-				debugLog("1Q> Stopping encoding session...")
-				encodingSession.Stop()
-				debugLog("1R> Cleaning up encoding session...")
-				encodingSession.Cleanup()
-				debugLog("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-				voiceConnection.Speaking(false)
-				ticker.Stop()
-				return nil
-			}
+		for playbackRunning[index] {
 			select {
 				case err := <- done:
 					if err != nil && err != io.EOF {
-						debugLog("1M> Error creating stream")
-						debugLog("1N> Cleaning up encoding session...")
-						encodingSession.Stop()
-						encodingSession.Cleanup()
-						encodingSession.Truncate()
-						debugLog("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-						voiceConnection.Speaking(false)
-						ticker.Stop()
-						return err
+						playbackRunning[index] = false
+						break
 					}
 				case <- ticker.C:
 					duration := Round(stream.PlaybackPosition(), time.Second)
@@ -725,143 +713,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		ticker.Stop()
 
 		return nil
-	} else {
-		debugLog("2B> Pausing stream...")
-		stream.SetPaused(true)
-		
-		debugLog("2C> Cleaning up encoding session...")
-		encodingSession.Stop()
-		encodingSession.Cleanup()
-		encodingSession.Truncate()
-
-		debugLog("2D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(false)
-		
-		options := dca.StdEncodeOptions
-		options.RawOutput = true
-		options.Bitrate = 96
-		options.Application = "lowdelay"
-		
-		mediaURL := url
-		var embedMessage *discordgo.Message
-		embedMessageID := ""
-		title := ""
-		author := ""
-		//imageURL := ""
-		thumbnailURL := ""
-		
-		regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-		if regexpHasYouTube {
-			videoInfo, err := ytdl.GetVideoInfo(url)
-			if err != nil {
-				debugLog("1E> Error getting video info from [" + url + "]")
-				return err
-			}
-			
-			debugLog("1F> Storing video metadata...")
-			title = videoInfo.Title
-			author = videoInfo.Author
-			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
-			thumbnailURL = videoInfo.GetThumbnailURL("default").String()
-			
-			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-			downloadURL, err := videoInfo.GetDownloadURL(format)
-			if err != nil {
-				debugLog("1G> Error getting download URL from [" + url + "]")
-				return err
-			}
-			mediaURL = downloadURL.String()
-			
-			embed := NewEmbed().
-				SetTitle(title).
-				SetDescription(author).
-				AddField("Duration", "0s").
-				//SetImage(imageURL).
-				SetThumbnail(thumbnailURL).
-				SetColor(0xff0000).MessageEmbed
-			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-			embedMessageID = embedMessage.ID
-		} else {
-			embed := NewEmbed().
-				AddField("URL", mediaURL).
-				AddField("Duration", "0s").
-				SetColor(0xffffff).MessageEmbed
-			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-			embedMessageID = embedMessage.ID
-		}
-		
-		encodingSession, err := dca.EncodeFile(mediaURL, options)
-		if err != nil {
-			debugLog("1I> Error encoding file [" + mediaURL + "]")
-			return err
-		}
-
-		debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(true)
-
-		done := make(chan error)
-		stream := dca.NewStream(encodingSession, voiceConnection, done)
-		
-		ticker := time.NewTicker(time.Second)
-		
-		for {
-			if playbackStopped[index] == true {
-				ticker.Stop()
-				debugLog("1Q> Stopping encoding session...")
-				encodingSession.Stop()
-				debugLog("1R> Cleaning up encoding session...")
-				encodingSession.Cleanup()
-				debugLog("1S> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-				voiceConnection.Speaking(false)
-				ticker.Stop()
-				return nil
-			}
-			select {
-				case err := <- done:
-					if err != nil && err != io.EOF {
-						debugLog("1M> Error creating stream")
-						debugLog("1N> Cleaning up encoding session...")
-						encodingSession.Stop()
-						encodingSession.Cleanup()
-						encodingSession.Truncate()
-						debugLog("1O> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-						voiceConnection.Speaking(false)
-						ticker.Stop()
-						return err
-					}
-				case <- ticker.C:
-					duration := Round(stream.PlaybackPosition(), time.Second)
-					if regexpHasYouTube {
-						embed := NewEmbed().
-							SetTitle(title).
-							SetDescription(author).
-							AddField("Duration", duration.String()).
-							//SetImage(imageURL).
-							SetThumbnail(thumbnailURL).
-							SetColor(0xff0000).MessageEmbed
-						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-					} else {
-						embed := NewEmbed().
-							AddField("URL", mediaURL).
-							AddField("Duration", duration.String()).
-							SetColor(0xffffff).MessageEmbed
-						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-					}
-			}
-		}
-		
-		debugLog("1T> Cleaning up encoding session...")
-		encodingSession.Stop()
-		encodingSession.Cleanup()
-		encodingSession.Truncate()
-
-		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(false)
-		
-		ticker.Stop()
-
-		return nil
-	}
 }
 
 func Round(d, r time.Duration) time.Duration {
