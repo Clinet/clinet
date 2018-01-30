@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
+	//"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,6 +19,7 @@ import (
 	"github.com/rylio/ytdl" // Allows the fetching of YouTube video metadata and download URLs
 	"google.golang.org/api/googleapi/transport" // Allows the making of authenticated API requests to Google
 	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
+	"github.com/nishanths/go-xkcd" // Allows the fetching of XKCD comics
 )
 
 type message struct {
@@ -50,6 +51,7 @@ var (
 	encodingSessions []*dca.EncodeSession
 	streams []*dca.StreamingSession
 	playbackRunning []bool
+	queue = make(map[string] []string)
 	
 	messages = make(map[string]chan message)
 	responses = make(map[string] string)
@@ -264,12 +266,71 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					SetTitle(botName + " - Help").
 					SetDescription("A list of available commands for " + botName + ".").
 					AddField(botPrefix + "help", "Displays this help message.").
+					AddField(botPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
 					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
 					AddField(botPrefix + "stop", "Stops the currently playing audio.").
 					AddField(botPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
 				session.ChannelMessageSendEmbed(channelID, helpEmbed)
+			case "xkcd":
+				if len(cmd) > 1 {
+					switch cmd[1] {
+						case "random":
+							client := xkcd.NewClient()
+							comic, err := client.Random()
+							if err != nil {
+								session.ChannelMessageSend(channelID, "Error finding random xkcd comic.")
+							}
+							xkcdRandomEmbed := NewEmbed().
+								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+								SetDescription(comic.Title).
+								SetImage(comic.ImageURL).
+								SetColor(0x96a8c8).MessageEmbed
+							session.ChannelMessageSendEmbed(channelID, xkcdRandomEmbed)
+						case "latest":
+							client := xkcd.NewClient()
+							comic, err := client.Latest()
+							if err != nil {
+								session.ChannelMessageSend(channelID, "Error finding latest xkcd comic.")
+							}
+							xkcdLatestEmbed := NewEmbed().
+								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+								SetDescription(comic.Title).
+								SetImage(comic.ImageURL).
+								SetColor(0x96a8c8).MessageEmbed
+							session.ChannelMessageSendEmbed(channelID, xkcdLatestEmbed)
+						default:
+							client := xkcd.NewClient()
+							comicNumber, err := strconv.Atoi(cmd[1])
+							if err != nil {
+								session.ChannelMessageSend(channelID, "``" + cmd[1] + "`` is not a valid number.")
+							} else {
+								comic, err := client.Get(comicNumber)
+								if err != nil {
+									session.ChannelMessageSend(channelID, "Error finding xkcd comic #" + cmd[1] + ".")
+								}
+								xkcdSpecifiedEmbed := NewEmbed().
+									SetTitle("xkcd - #" + cmd[1]).
+									SetDescription(comic.Title).
+									SetImage(comic.ImageURL).
+									SetColor(0x96a8c8).MessageEmbed
+								session.ChannelMessageSendEmbed(channelID, xkcdSpecifiedEmbed)
+							}
+					}
+				} else {
+					client := xkcd.NewClient()
+					comic, err := client.Random()
+					if err != nil {
+						session.ChannelMessageSend(channelID, "Error finding random xkcd comic.")
+					}
+					xkcdRandomEmbed := NewEmbed().
+						SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+						SetDescription(comic.Title).
+						SetImage(comic.ImageURL).
+						SetColor(0x96a8c8).MessageEmbed
+					session.ChannelMessageSendEmbed(channelID, xkcdRandomEmbed)
+				}
 			case "play":
 				if len(cmd) < 2 {
 					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
@@ -581,8 +642,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			break
 		}
 	}
-	
-	time.Sleep(1000 * time.Millisecond)
 
 	if voiceConnection == nil {
 		debugLog("1B> Connecting to voice channel [" + guildID + ":" + channelID + "]...")
@@ -593,7 +652,23 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			return err
 		}
 	}
-		
+	
+	guildQueue, ok := queue[guildID]
+	if stream != nil {
+		guildQueue = append(guildQueue, url)
+		queue[guildID] = guildQueue
+		fmt.Println(fmt.Sprintf("%v", queue))
+	} else {
+		if ok == false {
+			guildQueue = []string{}
+			queue[guildID] = guildQueue
+			fmt.Println(fmt.Sprintf("%v", queue))
+		} else {
+			queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
+			queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+			fmt.Println(fmt.Sprintf("%v", queue))
+		}
+
 		debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
 		voiceConnection.Speaking(false)
 		
@@ -672,12 +747,14 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		}
 		
 		ticker := time.NewTicker(time.Second)
+		playbackFinished := false
 		
 		for playbackRunning[index] {
 			select {
 				case err := <- done:
-					if err != nil && err != io.EOF {
+					if err != nil {
 						playbackRunning[index] = false
+						playbackFinished = true
 						break
 					}
 				case <- ticker.C:
@@ -710,8 +787,17 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		voiceConnection.Speaking(false)
 		
 		ticker.Stop()
-
-		return nil
+		
+		if len(queue[guildID]) == 0 {
+			voiceLeave(s, guildID, channelID)
+		} else {
+			if playbackFinished {
+				playSound(s, guildID, channelID, callerChannelID, url)
+			}
+		}
+	}
+	
+	return nil
 }
 
 func Round(d, r time.Duration) time.Duration {
