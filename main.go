@@ -654,146 +654,172 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	}
 	
 	guildQueue, ok := queue[guildID]
-	if stream != nil {
-		guildQueue = append(guildQueue, url)
-		queue[guildID] = guildQueue
-		fmt.Println(fmt.Sprintf("%v", queue))
-	} else {
-		if ok == false {
-			guildQueue = []string{}
+	if ok {
+		fmt.Println("Guild queue previously initialized")
+		if stream != nil {
+			fmt.Println("Playback in progress, appending to guild queue...")
+			guildQueue = append(guildQueue, url)
 			queue[guildID] = guildQueue
 			fmt.Println(fmt.Sprintf("%v", queue))
-		} else {
-			queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
-			queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+			return
+		}
+	} else {
+		fmt.Println("Initializing guild queue...")
+		guildQueue = []string{}
+		queue[guildID] = guildQueue
+		fmt.Println(fmt.Sprintf("%v", queue))
+		if stream != nil {
+			fmt.Println("Playback in progress, appending to guild queue...")
+			guildQueue = append(guildQueue, url)
+			queue[guildID] = guildQueue
 			fmt.Println(fmt.Sprintf("%v", queue))
+			return
 		}
+	}
 
-		debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(false)
-		
-		options := dca.StdEncodeOptions
-		options.RawOutput = true
-		options.Bitrate = 96
-		options.Application = "lowdelay"
-		
-		mediaURL := url
-		var embedMessage *discordgo.Message
-		embedMessageID := ""
-		title := ""
-		author := ""
-		//imageURL := ""
-		thumbnailURL := ""
-		
-		regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-		if regexpHasYouTube {
-			videoInfo, err := ytdl.GetVideoInfo(url)
-			if err != nil {
-				debugLog("1E> Error getting video info from [" + url + "]")
-				return err
-			}
-			
-			debugLog("1F> Storing video metadata...")
-			title = videoInfo.Title
-			author = videoInfo.Author
-			//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
-			thumbnailURL = videoInfo.GetThumbnailURL("default").String()
-			
-			format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-			downloadURL, err := videoInfo.GetDownloadURL(format)
-			if err != nil {
-				debugLog("1G> Error getting download URL from [" + url + "]")
-				return err
-			}
-			mediaURL = downloadURL.String()
-			
-			embed := NewEmbed().
-				SetTitle(title).
-				SetDescription(author).
-				AddField("Duration", "0s").
-				//SetImage(imageURL).
-				SetThumbnail(thumbnailURL).
-				SetColor(0xff0000).MessageEmbed
-			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-			embedMessageID = embedMessage.ID
-		} else {
-			embed := NewEmbed().
-				AddField("URL", mediaURL).
-				AddField("Duration", "0s").
-				SetColor(0xffffff).MessageEmbed
-			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-			embedMessageID = embedMessage.ID
-		}
-		
-		encodingSession, err = dca.EncodeFile(mediaURL, options)
+	debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+	voiceConnection.Speaking(false)
+	
+	options := dca.StdEncodeOptions
+	options.RawOutput = true
+	options.Bitrate = 96
+	options.Application = "lowdelay"
+	
+	mediaURL := url
+	var embedMessage *discordgo.Message
+	embedMessageID := ""
+	title := ""
+	author := ""
+	//imageURL := ""
+	thumbnailURL := ""
+	
+	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
+	if regexpHasYouTube {
+		videoInfo, err := ytdl.GetVideoInfo(url)
 		if err != nil {
-			debugLog("1I> Error encoding file [" + mediaURL + "]")
+			debugLog("1E> Error getting video info from [" + url + "]")
 			return err
 		}
-
-		debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(true)
-
-		done := make(chan error)
-		stream = dca.NewStream(encodingSession, voiceConnection, done)
 		
-		if newRows {
-			debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
-			voiceConnections = append(voiceConnections, voiceConnection)
-			encodingSessions = append(encodingSessions, encodingSession)
-			streams = append(streams, stream)
-			playbackRunning = append(playbackRunning, true)
-			index = len(playbackRunning) - 1
+		debugLog("1F> Storing video metadata...")
+		title = videoInfo.Title
+		author = videoInfo.Author
+		//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
+		thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+		
+		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
+		downloadURL, err := videoInfo.GetDownloadURL(format)
+		if err != nil {
+			debugLog("1G> Error getting download URL from [" + url + "]")
+			return err
 		}
+		mediaURL = downloadURL.String()
 		
-		ticker := time.NewTicker(time.Second)
-		playbackFinished := false
-		
-		for playbackRunning[index] {
-			select {
-				case err := <- done:
-					if err != nil {
-						playbackRunning[index] = false
-						playbackFinished = true
-						break
-					}
-				case <- ticker.C:
-					duration := Round(stream.PlaybackPosition(), time.Second)
-					if regexpHasYouTube {
-						embed := NewEmbed().
-							SetTitle(title).
-							SetDescription(author).
-							AddField("Duration", duration.String()).
-							//SetImage(imageURL).
-							SetThumbnail(thumbnailURL).
-							SetColor(0xff0000).MessageEmbed
-						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-					} else {
-						embed := NewEmbed().
-							AddField("URL", mediaURL).
-							AddField("Duration", duration.String()).
-							SetColor(0xffffff).MessageEmbed
-						s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-					}
-			}
+		embed := NewEmbed().
+			SetTitle(title).
+			SetDescription(author).
+			AddField("Duration", "0s").
+			//SetImage(imageURL).
+			SetThumbnail(thumbnailURL).
+			SetColor(0xff0000).MessageEmbed
+		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessageID = embedMessage.ID
+	} else {
+		embed := NewEmbed().
+			AddField("URL", mediaURL).
+			AddField("Duration", "0s").
+			SetColor(0xffffff).MessageEmbed
+		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+		embedMessageID = embedMessage.ID
+	}
+	
+	encodingSession, err = dca.EncodeFile(mediaURL, options)
+	if err != nil {
+		debugLog("1I> Error encoding file [" + mediaURL + "]")
+		return err
+	}
+    
+	debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+	voiceConnection.Speaking(true)
+    
+	done := make(chan error)
+	stream = dca.NewStream(encodingSession, voiceConnection, done)
+	
+	if newRows {
+		debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
+		voiceConnections = append(voiceConnections, voiceConnection)
+		encodingSessions = append(encodingSessions, encodingSession)
+		streams = append(streams, stream)
+		playbackRunning = append(playbackRunning, true)
+		index = len(playbackRunning) - 1
+	}
+	
+	ticker := time.NewTicker(time.Second)
+	playbackFinished := false
+	
+	for playbackRunning[index] {
+		select {
+			case err := <- done:
+				if err != nil {
+					fmt.Println("Playback finished")
+					playbackRunning[index] = false
+					playbackFinished = true
+					break
+				} else {
+					fmt.Println("Playback not finished")
+				}
+			case <- ticker.C:
+				duration := Round(stream.PlaybackPosition(), time.Second)
+				if regexpHasYouTube {
+					embed := NewEmbed().
+						SetTitle(title).
+						SetDescription(author).
+						AddField("Duration", duration.String()).
+						//SetImage(imageURL).
+						SetThumbnail(thumbnailURL).
+						SetColor(0xff0000).MessageEmbed
+					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+				} else {
+					embed := NewEmbed().
+						AddField("URL", mediaURL).
+						AddField("Duration", duration.String()).
+						SetColor(0xffffff).MessageEmbed
+					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+				}
 		}
-		
-		debugLog("1T> Cleaning up encoding session...")
-		encodingSession.Stop()
-		encodingSession.Cleanup()
-		encodingSession.Truncate()
-
-		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(false)
-		
-		ticker.Stop()
-		
-		if len(queue[guildID]) == 0 {
-			voiceLeave(s, guildID, channelID)
+	}
+	
+	debugLog("1T> Cleaning up encoding session...")
+	encodingSession.Stop()
+	encodingSession.Cleanup()
+	encodingSession.Truncate()
+	
+	debugLog("1U> Writing nil to encoding session and stream...")
+	encodingSession = nil
+	encodingSessions[index] = nil
+	stream = nil
+	streams[index] = nil
+    
+	debugLog("1V> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+	voiceConnection.Speaking(false)
+	
+	ticker.Stop()
+	
+	if len(queue[guildID]) == 0 {
+		fmt.Println("Guild queue empty, leaving voice channel...")
+		voiceLeave(s, guildID, channelID)
+	} else {
+		if playbackFinished {
+			fmt.Println("Queued URL found in guild queue, fetching URL...")
+			url = queue[guildID][0]
+			fmt.Println("Removing queued URL from guild queue...")
+			queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
+			queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+			fmt.Println("Current guild queue: " + fmt.Sprintf("%v", queue))
+			fmt.Println("Playing URL [" + url + "] from guild queue...")
+			playSound(s, guildID, channelID, callerChannelID, url)
 		} else {
-			if playbackFinished {
-				playSound(s, guildID, channelID, callerChannelID, url)
-			}
+			fmt.Println("Playback not marked as finished, doing nothing...")
 		}
 	}
 	
