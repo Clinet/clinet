@@ -266,6 +266,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					SetTitle(botName + " - Help").
 					SetDescription("A list of available commands for " + botName + ".").
 					AddField(botPrefix + "help", "Displays this help message.").
+					AddField(botPrefix + "about", "Displays information about " + botName + " and how to use it.").
 					AddField(botPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
 					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
@@ -273,6 +274,18 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					AddField(botPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
 				session.ChannelMessageSendEmbed(channelID, helpEmbed)
+			case "about":
+				aboutEmbed := NewEmbed().
+					SetTitle(botName + " - About").
+					SetDescription(botName + " is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
+					AddField("How can I use " + botName + " in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
+					AddField("How can I help keep " + botName + " running?", "The best ways to help keep " + botName + " running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
+					AddField("How can I use " + botName + "?", "There are many ways to make use of " + botName + ".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask " + botName + " a question, ex: ``Clinet, what time is it?``.").
+					AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
+					AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
+					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
+					SetColor(0x1c1c1c).MessageEmbed
+				session.ChannelMessageSendEmbed(channelID, aboutEmbed)
 			case "xkcd":
 				if len(cmd) > 1 {
 					switch cmd[1] {
