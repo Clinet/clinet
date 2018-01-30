@@ -51,7 +51,6 @@ var (
 	streams []*dca.StreamingSession
 	playbackRunning []bool
 	
-	//messages map[string]chan message
 	messages = make(map[string]chan message)
 	responses = make(map[string] string)
 )
