@@ -206,7 +206,7 @@ func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
 		}
 	}
 
-	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, true)
+	go handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, true)
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -231,7 +231,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		messages[m.ChannelID] <- message{ID:m.ID, ChannelID:m.ChannelID}
 	}()
 
-	handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, false)
+	go handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, false)
 }
 
 func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string, messageID string, updateMessage bool) {
@@ -294,6 +294,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 							comic, err := client.Random()
 							if err != nil {
 								session.ChannelMessageSend(channelID, "Error finding random xkcd comic.")
+								return
 							}
 							xkcdRandomEmbed := NewEmbed().
 								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -306,6 +307,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 							comic, err := client.Latest()
 							if err != nil {
 								session.ChannelMessageSend(channelID, "Error finding latest xkcd comic.")
+								return
 							}
 							xkcdLatestEmbed := NewEmbed().
 								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -322,6 +324,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 								comic, err := client.Get(comicNumber)
 								if err != nil {
 									session.ChannelMessageSend(channelID, "Error finding xkcd comic #" + cmd[1] + ".")
+									return
 								}
 								xkcdSpecifiedEmbed := NewEmbed().
 									SetTitle("xkcd - #" + cmd[1]).
@@ -354,34 +357,40 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
 					return
 				}
-				for _, vs := range g.VoiceStates {
-					if vs.UserID == authorID {
-						err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-						if err != nil {
-							debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
-							session.ChannelMessageSend(channelID, "Error playing sound.")
+				go func() {
+					for _, vs := range g.VoiceStates {
+						if vs.UserID == authorID {
+							err := playSound(session, g.ID, vs.ChannelID, channelID, url)
+							if err != nil {
+								debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
+								session.ChannelMessageSend(channelID, "Error playing sound.")
+								return
+							}
+						}
+					}
+				}()
+			case "stop":
+				go func() {
+					for _, vs := range g.VoiceStates {
+						if vs.UserID == authorID {
+							stopSound(g.ID, vs.ChannelID)
+							session.ChannelMessageSend(channelID, "Stopped playing sound.")
 							return
 						}
 					}
-				}
-			case "stop":
-				for _, vs := range g.VoiceStates {
-					if vs.UserID == authorID {
-						stopSound(g.ID, vs.ChannelID)
-						session.ChannelMessageSend(channelID, "Stopped playing sound.")
-						return
-					}
-				}
-				session.ChannelMessageSend(channelID, "Error finding voice channel to stop audio playback in.")
+					session.ChannelMessageSend(channelID, "Error finding voice channel to stop audio playback in.")
+				}()
 			case "leave":
-				for _, vs := range g.VoiceStates {
-					if vs.UserID == authorID {
-						voiceLeave(session, g.ID, vs.ChannelID)
-						session.ChannelMessageSend(channelID, "Left voice channel.")
-						return
+				go func() {
+					for _, vs := range g.VoiceStates {
+						if vs.UserID == authorID {
+							voiceLeave(session, g.ID, vs.ChannelID)
+							session.ChannelMessageSend(channelID, "Left voice channel.")
+							return
+						}
 					}
-				}
-				session.ChannelMessageSend(channelID, "Error finding voice channel to leave.")
+					session.ChannelMessageSend(channelID, "Error finding voice channel to leave.")
+				}()
 			case "youtube":
 				if len(cmd) < 2 {
 					session.ChannelMessageSend(channelID, "You must specify a YouTube command.")
@@ -409,39 +418,41 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 							session.ChannelMessageSend(channelID, "You must specify a valid search query.")
 							return
 						}
-						client := &http.Client{
-							Transport: &transport.APIKey{Key: youtubeAPIKey},
-						}
-						service, err := youtube.New(client)
-						if err != nil {
-							session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
-							return
-						}
-						call := service.Search.List("id,snippet").
-								Q(query).
-								MaxResults(50)
-						response, err := call.Do()
-						if err != nil {
-							session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
-							return
-						}
-						for _, item := range response.Items {
-							switch item.Id.Kind {
-								case "youtube#video":
-									url := "https://youtube.com/watch?v=" + item.Id.VideoId
-									for _, vs := range g.VoiceStates {
-										if vs.UserID == authorID {
-											err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-											if err != nil {
-												debugLog("Error playing YouTube sound: " + fmt.Sprintf("%v", err))
-												session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
+						go func() {
+							client := &http.Client{
+								Transport: &transport.APIKey{Key: youtubeAPIKey},
+							}
+							service, err := youtube.New(client)
+							if err != nil {
+								session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
+								return
+							}
+							call := service.Search.List("id,snippet").
+									Q(query).
+									MaxResults(50)
+							response, err := call.Do()
+							if err != nil {
+								session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
+								return
+							}
+							for _, item := range response.Items {
+								switch item.Id.Kind {
+									case "youtube#video":
+										url := "https://youtube.com/watch?v=" + item.Id.VideoId
+										for _, vs := range g.VoiceStates {
+											if vs.UserID == authorID {
+												err := playSound(session, g.ID, vs.ChannelID, channelID, url)
+												if err != nil {
+													debugLog("Error playing YouTube sound: " + fmt.Sprintf("%v", err))
+													session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
+												}
 											}
 										}
-									}
-									return
+										return
+								}
 							}
-						}
-						session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
+							session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
+						}()
 					default:
 						session.ChannelMessageSend(channelID, "Unknown YouTube command. Type ``cli$youtube help`` for a list of YouTube commands.")
 				}
@@ -449,138 +460,140 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				session.ChannelMessageSend(channelID, "Unknown command. Type ``cli$help`` for a list of commands.")
 		}
 	} else {
-		regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
-		if regexpBotName && strings.HasSuffix(content, "?") {
-			session.ChannelTyping(channelID) // Send a typing event
-			
-			debugLog("### [START] Wolfram")
-			
-			query := content
-			debugLog("Original query: " + query)
-			
-			// Sanitize for Wolfram|Alpha
-			replace := NewCaseInsensitiveReplacer("Clinet", "")
-			query = replace.Replace(query)
-			for {
-				if strings.HasPrefix(query, " ") {
-					query = strings.Replace(query, " ", "", 1)
-				} else if strings.HasPrefix(query, ",") {
-					query = strings.Replace(query, ",", "", 1)
-				} else {
-					break
+		go func() {
+			regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
+			if regexpBotName && strings.HasSuffix(content, "?") {
+				session.ChannelTyping(channelID) // Send a typing event
+				
+				debugLog("### [START] Wolfram")
+				
+				query := content
+				debugLog("Original query: " + query)
+				
+				// Sanitize for Wolfram|Alpha
+				replace := NewCaseInsensitiveReplacer("Clinet", "")
+				query = replace.Replace(query)
+				for {
+					if strings.HasPrefix(query, " ") {
+						query = strings.Replace(query, " ", "", 1)
+					} else if strings.HasPrefix(query, ",") {
+						query = strings.Replace(query, ",", "", 1)
+					} else {
+						break
+					}
 				}
-			}
-			debugLog("Sanitized query: " + query)
-			
-			queryResultObject, err := wolframClient.GetQueryResult(query, nil)
-			if err != nil {
-				message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-				if err == nil {
-					responses[messageID] = message.ID
-					session.MessageReactionAdd(channelID, messageID, "\u274C")
-				} else {
-					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-				}
-				debugLog(fmt.Sprintf("Error getting query result: %v", err))
-				return
-			}
-			
-			queryResult := queryResultObject.QueryResult
-			pods := queryResult.Pods
-			
-			if len(pods) < 1 {
-				message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-				if err == nil {
-					responses[messageID] = message.ID
-					session.MessageReactionAdd(channelID, messageID, "\u274C")
-				} else {
-					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-				}
-				debugLog("Error getting pods from query")
-				return
-			}
-			
-			result := ""
-			
-			for _, pod := range pods {
-				podTitle := pod.Title
-				switch podTitle {
-					case "Locations":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "Nearby locations":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "Local map":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "Inferred local map":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "Inferred nearest city center":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "IP address":
-						debugLog("Denied pod: " + podTitle)
-						continue
-					case "IP address registrant":
-						debugLog("Denied pod: " + podTitle)
-						continue
+				debugLog("Sanitized query: " + query)
+				
+				queryResultObject, err := wolframClient.GetQueryResult(query, nil)
+				if err != nil {
+					message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+					if err == nil {
+						responses[messageID] = message.ID
+						session.MessageReactionAdd(channelID, messageID, "\u274C")
+					} else {
+						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+					}
+					debugLog(fmt.Sprintf("Error getting query result: %v", err))
+					return
 				}
 				
-				subPods := pod.SubPods
-				if len(subPods) > 0 {
-					for _, subPod := range subPods {
-						plaintext := subPod.Plaintext
-						if plaintext != "" {
-							debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
-							if result != "" {
-								result = result + "\n\n[" + podTitle + "]\n" + plaintext
-							} else {
-								result = "[" + podTitle + "]\n" + plaintext
+				queryResult := queryResultObject.QueryResult
+				pods := queryResult.Pods
+				
+				if len(pods) < 1 {
+					message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+					if err == nil {
+						responses[messageID] = message.ID
+						session.MessageReactionAdd(channelID, messageID, "\u274C")
+					} else {
+						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+					}
+					debugLog("Error getting pods from query")
+					return
+				}
+				
+				result := ""
+				
+				for _, pod := range pods {
+					podTitle := pod.Title
+					switch podTitle {
+						case "Locations":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "Nearby locations":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "Local map":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "Inferred local map":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "Inferred nearest city center":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "IP address":
+							debugLog("Denied pod: " + podTitle)
+							continue
+						case "IP address registrant":
+							debugLog("Denied pod: " + podTitle)
+							continue
+					}
+					
+					subPods := pod.SubPods
+					if len(subPods) > 0 {
+						for _, subPod := range subPods {
+							plaintext := subPod.Plaintext
+							if plaintext != "" {
+								debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
+								if result != "" {
+									result = result + "\n\n[" + podTitle + "]\n" + plaintext
+								} else {
+									result = "[" + podTitle + "]\n" + plaintext
+								}
 							}
 						}
 					}
 				}
-			}
-			
-			if result == "" {
-				message, err := session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
-				if err == nil {
-					responses[messageID] = message.ID
-					session.MessageReactionAdd(channelID, messageID, "\u274C")
-				} else {
-					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+				
+				if result == "" {
+					message, err := session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
+					if err == nil {
+						responses[messageID] = message.ID
+						session.MessageReactionAdd(channelID, messageID, "\u274C")
+					} else {
+						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+					}
+					debugLog("Error getting legal data from available pods")
+					return
 				}
-				debugLog("Error getting legal data from available pods")
-				return
-			}
-			
-			// Make nicer for Discord
-			result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
-			result = strings.Replace(result, "Wolfram Alpha", botName, -1)
-			result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
-			
-			if updateMessage {
-				message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
-				if err == nil {
-					responses[messageID] = message.ID
-					session.MessageReactionAdd(channelID, messageID, "\u2705")
+				
+				// Make nicer for Discord
+				result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
+				result = strings.Replace(result, "Wolfram Alpha", botName, -1)
+				result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
+				
+				if updateMessage {
+					message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
+					if err == nil {
+						responses[messageID] = message.ID
+						session.MessageReactionAdd(channelID, messageID, "\u2705")
+					} else {
+						debugLog("Error updating message [" + messageID + "] in [" + guildDetails.ID + ":" + channelID + "]")
+					}
 				} else {
-					debugLog("Error updating message [" + messageID + "] in [" + guildDetails.ID + ":" + channelID + "]")
+					message, err := session.ChannelMessageSend(channelID, result)
+					if err == nil {
+						responses[messageID] = message.ID
+						session.MessageReactionAdd(channelID, messageID, "\u2705")
+					} else {
+						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+					}
 				}
-			} else {
-				message, err := session.ChannelMessageSend(channelID, result)
-				if err == nil {
-					responses[messageID] = message.ID
-					session.MessageReactionAdd(channelID, messageID, "\u2705")
-				} else {
-					debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-				}
+				
+				debugLog("### [END]")
 			}
-			
-			debugLog("### [END]")
-		}
+		}()
 	}
 }
 
