@@ -77,6 +77,7 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 | [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
 | [dca](https://github.com/jonas747/dca) |
 | [ytdl](https://github.com/rylio/ytdl) |
+| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.

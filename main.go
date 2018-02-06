@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"net/http"
 	"regexp"
+	"math/rand"
 
 	"github.com/paked/configure" // Allows configuration of the program via external sources
 	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
@@ -276,6 +277,9 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					SetDescription("A list of available commands for " + botName + ".").
 					AddField(botPrefix + "help", "Displays this help message.").
 					AddField(botPrefix + "about", "Displays information about " + botName + " and how to use it.").
+					AddField(botPrefix + "roll", "Rolls a dice.").
+					AddField(botPrefix + "doubleroll", "Rolls two die.").
+					AddField(botPrefix + "coinflip", "Flips a coin.").
 					AddField(botPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
 					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
@@ -289,7 +293,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					SetDescription(botName + " is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
 					AddField("How can I use " + botName + " in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
 					AddField("How can I help keep " + botName + " running?", "The best ways to help keep " + botName + " running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
-					AddField("How can I use " + botName + "?", "There are many ways to make use of " + botName + ".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask " + botName + " a question, ex: ``Clinet, what time is it?``.").
+					AddField("How can I use " + botName + "?", "There are many ways to make use of " + botName + ".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask " + botName + " a question, ex: ``Clinet, what time is it?`` or ``Clinet, what is DiscordApp?``.").
 					AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 					AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
 					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
@@ -464,6 +468,24 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 						}()
 					default:
 						session.ChannelMessageSend(channelID, "Unknown YouTube command. Type ``cli$youtube help`` for a list of YouTube commands.")
+				}
+			case "roll":
+				random := rand.Intn(6) + 1
+				session.ChannelMessageSend(channelID, "You rolled a " + strconv.Itoa(random) + "!")
+			case "doubleroll":
+				random1 := rand.Intn(6) + 1
+				random2 := rand.Intn(6) + 1
+				randomTotal := random1 + random2
+				session.ChannelMessageSend(channelID, "You rolled a " + strconv.Itoa(random1) + " and a " + strconv.Itoa(random2) + ". The total is " + strconv.Itoa(randomTotal) + "!")
+			case "coinflip":
+				random := rand.Intn(3)
+				switch random {
+					case 0:
+						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed on heads!")
+					case 1:
+						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed on tails!")
+					default:
+						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed sideways!")
 				}
 			default:
 				session.ChannelMessageSend(channelID, "Unknown command. Type ``cli$help`` for a list of commands.")
