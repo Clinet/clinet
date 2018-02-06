@@ -493,9 +493,9 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				}
 				debugLog("Sanitized query: " + query)
 				
-				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID, updateMessage)
+				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID)
 				if iErr {
-					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID, updateMessage)
+					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID)
 					if iErr {
 						message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
 						if err == nil {
@@ -513,7 +513,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 	}
 }
 
-func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (bool) {
+func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
 	queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 	if err != nil {
 		debugLog(fmt.Sprintf("Error getting query result: %v", err))
@@ -527,8 +527,8 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 		debugLog("Error getting pods from query")
 		return true
 	}
-	
-	result := ""
+
+	fields := []*discordgo.MessageEmbedField{}
 	
 	for _, pod := range pods {
 		podTitle := pod.Title
@@ -561,80 +561,70 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 			for _, subPod := range subPods {
 				plaintext := subPod.Plaintext
 				if plaintext != "" {
-					debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
-					if result != "" {
-						result = result + "\n\n[" + podTitle + "]\n" + plaintext
-					} else {
-						result = "[" + podTitle + "]\n" + plaintext
-					}
+					// Make nicer for Discord
+					plaintext = strings.Replace(plaintext, "Wolfram|Alpha", botName, -1)
+					plaintext = strings.Replace(plaintext, "Wolfram Alpha", botName, -1)
+					plaintext = strings.Replace(plaintext, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
+
+					fields = append(fields, &discordgo.MessageEmbedField{Name:podTitle, Value:plaintext})
 				}
 			}
 		}
 	}
 	
-	if result == "" {
+	if len(fields) == 0 {
 		debugLog("Error getting legal data from available pods")
 		return true
 	}
 	
-	// Make nicer for Discord
-	result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
-	result = strings.Replace(result, "Wolfram Alpha", botName, -1)
-	result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
-	
-	if updateMessage {
-		message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
-		if err == nil {
-			responses[messageID] = message.ID
-			session.MessageReactionAdd(channelID, messageID, "\u2705")
-		} else {
-			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
-			return true
-		}
+	resultEmbed := NewEmbed().
+		SetColor(0xda0e1a).MessageEmbed
+	resultEmbed.Fields = fields
+	message, err := session.ChannelMessageSendEmbed(channelID, resultEmbed)
+	if err == nil {
+		responses[messageID] = message.ID
+		session.MessageReactionAdd(channelID, messageID, "\u2705")
 	} else {
-		message, err := session.ChannelMessageSend(channelID, result)
-		if err == nil {
-			responses[messageID] = message.ID
-			session.MessageReactionAdd(channelID, messageID, "\u2705")
-		} else {
-			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
+		debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+		return true
 	}
 	return false
 }
 
-func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (bool) {
+func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
 	queryResult, err := ddgClient.GetQueryResult(query)
 	if err != nil {
 		debugLog(fmt.Sprintf("Error getting query result: %v", err))
 		return true
 	}
 	
-	result := queryResult.AbstractText
+	result := ""
+	if queryResult.Definition != "" {
+		result = queryResult.Definition
+	} else if queryResult.Answer != "" {
+		result = queryResult.Answer
+	} else if queryResult.AbstractText != "" {
+		result = queryResult.AbstractText
+	}
 	if result == "" {
-		debugLog("Error getting abstract text")
+		debugLog("Error getting query result from response")
 		return true
 	}
-	
-	if updateMessage {
-		message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
-		if err == nil {
-			responses[messageID] = message.ID
-			session.MessageReactionAdd(channelID, messageID, "\u2705")
-		} else {
-			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
-			return true
-		}
+
+	resultEmbed := NewEmbed().
+		SetTitle(queryResult.Heading).
+		SetDescription(result).
+		SetColor(0xdf5730).MessageEmbed
+	if queryResult.Image != "" {
+		resultEmbed.Image = &discordgo.MessageEmbedImage{URL:queryResult.Image}
+	}
+	message, err := session.ChannelMessageSendEmbed(channelID, resultEmbed)
+	if err == nil {
+		responses[messageID] = message.ID
+		session.MessageReactionAdd(channelID, messageID, "\u2705")
 	} else {
-		message, err := session.ChannelMessageSend(channelID, result)
-		if err == nil {
-			responses[messageID] = message.ID
-			session.MessageReactionAdd(channelID, messageID, "\u2705")
-		} else {
-			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
+		debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+		return true
 	}
 	return false
 }
