@@ -494,9 +494,9 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				debugLog("Sanitized query: " + query)
 				
 				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID, updateMessage)
-				if iErr > 0 {
+				if iErr {
 					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID, updateMessage)
-					if iErr > 0 {
+					if iErr {
 						message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
 						if err == nil {
 							responses[messageID] = message.ID
@@ -513,11 +513,11 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 	}
 }
 
-func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (int) {
+func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (bool) {
 	queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 	if err != nil {
 		debugLog(fmt.Sprintf("Error getting query result: %v", err))
-		return 1
+		return true
 	}
 	
 	queryResult := queryResultObject.QueryResult
@@ -525,7 +525,7 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 	
 	if len(pods) < 1 {
 		debugLog("Error getting pods from query")
-		return 2
+		return true
 	}
 	
 	result := ""
@@ -574,7 +574,7 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 	
 	if result == "" {
 		debugLog("Error getting legal data from available pods")
-		return 3
+		return true
 	}
 	
 	// Make nicer for Discord
@@ -589,7 +589,7 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 			session.MessageReactionAdd(channelID, messageID, "\u2705")
 		} else {
 			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
-			return 5
+			return true
 		}
 	} else {
 		message, err := session.ChannelMessageSend(channelID, result)
@@ -598,22 +598,23 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 			session.MessageReactionAdd(channelID, messageID, "\u2705")
 		} else {
 			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
-			return 4
+			return true
 		}
 	}
-	return 0
+	return false
 }
-func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (int) {
+
+func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (bool) {
 	queryResult, err := ddgClient.GetQueryResult(query)
 	if err != nil {
 		debugLog(fmt.Sprintf("Error getting query result: %v", err))
-		return 1
+		return true
 	}
 	
 	result := queryResult.AbstractText
 	if result == "" {
 		debugLog("Error getting abstract text")
-		return 2
+		return true
 	}
 	
 	if updateMessage {
@@ -623,7 +624,7 @@ func queryDDG(channelID string, session *discordgo.Session, query string, messag
 			session.MessageReactionAdd(channelID, messageID, "\u2705")
 		} else {
 			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
-			return 5
+			return true
 		}
 	} else {
 		message, err := session.ChannelMessageSend(channelID, result)
@@ -632,10 +633,10 @@ func queryDDG(channelID string, session *discordgo.Session, query string, messag
 			session.MessageReactionAdd(channelID, messageID, "\u2705")
 		} else {
 			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
-			return 4
+			return true
 		}
 	}
-	return 0
+	return false
 }
 
 func guildDetails(channelID string, s *discordgo.Session) (*discordgo.Guild, error) {
