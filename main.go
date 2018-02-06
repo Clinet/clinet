@@ -20,6 +20,7 @@ import (
 	"google.golang.org/api/googleapi/transport" // Allows the making of authenticated API requests to Google
 	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
 	"github.com/nishanths/go-xkcd" // Allows the fetching of XKCD comics
+	"github.com/JoshuaDoes/duckduckgolang" // Allows the usage of the DuckDuckGo API
 )
 
 type message struct {
@@ -32,17 +33,20 @@ var (
 	confBotToken = conf.String("botToken", "", "Bot Token")
 	confBotName = conf.String("botName", "", "Bot Name")
 	confBotPrefix = conf.String("botPrefix", "", "Bot Prefix")
-	confWolframAppID = conf.String("wolframAppID", "", "Wolfram AppID")
+	confWolframAppID = conf.String("wolframAppID", "", "Wolfram App ID")
+	confDuckDuckGoAppName = conf.String("ddgAppName", "", "DuckDuckGo App Name")
 	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
 	confDebugMode = conf.Bool("debugMode", false, "Debug Mode")
 	botToken string = ""
 	botName string = ""
 	botPrefix string = ""
 	wolframAppID string = ""
+	ddgAppName string = ""
 	youtubeAPIKey string = ""
 	debugMode bool = false
 	
 	wolframClient *wolfram.Client
+	ddgClient *duckduckgo.Client
 	
 	guildCount int
 	guilds = make(map[string] string)
@@ -77,9 +81,10 @@ func main() {
 	botName = *confBotName
 	botPrefix = *confBotPrefix
 	wolframAppID = *confWolframAppID
+	ddgAppName = *confDuckDuckGoAppName
 	youtubeAPIKey = *confYouTubeAPIKey
 	debugMode = *confDebugMode
-	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || youtubeAPIKey == "") {
+	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "") {
 		fmt.Println("> Configuration not properly setup, exiting...")
 		return
 	} else {
@@ -88,6 +93,7 @@ func main() {
 		debugLog("botName: " + botName)
 		debugLog("botPrefix: " + botPrefix)
 		debugLog("wolframAppID: " + wolframAppID)
+		debugLog("ddgAppName: " + ddgAppName)
 		debugLog("youtubeAPIKey: " + youtubeAPIKey)
 		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
 	}
@@ -119,6 +125,9 @@ func main() {
 	
 	fmt.Println("> Initializing Wolfram...")
 	wolframClient = &wolfram.Client{AppID:wolframAppID}
+	
+	fmt.Println("> Initializing DuckDuckGo...")
+	ddgClient = &duckduckgo.Client{AppName:ddgAppName}
 
 	fmt.Println("> " + botName + " has started successfully.")
 
@@ -465,7 +474,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			if regexpBotName && strings.HasSuffix(content, "?") {
 				session.ChannelTyping(channelID) // Send a typing event
 				
-				debugLog("### [START] Wolfram")
+				debugLog("### [START] Query")
 				
 				query := content
 				debugLog("Original query: " + query)
@@ -484,110 +493,17 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				}
 				debugLog("Sanitized query: " + query)
 				
-				queryResultObject, err := wolframClient.GetQueryResult(query, nil)
-				if err != nil {
-					message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-					if err == nil {
-						responses[messageID] = message.ID
-						session.MessageReactionAdd(channelID, messageID, "\u274C")
-					} else {
-						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-					}
-					debugLog(fmt.Sprintf("Error getting query result: %v", err))
-					return
-				}
-				
-				queryResult := queryResultObject.QueryResult
-				pods := queryResult.Pods
-				
-				if len(pods) < 1 {
-					message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-					if err == nil {
-						responses[messageID] = message.ID
-						session.MessageReactionAdd(channelID, messageID, "\u274C")
-					} else {
-						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-					}
-					debugLog("Error getting pods from query")
-					return
-				}
-				
-				result := ""
-				
-				for _, pod := range pods {
-					podTitle := pod.Title
-					switch podTitle {
-						case "Locations":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "Nearby locations":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "Local map":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "Inferred local map":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "Inferred nearest city center":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "IP address":
-							debugLog("Denied pod: " + podTitle)
-							continue
-						case "IP address registrant":
-							debugLog("Denied pod: " + podTitle)
-							continue
-					}
-					
-					subPods := pod.SubPods
-					if len(subPods) > 0 {
-						for _, subPod := range subPods {
-							plaintext := subPod.Plaintext
-							if plaintext != "" {
-								debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
-								if result != "" {
-									result = result + "\n\n[" + podTitle + "]\n" + plaintext
-								} else {
-									result = "[" + podTitle + "]\n" + plaintext
-								}
-							}
+				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID, updateMessage)
+				if iErr > 0 {
+					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID, updateMessage)
+					if iErr > 0 {
+						message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
+						if err == nil {
+							responses[messageID] = message.ID
+							session.MessageReactionAdd(channelID, messageID, "\u274C")
+						} else {
+							debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
 						}
-					}
-				}
-				
-				if result == "" {
-					message, err := session.ChannelMessageSend(channelID, botName + " was either unable to process your request or was denied permission from doing so.")
-					if err == nil {
-						responses[messageID] = message.ID
-						session.MessageReactionAdd(channelID, messageID, "\u274C")
-					} else {
-						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-					}
-					debugLog("Error getting legal data from available pods")
-					return
-				}
-				
-				// Make nicer for Discord
-				result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
-				result = strings.Replace(result, "Wolfram Alpha", botName, -1)
-				result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
-				
-				if updateMessage {
-					message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
-					if err == nil {
-						responses[messageID] = message.ID
-						session.MessageReactionAdd(channelID, messageID, "\u2705")
-					} else {
-						debugLog("Error updating message [" + messageID + "] in [" + guildDetails.ID + ":" + channelID + "]")
-					}
-				} else {
-					message, err := session.ChannelMessageSend(channelID, result)
-					if err == nil {
-						responses[messageID] = message.ID
-						session.MessageReactionAdd(channelID, messageID, "\u2705")
-					} else {
-						debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
 					}
 				}
 				
@@ -595,6 +511,131 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 			}
 		}()
 	}
+}
+
+func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (int) {
+	queryResultObject, err := wolframClient.GetQueryResult(query, nil)
+	if err != nil {
+		debugLog(fmt.Sprintf("Error getting query result: %v", err))
+		return 1
+	}
+	
+	queryResult := queryResultObject.QueryResult
+	pods := queryResult.Pods
+	
+	if len(pods) < 1 {
+		debugLog("Error getting pods from query")
+		return 2
+	}
+	
+	result := ""
+	
+	for _, pod := range pods {
+		podTitle := pod.Title
+		switch podTitle {
+			case "Locations":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "Nearby locations":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "Local map":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "Inferred local map":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "Inferred nearest city center":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "IP address":
+				debugLog("Denied pod: " + podTitle)
+				continue
+			case "IP address registrant":
+				debugLog("Denied pod: " + podTitle)
+				continue
+		}
+		
+		subPods := pod.SubPods
+		if len(subPods) > 0 {
+			for _, subPod := range subPods {
+				plaintext := subPod.Plaintext
+				if plaintext != "" {
+					debugLog("Found result from pod [" + podTitle + "]: " + plaintext)
+					if result != "" {
+						result = result + "\n\n[" + podTitle + "]\n" + plaintext
+					} else {
+						result = "[" + podTitle + "]\n" + plaintext
+					}
+				}
+			}
+		}
+	}
+	
+	if result == "" {
+		debugLog("Error getting legal data from available pods")
+		return 3
+	}
+	
+	// Make nicer for Discord
+	result = strings.Replace(result, "Wolfram|Alpha", botName, -1)
+	result = strings.Replace(result, "Wolfram Alpha", botName, -1)
+	result = strings.Replace(result, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
+	
+	if updateMessage {
+		message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
+		if err == nil {
+			responses[messageID] = message.ID
+			session.MessageReactionAdd(channelID, messageID, "\u2705")
+		} else {
+			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
+			return 5
+		}
+	} else {
+		message, err := session.ChannelMessageSend(channelID, result)
+		if err == nil {
+			responses[messageID] = message.ID
+			session.MessageReactionAdd(channelID, messageID, "\u2705")
+		} else {
+			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+			return 4
+		}
+	}
+	return 0
+}
+func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string, updateMessage bool) (int) {
+	queryResult, err := ddgClient.GetQueryResult(query)
+	if err != nil {
+		debugLog(fmt.Sprintf("Error getting query result: %v", err))
+		return 1
+	}
+	
+	result := queryResult.AbstractText
+	if result == "" {
+		debugLog("Error getting abstract text")
+		return 2
+	}
+	
+	if updateMessage {
+		message, _ := session.ChannelMessageEdit(channelID, responses[messageID], result)
+		if err == nil {
+			responses[messageID] = message.ID
+			session.MessageReactionAdd(channelID, messageID, "\u2705")
+		} else {
+			debugLog("Error updating message [" + messageID + "] in [" + guildID + ":" + channelID + "]")
+			return 5
+		}
+	} else {
+		message, err := session.ChannelMessageSend(channelID, result)
+		if err == nil {
+			responses[messageID] = message.ID
+			session.MessageReactionAdd(channelID, messageID, "\u2705")
+		} else {
+			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+			return 4
+		}
+	}
+	return 0
 }
 
 func guildDetails(channelID string, s *discordgo.Session) (*discordgo.Guild, error) {
