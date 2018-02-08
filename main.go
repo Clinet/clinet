@@ -56,6 +56,7 @@ var (
 	encodingSessions []*dca.EncodeSession
 	streams []*dca.StreamingSession
 	playbackRunning []bool
+	playbackStopped []bool
 	queue = make(map[string] []string)
 	
 	messages = make(map[string]chan message)
@@ -361,10 +362,6 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					session.ChannelMessageSendEmbed(channelID, xkcdRandomEmbed)
 				}
 			case "play":
-				if len(cmd) < 2 {
-					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
-					return
-				}
 				url := cmd[1]
 				if url == "" {
 					session.ChannelMessageSend(channelID, "You must specify a valid URL.")
@@ -373,11 +370,25 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				go func() {
 					for _, vs := range g.VoiceStates {
 						if vs.UserID == authorID {
-							err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-							if err != nil {
-								debugLog("Error playing sound:" + fmt.Sprintf("%v", err))
-								session.ChannelMessageSend(channelID, "Error playing sound.")
-								return
+							if len(cmd) < 2 {
+								err := playSound(session, g.ID, vs.ChannelID, channelID, "")
+								if err != nil {
+									debugLog("Error playing sound: " + fmt.Sprintf("%v", err))
+									session.ChannelMessageSend(channelID, "Error playing sound.")
+									return
+								}
+							} else {
+								url := cmd[1]
+								if url == "" {
+									session.ChannelMessageSend(channelID, "You must specify a URL.")
+									return
+								}
+								err := playSound(session, g.ID, vs.ChannelID, channelID, url)
+								if err != nil {
+									debugLog("Error playing sound: " + fmt.Sprintf("%v", err))
+									session.ChannelMessageSend(channelID, "Error playing sound.")
+									return
+								}
 							}
 						}
 					}
@@ -671,13 +682,18 @@ func channelDetails(channelID string, s *discordgo.Session) (*discordgo.Channel,
 	return channelInGuild, nil
 }
 
-func clearVoiceSession(i int) {
+func clearVoiceSession(i int, guildID string) {
 	voiceConnections[len(voiceConnections) - 1], voiceConnections[i] = voiceConnections[i], voiceConnections[len(voiceConnections) - 1]
-	voiceConnections = voiceConnections[:len(voiceConnections) - 1]			
+	voiceConnections = voiceConnections[:len(voiceConnections) - 1]		
 	encodingSessions[len(encodingSessions) - 1], encodingSessions[i] = encodingSessions[i], encodingSessions[len(encodingSessions) - 1]
-	encodingSessions = encodingSessions[:len(encodingSessions) - 1]			
+	encodingSessions = encodingSessions[:len(encodingSessions) - 1]		
 	streams[len(streams) - 1], streams[i] = streams[i], streams[len(streams) - 1]
-	streams = streams[:len(streams) - 1]
+	streams = streams[:len(streams) - 1]				
+	playbackRunning[len(playbackRunning) - 1], playbackRunning[i] = playbackRunning[i], playbackRunning[len(playbackRunning) - 1]
+	playbackRunning = playbackRunning[:len(playbackRunning) - 1]
+	playbackStopped[len(playbackStopped) - 1], playbackStopped[i] = playbackStopped[i], playbackStopped[len(playbackStopped) - 1]
+	playbackStopped = playbackStopped[:len(playbackStopped) - 1]
+	queue[guildID] = nil
 }
 
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {
@@ -687,7 +703,7 @@ func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 			playbackRunning[i] = false
 			voiceConnectionRow.Disconnect()
 			
-			clearVoiceSession(i)
+			clearVoiceSession(i, guildID)
 			
 			return
 		}
@@ -699,6 +715,7 @@ func stopSound(guildID, channelID string) {
 		if voiceConnectionRow.ChannelID == channelID {
 			debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
 			playbackRunning[i] = false
+			playbackStopped[i] = true
 			return
 		}
 	}
@@ -708,7 +725,8 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var voiceConnection *discordgo.VoiceConnection = nil
 	var encodingSession *dca.EncodeSession = nil
 	var stream *dca.StreamingSession = nil
-	var isPlaybackRunning = false
+	var isPlaybackRunning bool = false
+	var wasStopped bool = false
 	var index int = -1
 	var newRows bool = true
 	for i, voiceConnectionRow := range voiceConnections {
@@ -718,6 +736,8 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			encodingSession = encodingSessions[i]
 			stream = streams[i]
 			isPlaybackRunning = playbackRunning[i]
+			wasStopped = playbackStopped[i]
+			debugLog(fmt.Sprintf("%v:%v", isPlaybackRunning, playbackRunning[i]))
 			index = i
 			newRows = false
 			break
@@ -746,6 +766,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			return
 		} else {
 			debugLog("Continuing with playback")
+			if url == "" {
+				debugLog("Queued URL found in guild queue, fetching URL...")
+				url = queue[guildID][0]
+				debugLog("Removing queued URL from guild queue...")
+				queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
+				queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+				debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
+				debugLog("Playing URL [" + url + "] from guild queue...")
+				playSound(s, guildID, channelID, callerChannelID, url)
+			}
 		}
 	} else {
 		debugLog("Initializing guild queue...")
@@ -838,6 +868,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		encodingSessions = append(encodingSessions, encodingSession)
 		streams = append(streams, stream)
 		playbackRunning = append(playbackRunning, true)
+		playbackStopped = append(playbackStopped, false)
 		index = len(playbackRunning) - 1
 	}
 	isPlaybackRunning = true
@@ -891,14 +922,18 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		debugLog("Guild queue empty, leaving voice channel...")
 		voiceLeave(s, guildID, channelID)
 	} else {
-		debugLog("Queued URL found in guild queue, fetching URL...")
-		url = queue[guildID][0]
-		debugLog("Removing queued URL from guild queue...")
-		queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
-		queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
-		debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
-		debugLog("Playing URL [" + url + "] from guild queue...")
-		playSound(s, guildID, channelID, callerChannelID, url)
+		if wasStopped == false {
+			debugLog("Queued URL found in guild queue, fetching URL...")
+			url = queue[guildID][0]
+			debugLog("Removing queued URL from guild queue...")
+			queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
+			queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+			debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
+			debugLog("Playing URL [" + url + "] from guild queue...")
+			playSound(s, guildID, channelID, callerChannelID, url)
+		} else {
+			debugLog("Was told to stop, staying...")
+		}
 	}
 	
 	return nil
