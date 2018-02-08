@@ -28,6 +28,25 @@ type message struct {
     ID  string
     ChannelID string   
 }
+type GuildQueue struct {
+	Queue []Queue
+}
+type Queue struct {
+	Name string
+	Author string
+	Duration int
+	ImageURL string
+	ThumbnailURL string
+	Requester string
+	URL string
+}
+type VoiceData struct {
+	VoiceConnection *discordgo.VoiceConnection
+	EncodingSession *dca.EncodeSession
+	Stream *dca.StreamingSession
+	IsPlaybackRunning bool
+	WasPlaybackStoppedManually bool
+}
 
 var (
 	conf = configure.New()
@@ -52,12 +71,17 @@ var (
 	guildCount int
 	guilds = make(map[string] string)
 	
+	/*
 	voiceConnections []*discordgo.VoiceConnection
 	encodingSessions []*dca.EncodeSession
 	streams []*dca.StreamingSession
 	playbackRunning []bool
 	playbackStopped []bool
 	queue = make(map[string] []string)
+	*/
+	
+	queue = make(map[string] *GuildQueue)
+	voiceData = make(map[string] *VoiceData)
 	
 	messages = make(map[string]chan message)
 	responses = make(map[string] string)
@@ -136,12 +160,10 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
-	if len(voiceConnections) > 0 {
-		debugLog("> Closing any active voice connections...")
-		for _, voiceConnectionRow := range voiceConnections {
-			voiceConnectionRow.Close()
-		}
+	
+	debugLog("> Closing any active voice connections...")
+	for _, voiceDataRow := range voiceData {
+		voiceDataRow.VoiceConnection.Close()
 	}
 	
 	fmt.Println("> Closing Discord session...")
@@ -698,29 +720,20 @@ func channelDetails(channelID string, s *discordgo.Session) (*discordgo.Channel,
 	return channelInGuild, nil
 }
 
-func clearVoiceSession(i int, guildID string) {
-	voiceConnections[len(voiceConnections) - 1], voiceConnections[i] = voiceConnections[i], voiceConnections[len(voiceConnections) - 1]
-	voiceConnections = voiceConnections[:len(voiceConnections) - 1]		
-	encodingSessions[len(encodingSessions) - 1], encodingSessions[i] = encodingSessions[i], encodingSessions[len(encodingSessions) - 1]
-	encodingSessions = encodingSessions[:len(encodingSessions) - 1]		
-	streams[len(streams) - 1], streams[i] = streams[i], streams[len(streams) - 1]
-	streams = streams[:len(streams) - 1]				
-	playbackRunning[len(playbackRunning) - 1], playbackRunning[i] = playbackRunning[i], playbackRunning[len(playbackRunning) - 1]
-	playbackRunning = playbackRunning[:len(playbackRunning) - 1]
-	playbackStopped[len(playbackStopped) - 1], playbackStopped[i] = playbackStopped[i], playbackStopped[len(playbackStopped) - 1]
-	playbackStopped = playbackStopped[:len(playbackStopped) - 1]
+func clearVoiceSession(guildID string) {
 	queue[guildID] = nil
+	voiceData[guildID] = nil
 }
 
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {
-	for i, voiceConnectionRow := range voiceConnections {
-		if voiceConnectionRow.ChannelID == channelID {
+	for _, voiceDataRow := range voiceData {
+		if voiceDataRow.VoiceConnection.ChannelID == channelID {
 			debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
-			playbackRunning[i] = false
-			playbackStopped[i] = true
-			voiceConnectionRow.Disconnect()
+			voiceDataRow.IsPlaybackRunning = false
+			voiceDataRow.WasPlaybackStoppedManually = false
+			voiceDataRow.VoiceConnection.Disconnect()
 			
-			clearVoiceSession(i, guildID)
+			clearVoiceSession(guildID)
 			
 			return
 		}
@@ -728,11 +741,12 @@ func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 }
 
 func stopSound(guildID, channelID string) {
-	for i, voiceConnectionRow := range voiceConnections {
-		if voiceConnectionRow.ChannelID == channelID {
+	for _, voiceDataRow := range voiceData {
+		if voiceDataRow.VoiceConnection.ChannelID == channelID {
 			debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-			playbackRunning[i] = false
-			playbackStopped[i] = true
+			voiceDataRow.IsPlaybackRunning = false
+			voiceDataRow.WasPlaybackStoppedManually = true
+			
 			return
 		}
 	}
@@ -743,18 +757,15 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var encodingSession *dca.EncodeSession = nil
 	var stream *dca.StreamingSession = nil
 	var isPlaybackRunning bool = false
-	var index int = -1
-	var newRows bool = true
-	for i, voiceConnectionRow := range voiceConnections {
-		if voiceConnectionRow.ChannelID == channelID {
+	var newEntry bool = true
+	for _, voiceDataRow := range voiceData {
+		if voiceDataRow.VoiceConnection.ChannelID == channelID {
 			debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
-			voiceConnection = voiceConnections[i]
-			encodingSession = encodingSessions[i]
-			stream = streams[i]
-			isPlaybackRunning = playbackRunning[i]
-			debugLog(fmt.Sprintf("%v:%v", isPlaybackRunning, playbackRunning[i]))
-			index = i
-			newRows = false
+			voiceConnection = voiceDataRow.VoiceConnection
+			encodingSession = voiceDataRow.EncodingSession
+			stream = voiceDataRow.Stream
+			isPlaybackRunning = voiceDataRow.IsPlaybackRunning
+			newEntry = false
 			break
 		}
 	}
@@ -769,24 +780,57 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		}
 	}
 	
-	guildQueue, ok := queue[guildID]
+	_, ok := queue[guildID]
 	if ok {
 		debugLog("Guild queue previously initialized")
 		if isPlaybackRunning {
 			debugLog("Playback in progress, appending to guild queue...")
-			guildQueue = append(guildQueue, url)
-			queue[guildID] = guildQueue
+			
+			title := ""
+			author := ""
+			imageURL := ""
+			thumbnailURL := ""
+			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
+			if regexpHasYouTube {
+				videoInfo, err := ytdl.GetVideoInfo(url)
+				if err != nil {
+					return err
+				}
+				title = videoInfo.Title
+				author = videoInfo.Author
+				imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
+				thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+				
+				format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
+				_, err = videoInfo.GetDownloadURL(format)
+				if err != nil {
+					return err
+				}
+			}
+			
+			newEntry := &Queue{Name:title, Author:author, ImageURL:imageURL, ThumbnailURL:thumbnailURL, URL:url}
+			queue[guildID].Queue = append(queue[guildID].Queue, *newEntry)
 			debugLog(fmt.Sprintf("%v", queue))
-			s.ChannelMessageSend(callerChannelID, "Added ``" + url + "`` to the queue.")
+			if regexpHasYouTube {
+				embed := NewEmbed().
+					SetTitle("Added to Queue").
+					AddField(title, author).
+					//SetImage(imageURL).
+					SetThumbnail(thumbnailURL).
+					SetColor(0xff0000).MessageEmbed
+				s.ChannelMessageSendEmbed(callerChannelID, embed)
+			} else {
+				s.ChannelMessageSend(callerChannelID, "Added ``" + title + "`` to the queue.")
+			}
 			return
 		} else {
 			debugLog("Continuing with playback")
 			if url == "" {
 				debugLog("Queued URL found in guild queue, fetching URL...")
-				url = queue[guildID][0]
+				url = queue[guildID].Queue[0].URL
 				debugLog("Removing queued URL from guild queue...")
-				queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
-				queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+				queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
+				queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
 				debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
 				debugLog("Playing URL [" + url + "] from guild queue...")
 				playSound(s, guildID, channelID, callerChannelID, url)
@@ -794,19 +838,9 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		}
 	} else {
 		debugLog("Initializing guild queue...")
-		guildQueue = []string{}
-		queue[guildID] = guildQueue
+		queue[guildID] = &GuildQueue{}
 		debugLog(fmt.Sprintf("%v", queue))
-		if isPlaybackRunning { // Theoretically this will never be reached
-			debugLog("Playback in progress, appending to guild queue...")
-			guildQueue = append(guildQueue, url)
-			queue[guildID] = guildQueue
-			debugLog(fmt.Sprintf("%v", queue))
-			s.ChannelMessageSend(callerChannelID, "Added ``" + url + "`` to the queue.")
-			return
-		} else {
-			debugLog("Continuing with playback")
-		}
+		debugLog("Continuing with playback")
 	}
 
 	debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
@@ -877,26 +911,20 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	done := make(chan error)
 	stream = dca.NewStream(encodingSession, voiceConnection, done)
 	
-	if newRows {
+	if newEntry {
 		debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
-		voiceConnections = append(voiceConnections, voiceConnection)
-		encodingSessions = append(encodingSessions, encodingSession)
-		streams = append(streams, stream)
-		playbackRunning = append(playbackRunning, true)
-		playbackStopped = append(playbackStopped, false)
-		index = len(playbackRunning) - 1
+		voiceData[guildID] = &VoiceData{VoiceConnection:voiceConnection, EncodingSession:encodingSession, Stream:stream, IsPlaybackRunning:true, WasPlaybackStoppedManually:false}
 	}
 	isPlaybackRunning = true
-	playbackRunning[index] = true
 	
 	ticker := time.NewTicker(time.Second)
 	
-	for playbackRunning[index] {
+	for voiceData[guildID].IsPlaybackRunning {
 		select {
 			case err := <- done:
 				if err != nil {
 					fmt.Println("Playback finished")
-					playbackRunning[index] = false
+					voiceData[guildID].IsPlaybackRunning = false
 					break
 				} else {
 					fmt.Println("Playback not finished")
@@ -933,16 +961,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	isPlaybackRunning = false
 	ticker.Stop()
 	
-	if len(queue[guildID]) == 0 {
+	if len(queue[guildID].Queue) == 0 {
 		debugLog("Guild queue empty, leaving voice channel...")
 		voiceLeave(s, guildID, channelID)
 	} else {
-		if playbackStopped[index] == false {
+		if voiceData[guildID].WasPlaybackStoppedManually == false {
 			debugLog("Queued URL found in guild queue, fetching URL...")
-			url = queue[guildID][0]
+			url = queue[guildID].Queue[0].URL
 			debugLog("Removing queued URL from guild queue...")
-			queue[guildID][len(queue[guildID]) - 1], queue[guildID][0] = queue[guildID][0], queue[guildID][len(queue[guildID]) - 1]
-			queue[guildID] = queue[guildID][:len(queue[guildID]) - 1]
+			queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
+			queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
 			debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
 			debugLog("Playing URL [" + url + "] from guild queue...")
 			playSound(s, guildID, channelID, callerChannelID, url)
@@ -955,14 +983,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 }
 
 func viewQueue(session *discordgo.Session, guildID, channelID string) {
-	guildQueue := queue[guildID]
+	guildQueue := queue[guildID].Queue
 	if len(guildQueue) > 0 {
 		queueList := ""
-		for i, queueRow := range guildQueue {
+		count := 0
+		for _, queueRow := range guildQueue {
+			count += 1
 			if queueList == "" {
-				queueList = "``" + strconv.Itoa(i + 1) + ".`` " + queueRow
+				queueList = "``" + strconv.Itoa(count) + ".`` " + queueRow.URL
 			} else {
-				queueList = queueList + "\n``" + strconv.Itoa(i + 1) + ".`` " + queueRow
+				queueList = queueList + "\n``" + strconv.Itoa(count) + ".`` " + queueRow.URL
 			}
 		}
 		guildDetails, _ := guildDetails(channelID, session)
