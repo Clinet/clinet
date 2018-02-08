@@ -549,7 +549,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
 	queryResultObject, err := wolframClient.GetQueryResult(query, nil)
 	if err != nil {
-		debugLog(fmt.Sprintf("Error getting query result: %v", err))
+		debugLog(fmt.Sprintf("[Wolfram|Alpha] Error getting query result: %v", err))
 		return true
 	}
 	
@@ -557,68 +557,87 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 	pods := queryResult.Pods
 	
 	if len(pods) < 1 {
-		debugLog("Error getting pods from query")
+		debugLog("[Wolfram|Alpha] Error getting pods from query")
 		return true
 	}
 
 	fields := []*discordgo.MessageEmbedField{}
+	embedImage := ""
 	
-	for _, pod := range pods {
+	for podN, pod := range pods {
 		podTitle := pod.Title
 		switch podTitle {
 			case "Locations":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "Nearby locations":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "Local map":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "Inferred local map":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "Inferred nearest city center":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "IP address":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 			case "IP address registrant":
-				debugLog("Denied pod: " + podTitle)
+				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
 				continue
 		}
 		
 		subPods := pod.SubPods
 		if len(subPods) > 0 {
-			for _, subPod := range subPods {
+			debugLog("[Wolfram|Alpha] Pod #" + strconv.Itoa(podN + 1))
+			for subPodN, subPod := range subPods {
+				debugLog("[Wolfram|Alpha] Sub Pod #" + strconv.Itoa(subPodN + 1))
+
 				plaintext := subPod.Plaintext
+				imageSRC := subPod.Image.Src
 				if plaintext != "" {
 					// Make nicer for Discord
 					plaintext = strings.Replace(plaintext, "Wolfram|Alpha", botName, -1)
 					plaintext = strings.Replace(plaintext, "Wolfram Alpha", botName, -1)
 					plaintext = strings.Replace(plaintext, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
 
+					debugLog("Pod Title: " + podTitle)
+					debugLog("Plaintext: " + plaintext)
 					fields = append(fields, &discordgo.MessageEmbedField{Name:podTitle, Value:plaintext})
+				}
+				if imageSRC != "" && embedImage == "" && podTitle != "Input" && podTitle != "Input interpretation" {
+					debugLog("Image SRC: " + imageSRC)
+					embedImage = imageSRC
 				}
 			}
 		}
 	}
 	
-	if len(fields) == 0 {
-		debugLog("Error getting legal data from available pods")
-		return true
-	}
-	
 	resultEmbed := NewEmbed().
 		SetColor(0xda0e1a).MessageEmbed
-	resultEmbed.Fields = fields
+	
+	if len(fields) == 0 {
+		if embedImage != "" {
+			resultEmbed.Image = &discordgo.MessageEmbedImage{URL:embedImage}
+		} else {
+			debugLog("[Wolfram|Alpha] Error getting legal data from available pods")
+			return true
+		}
+	} else {
+		resultEmbed.Fields = fields
+		if embedImage != "" {
+			resultEmbed.Image = &discordgo.MessageEmbedImage{URL:embedImage}
+		}
+	}
 	message, err := session.ChannelMessageSendEmbed(channelID, resultEmbed)
 	if err == nil {
 		responses[messageID] = message.ID
 		session.MessageReactionAdd(channelID, messageID, "\u2705")
 	} else {
-		debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+		debugLog("[Wolfram|Alpha] Error sending message in [" + guildID + ":" + channelID + "]")
 		return true
 	}
 	return false
@@ -627,7 +646,7 @@ func queryWolfram(channelID string, session *discordgo.Session, query string, me
 func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
 	queryResult, err := ddgClient.GetQueryResult(query)
 	if err != nil {
-		debugLog(fmt.Sprintf("Error getting query result: %v", err))
+		debugLog(fmt.Sprintf("[DuckDuckGo] Error getting query result: %v", err))
 		return true
 	}
 	
@@ -640,7 +659,7 @@ func queryDDG(channelID string, session *discordgo.Session, query string, messag
 		result = queryResult.AbstractText
 	}
 	if result == "" {
-		debugLog("Error getting query result from response")
+		debugLog("[DuckDuckGo] Error getting query result from response")
 		return true
 	}
 
@@ -656,7 +675,7 @@ func queryDDG(channelID string, session *discordgo.Session, query string, messag
 		responses[messageID] = message.ID
 		session.MessageReactionAdd(channelID, messageID, "\u2705")
 	} else {
-		debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
+		debugLog("[DuckDuckGo] Error sending message in [" + guildID + ":" + channelID + "]")
 		return true
 	}
 	return false
