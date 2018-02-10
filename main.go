@@ -866,14 +866,16 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var isPlaybackRunning bool = false
 	var newEntry bool = true
 	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection.ChannelID == channelID {
-			debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
-			voiceConnection = voiceDataRow.VoiceConnection
-			encodingSession = voiceDataRow.EncodingSession
-			stream = voiceDataRow.Stream
-			isPlaybackRunning = voiceDataRow.IsPlaybackRunning
-			newEntry = false
-			break
+		if voiceDataRow.VoiceConnection != nil {
+			if voiceDataRow.VoiceConnection.ChannelID == channelID {
+				debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
+				voiceConnection = voiceDataRow.VoiceConnection
+				encodingSession = voiceDataRow.EncodingSession
+				stream = voiceDataRow.Stream
+				isPlaybackRunning = voiceDataRow.IsPlaybackRunning
+				newEntry = false
+				break
+			}
 		}
 	}
 
