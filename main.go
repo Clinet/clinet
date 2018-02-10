@@ -22,6 +22,8 @@ import (
 	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
 	"github.com/nishanths/go-xkcd" // Allows the fetching of XKCD comics
 	"github.com/JoshuaDoes/duckduckgolang" // Allows the usage of the DuckDuckGo API
+	"github.com/koffeinsource/go-imgur" // Allows usage of the Imgur API
+	"github.com/koffeinsource/go-klogger" // For some reason, this is required for go-imgur's logging
 )
 
 type message struct {
@@ -56,6 +58,7 @@ var (
 	confWolframAppID = conf.String("wolframAppID", "", "Wolfram App ID")
 	confDuckDuckGoAppName = conf.String("ddgAppName", "", "DuckDuckGo App Name")
 	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
+	confImgurClientID = conf.String("imgurClientID", "", "Imgur Client ID")
 	confDebugMode = conf.Bool("debugMode", false, "Debug Mode")
 	botToken string = ""
 	botName string = ""
@@ -63,10 +66,12 @@ var (
 	wolframAppID string = ""
 	ddgAppName string = ""
 	youtubeAPIKey string = ""
+	imgurClientID string = ""
 	debugMode bool = false
 	
 	wolframClient *wolfram.Client
 	ddgClient *duckduckgo.Client
+	imgurClient imgur.Client
 	
 	guildCount int
 	guilds = make(map[string] string)
@@ -109,8 +114,9 @@ func main() {
 	wolframAppID = *confWolframAppID
 	ddgAppName = *confDuckDuckGoAppName
 	youtubeAPIKey = *confYouTubeAPIKey
+	imgurClientID = *confImgurClientID
 	debugMode = *confDebugMode
-	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "") {
+	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "" || imgurClientID == "") {
 		fmt.Println("> Configuration not properly setup, exiting...")
 		return
 	} else {
@@ -121,6 +127,7 @@ func main() {
 		debugLog("wolframAppID: " + wolframAppID)
 		debugLog("ddgAppName: " + ddgAppName)
 		debugLog("youtubeAPIKey: " + youtubeAPIKey)
+		debugLog("imgurClientID: " + imgurClientID)
 		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
 	}
 	
@@ -154,6 +161,11 @@ func main() {
 	
 	fmt.Println("> Initializing DuckDuckGo...")
 	ddgClient = &duckduckgo.Client{AppName:ddgAppName}
+	
+	fmt.Println("> Initializing Imgur...")
+	imgurClient.HTTPClient = &http.Client{}
+	imgurClient.Log = &klogger.CLILogger{}
+	imgurClient.ImgurClientID = imgurClientID
 
 	fmt.Println("> " + botName + " has started successfully.")
 
@@ -304,6 +316,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					AddField(botPrefix + "doubleroll", "Rolls two die.").
 					AddField(botPrefix + "coinflip", "Flips a coin.").
 					AddField(botPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
+					AddField(botPrefix + "imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
 					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
 					AddField(botPrefix + "stop", "Stops the currently playing audio.").
@@ -322,6 +335,15 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
 					SetColor(0x1c1c1c).MessageEmbed
 				session.ChannelMessageSendEmbed(channelID, aboutEmbed)
+			case "imgur":
+				if len(cmd) > 1 {
+					iErr := queryImgur(session, channelID, guildDetails.ID, cmd[1])
+					if iErr {
+						session.ChannelMessageSend(channelID, "Error finding info about the specified URL on Imgur.")
+					}
+				} else {
+					session.ChannelMessageSend(channelID, "You must specify an Imgur URL to query Imgur.")
+				}
 			case "xkcd":
 				if len(cmd) > 1 {
 					switch cmd[1] {
@@ -700,6 +722,91 @@ func queryDDG(channelID string, session *discordgo.Session, query string, messag
 	return false
 }
 
+func queryImgur(session *discordgo.Session, channelID, guildID, url string) (bool) {
+	imgurInfo, _, err := imgurClient.GetInfoFromURL(url)
+	if err != nil {
+		debugLog("[Imgur] Error getting info from URL [" + url + "]")
+		return true
+	}
+	if imgurInfo.Image != nil {
+		debugLog("[Imgur] Detected image from URL [" + url + "]")
+		imgurImage := imgurInfo.Image
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurImage.Title).
+			SetDescription(imgurImage.Description).
+			AddField("Views", strconv.Itoa(imgurImage.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurImage.Nsfw)).
+			SetColor(0x89c623).MessageEmbed
+		_, err := session.ChannelMessageSendEmbed(channelID, imgurEmbed)
+		if err != nil {
+			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
+			return true
+		}
+	} else if imgurInfo.Album != nil {
+		debugLog("[Imgur] Detected album from URL [" + url + "]")
+		imgurAlbum := imgurInfo.Album
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurAlbum.Title).
+			SetDescription(imgurAlbum.Description).
+			AddField("Uploader", imgurAlbum.AccountURL).
+			AddField("Image Count", strconv.Itoa(imgurAlbum.ImagesCount)).
+			AddField("Views", strconv.Itoa(imgurAlbum.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurAlbum.Nsfw)).
+			SetColor(0x89c623).MessageEmbed
+		_, err = session.ChannelMessageSendEmbed(channelID, imgurEmbed)
+		if err != nil {
+			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
+			return true
+		}
+	} else if imgurInfo.GImage != nil {
+		debugLog("[Imgur] Detected gallery image from URL [" + url + "]")
+		imgurGImage := imgurInfo.GImage
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurGImage.Title).
+			SetDescription(imgurGImage.Description).
+			AddField("Topic", imgurGImage.Topic).
+			AddField("Uploader", imgurGImage.AccountURL).
+			AddField("Views", strconv.Itoa(imgurGImage.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurGImage.Nsfw)).
+			AddField("Comment Count", strconv.Itoa(imgurGImage.CommentCount)).
+			AddField("Upvotes", strconv.Itoa(imgurGImage.Ups)).
+			AddField("Downvotes", strconv.Itoa(imgurGImage.Downs)).
+			AddField("Points", strconv.Itoa(imgurGImage.Points)).
+			AddField("Score", strconv.Itoa(imgurGImage.Score)).
+			SetColor(0x89c623).MessageEmbed
+		_, err := session.ChannelMessageSendEmbed(channelID, imgurEmbed)
+		if err != nil {
+			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
+			return true
+		}
+	} else if imgurInfo.GAlbum != nil {
+		debugLog("[Imgur] Detected gallery album from URL [" + url + "]")
+		imgurGAlbum := imgurInfo.GAlbum
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurGAlbum.Title).
+			SetDescription(imgurGAlbum.Description).
+			AddField("Topic", imgurGAlbum.Topic).
+			AddField("Uploader", imgurGAlbum.AccountURL).
+			AddField("Views", strconv.Itoa(imgurGAlbum.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurGAlbum.Nsfw)).
+			AddField("Comment Count", strconv.Itoa(imgurGAlbum.CommentCount)).
+			AddField("Upvotes", strconv.Itoa(imgurGAlbum.Ups)).
+			AddField("Downvotes", strconv.Itoa(imgurGAlbum.Downs)).
+			AddField("Points", strconv.Itoa(imgurGAlbum.Points)).
+			AddField("Score", strconv.Itoa(imgurGAlbum.Score)).
+			SetColor(0x89c623).MessageEmbed
+		_, err = session.ChannelMessageSendEmbed(channelID, imgurEmbed)
+		if err != nil {
+			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
+			return true
+		}
+	} else {
+		debugLog("[Imgur] Error detecting Imgur type from URL [" + url + "]")
+		return true
+	}
+	return false
+}
+
 func guildDetails(channelID string, s *discordgo.Session) (*discordgo.Guild, error) {
 	channelInGuild, err := s.State.Channel(channelID)
 	if err != nil {
@@ -721,8 +828,8 @@ func channelDetails(channelID string, s *discordgo.Session) (*discordgo.Channel,
 }
 
 func clearVoiceSession(guildID string) {
-	queue[guildID] = nil
-	voiceData[guildID] = nil
+	queue[guildID] = &GuildQueue{}
+	voiceData[guildID] = &VoiceData{}
 }
 
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {

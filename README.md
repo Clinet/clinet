@@ -78,6 +78,7 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 | [dca](https://github.com/jonas747/dca) |
 | [ytdl](https://github.com/rylio/ytdl) |
 | [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
+| [go-imgur](https://github.com/koffeinsource/go-imgur) |
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
