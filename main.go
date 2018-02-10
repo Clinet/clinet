@@ -935,14 +935,19 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		} else {
 			debugLog("Continuing with playback")
 			if url == "" {
-				debugLog("Queued URL found in guild queue, fetching URL...")
-				url = queue[guildID].Queue[0].URL
-				debugLog("Removing queued URL from guild queue...")
-				queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
-				queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
-				debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
-				debugLog("Playing URL [" + url + "] from guild queue...")
-				playSound(s, guildID, channelID, callerChannelID, url)
+				if len(queue[guildID].Queue) > 0 {
+					debugLog("Queued URL found in guild queue, fetching URL...")
+					url = queue[guildID].Queue[0].URL
+					debugLog("Removing queued URL from guild queue...")
+					queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
+					queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
+					debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
+					debugLog("Playing URL [" + url + "] from guild queue...")
+					playSound(s, guildID, channelID, callerChannelID, url)
+				} else {
+					debugLog("No entries left in the guild queue")
+					s.ChannelMessageSend(callerChannelID, "No entries were found in the guild queue.")
+				}
 			}
 		}
 	} else {
