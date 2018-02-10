@@ -837,27 +837,31 @@ func clearVoiceSession(guildID string) {
 
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection.ChannelID == channelID {
-			debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
-			voiceDataRow.IsPlaybackRunning = false
-			voiceDataRow.WasPlaybackStoppedManually = false
-			voiceDataRow.VoiceConnection.Disconnect()
-			
-			clearVoiceSession(guildID)
-			
-			return
+		if voiceDataRow.VoiceConnection != nil {
+			if voiceDataRow.VoiceConnection.ChannelID == channelID {
+				debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
+				voiceDataRow.IsPlaybackRunning = false
+				voiceDataRow.WasPlaybackStoppedManually = false
+				voiceDataRow.VoiceConnection.Disconnect()
+				
+				clearVoiceSession(guildID)
+				
+				return
+			}
 		}
 	}
 }
 
 func stopSound(guildID, channelID string) {
 	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection.ChannelID == channelID {
-			debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-			voiceDataRow.IsPlaybackRunning = false
-			voiceDataRow.WasPlaybackStoppedManually = true
-			
-			return
+		if voiceDataRow.VoiceConnection != nil {
+			if voiceDataRow.VoiceConnection.ChannelID == channelID {
+				debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
+				voiceDataRow.IsPlaybackRunning = false
+				voiceDataRow.WasPlaybackStoppedManually = true
+				
+				return
+			}
 		}
 	}
 }
