@@ -865,7 +865,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	var encodingSession *dca.EncodeSession = nil
 	var stream *dca.StreamingSession = nil
 	var isPlaybackRunning bool = false
-	var newEntry bool = true
 	for _, voiceDataRow := range voiceData {
 		if voiceDataRow.VoiceConnection != nil {
 			if voiceDataRow.VoiceConnection.ChannelID == channelID {
@@ -874,7 +873,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				encodingSession = voiceDataRow.EncodingSession
 				stream = voiceDataRow.Stream
 				isPlaybackRunning = voiceDataRow.IsPlaybackRunning
-				newEntry = false
 				break
 			}
 		}
@@ -1027,13 +1025,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
     
 	done := make(chan error)
 	stream = dca.NewStream(encodingSession, voiceConnection, done)
-	
-	if newEntry {
-		debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
-		voiceData[guildID] = &VoiceData{VoiceConnection:voiceConnection, EncodingSession:encodingSession, Stream:stream, IsPlaybackRunning:true, WasPlaybackStoppedManually:false}
-	}
+
+	debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
+	voiceData[guildID] = &VoiceData{VoiceConnection:voiceConnection, EncodingSession:encodingSession, Stream:stream, IsPlaybackRunning:true, WasPlaybackStoppedManually:false}
 	isPlaybackRunning = true
-	
+
 	ticker := time.NewTicker(time.Second)
 	
 	for voiceData[guildID].IsPlaybackRunning {
