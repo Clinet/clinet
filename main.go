@@ -176,7 +176,9 @@ func main() {
 	
 	debugLog("> Closing any active voice connections...")
 	for _, voiceDataRow := range voiceData {
-		voiceDataRow.VoiceConnection.Close()
+		if voiceDataRow != nil {
+			voiceDataRow.VoiceConnection.Close()
+		}
 	}
 	
 	fmt.Println("> Closing Discord session...")
