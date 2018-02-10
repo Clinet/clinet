@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"regexp"
 	"math/rand"
+	"errors"
 
 	"github.com/paked/configure" // Allows configuration of the program via external sources
 	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
@@ -944,9 +945,11 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 					debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
 					debugLog("Playing URL [" + url + "] from guild queue...")
 					playSound(s, guildID, channelID, callerChannelID, url)
+					return
 				} else {
 					debugLog("No entries left in the guild queue")
 					s.ChannelMessageSend(callerChannelID, "No entries were found in the guild queue.")
+					return errors.New("Unable to find an entry in the guild queue")
 				}
 			}
 		}
