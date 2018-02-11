@@ -323,6 +323,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					AddField(botPrefix + "play (url)", "Plays the specified YouTube or direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "youtube help", "Lists available YouTube commands.").
 					AddField(botPrefix + "stop", "Stops the currently playing audio.").
+					AddField(botPrefix + "skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
 					AddField(botPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
 				session.ChannelMessageSendEmbed(channelID, helpEmbed)
@@ -432,8 +433,10 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 									return
 								}
 							}
+							return
 						}
 					}
+					session.ChannelMessageSend(channelID, "Error finding voice channel to play audio in.")
 				}()
 			case "stop":
 				go func() {
@@ -445,6 +448,16 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 						}
 					}
 					session.ChannelMessageSend(channelID, "Error finding voice channel to stop audio playback in.")
+				}()
+			case "skip":
+				go func() {
+					for _, vs := range g.VoiceStates {
+						if vs.UserID == authorID {
+							skipSound(session, g.ID, vs.ChannelID, channelID)
+							return
+						}
+					}
+					session.ChannelMessageSend(channelID, "Error finding voice channel to skip to the next audio in.")
 				}()
 			case "leave":
 				go func() {
@@ -856,19 +869,34 @@ func stopSound(guildID, channelID string) {
 	for _, voiceDataRow := range voiceData {
 		if voiceDataRow.VoiceConnection != nil {
 			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-				voiceDataRow.WasPlaybackStoppedManually = true
-				voiceDataRow.IsPlaybackRunning = false
+				debugLog("> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
 				
-				debugLog("1T> Cleaning up encoding session...")
+				debugLog("> Cleaning up encoding session...")
 				voiceDataRow.EncodingSession.Stop()
 				voiceDataRow.EncodingSession.Cleanup()
 				voiceDataRow.EncodingSession.Truncate()
 		
-				debugLog("1U> Setting speaking to false in voice channel [" + voiceDataRow.VoiceConnection.GuildID + ":" + voiceDataRow.VoiceConnection.ChannelID + "]...")
+				debugLog("> Setting speaking to false in voice channel [" + voiceDataRow.VoiceConnection.GuildID + ":" + voiceDataRow.VoiceConnection.ChannelID + "]...")
 				voiceDataRow.VoiceConnection.Speaking(false)
 				
+				debugLog("> Setting WasPlaybackStoppedManually to true and IsPlaybackRunning to false...")
+				voiceDataRow.WasPlaybackStoppedManually = true
+				voiceDataRow.IsPlaybackRunning = false
+				
 				return
+			}
+		}
+	}
+}
+
+func skipSound(s *discordgo.Session, guildID, channelID, callerChannelID string) {
+	for _, voiceDataRow := range voiceData {
+		if voiceDataRow.VoiceConnection != nil {
+			if voiceDataRow.VoiceConnection.ChannelID == channelID {
+				debugLog("> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
+				stopSound(guildID, channelID)
+				debugLog("> Attempting to play next sound on voice channel [" + guildID + ":" + channelID + "]...")
+				playSound(s, guildID, channelID, callerChannelID, "")
 			}
 		}
 	}
