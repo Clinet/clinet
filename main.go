@@ -857,8 +857,16 @@ func stopSound(guildID, channelID string) {
 		if voiceDataRow.VoiceConnection != nil {
 			if voiceDataRow.VoiceConnection.ChannelID == channelID {
 				debugLog("A> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-				voiceDataRow.IsPlaybackRunning = false
 				voiceDataRow.WasPlaybackStoppedManually = true
+				voiceDataRow.IsPlaybackRunning = false
+				
+				debugLog("1T> Cleaning up encoding session...")
+				voiceDataRow.EncodingSession.Stop()
+				voiceDataRow.EncodingSession.Cleanup()
+				voiceDataRow.EncodingSession.Truncate()
+		
+				debugLog("1U> Setting speaking to false in voice channel [" + voiceDataRow.VoiceConnection.GuildID + ":" + voiceDataRow.VoiceConnection.ChannelID + "]...")
+				voiceDataRow.VoiceConnection.Speaking(false)
 				
 				return
 			}
@@ -1069,22 +1077,23 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		}
 	}
 	
-	debugLog("1T> Cleaning up encoding session...")
-	encodingSession.Stop()
-	encodingSession.Cleanup()
-	encodingSession.Truncate()
-    
-	debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-	voiceConnection.Speaking(false)
-	
-	isPlaybackRunning = false
 	ticker.Stop()
 	
-	if len(queue[guildID].Queue) == 0 {
-		debugLog("Guild queue empty, leaving voice channel...")
-		voiceLeave(s, guildID, channelID)
-	} else {
-		if voiceData[guildID].WasPlaybackStoppedManually == false {
+	if voiceData[guildID].WasPlaybackStoppedManually == false {
+		debugLog("1T> Cleaning up encoding session...")
+		encodingSession.Stop()
+		encodingSession.Cleanup()
+		encodingSession.Truncate()
+		
+		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
+		voiceConnection.Speaking(false)
+		
+		isPlaybackRunning = false
+		
+		if len(queue[guildID].Queue) == 0 {
+			debugLog("Guild queue empty, leaving voice channel...")
+			voiceLeave(s, guildID, channelID)
+		} else {
 			debugLog("Queued URL found in guild queue, fetching URL...")
 			url = queue[guildID].Queue[0].URL
 			debugLog("Removing queued URL from guild queue...")
@@ -1093,8 +1102,6 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
 			debugLog("Playing URL [" + url + "] from guild queue...")
 			playSound(s, guildID, channelID, callerChannelID, url)
-		} else {
-			debugLog("Was told to stop, staying...")
 		}
 	}
 	
