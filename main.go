@@ -948,12 +948,13 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				embed := NewEmbed().
 					SetTitle("Added to Queue").
 					AddField(title, author).
+					AddField("Duration", duration).
 					//SetImage(imageURL).
 					SetThumbnail(thumbnailURL).
 					SetColor(0xff0000).MessageEmbed
 				s.ChannelMessageSendEmbed(callerChannelID, embed)
 			} else {
-				s.ChannelMessageSend(callerChannelID, "Added ``" + title + "`` to the queue.")
+				s.ChannelMessageSend(callerChannelID, "Added ``" + url + "`` to the queue.")
 			}
 			return
 		} else {
