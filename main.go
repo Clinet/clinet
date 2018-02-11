@@ -323,6 +323,8 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 					AddField(botPrefix + "play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 					AddField(botPrefix + "stop", "Stops the currently playing audio.").
 					AddField(botPrefix + "skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
+					AddField(botPrefix + "queue", "Lists all entries in the queue.").
+					AddField(botPrefix + "clear", "Clears the current queue.").
 					AddField(botPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
 				session.ChannelMessageSendEmbed(channelID, helpEmbed)
@@ -518,6 +520,8 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				}()
 			case "queue":
 				viewQueue(session, g.ID, channelID)
+			case "clear":
+				clearQueue(session, g.ID, channelID, true)
 			case "roll":
 				random := rand.Intn(6) + 1
 				session.ChannelMessageSend(channelID, "You rolled a " + strconv.Itoa(random) + "!")
@@ -825,20 +829,26 @@ func channelDetails(channelID string, s *discordgo.Session) (*discordgo.Channel,
 }
 
 func clearVoiceSession(guildID string) {
-	queue[guildID] = &GuildQueue{}
 	voiceData[guildID] = &VoiceData{}
+}
+
+func clearQueue(s *discordgo.Session, guildID, channelID string, wasClearedManually bool) {
+	queue[guildID] = &GuildQueue{}
+	if wasClearedManually {
+		s.ChannelMessageSend(channelID, "Cleared the guild queue.")
+	}
 }
 
 func voiceLeave(s *discordgo.Session, guildID, channelID string) {
 	for _, voiceDataRow := range voiceData {
 		if voiceDataRow.VoiceConnection != nil {
 			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				debugLog("A> Leaving voice channel [" + guildID + ":" + channelID + "]...")
-				voiceDataRow.IsPlaybackRunning = false
-				voiceDataRow.WasPlaybackStoppedManually = false
+				stopSound(guildID, channelID)
+				debugLog("> Leaving voice channel [" + guildID + ":" + channelID + "]...")
 				voiceDataRow.VoiceConnection.Disconnect()
 				
 				clearVoiceSession(guildID)
+				clearQueue(s, guildID, channelID, false)
 				
 				return
 			}
