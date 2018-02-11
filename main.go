@@ -1,18 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	//"io"
+	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
-	"strings"
-	"strconv"
-	"net/http"
-	"regexp"
-	"math/rand"
-	"errors"
 
 	"github.com/paked/configure" // Allows configuration of the program via external sources
 	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
