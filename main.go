@@ -37,7 +37,7 @@ type GuildQueue struct {
 type Queue struct {
 	Name string
 	Author string
-	Duration int
+	Duration string
 	ImageURL string
 	ThumbnailURL string
 	Requester string
@@ -921,6 +921,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			author := ""
 			imageURL := ""
 			thumbnailURL := ""
+			duration := ""
 			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
 			if regexpHasYouTube {
 				videoInfo, err := ytdl.GetVideoInfo(url)
@@ -931,6 +932,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				author = videoInfo.Author
 				imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
 				thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+				duration = videoInfo.Duration.String()
 				
 				format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
 				_, err = videoInfo.GetDownloadURL(format)
@@ -939,7 +941,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				}
 			}
 			
-			newEntry := &Queue{Name:title, Author:author, ImageURL:imageURL, ThumbnailURL:thumbnailURL, URL:url}
+			newEntry := &Queue{Name:title, Author:author, ImageURL:imageURL, ThumbnailURL:thumbnailURL, URL:url, Duration:duration}
 			queue[guildID].Queue = append(queue[guildID].Queue, *newEntry)
 			debugLog(fmt.Sprintf("%v", queue))
 			if regexpHasYouTube {
@@ -996,7 +998,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	author := ""
 	//imageURL := ""
 	thumbnailURL := ""
-	
+	duration := ""
 	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
 	if regexpHasYouTube {
 		videoInfo, err := ytdl.GetVideoInfo(url)
@@ -1010,6 +1012,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		author = videoInfo.Author
 		//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
 		thumbnailURL = videoInfo.GetThumbnailURL("default").String()
+		duration = videoInfo.Duration.String()
 		
 		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
 		downloadURL, err := videoInfo.GetDownloadURL(format)
@@ -1022,7 +1025,8 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 		embed := NewEmbed().
 			SetTitle(title).
 			SetDescription(author).
-			AddField("Duration", "0s").
+			AddField("Current Time", "0s").
+			AddField("Duration", duration).
 			//SetImage(imageURL).
 			SetThumbnail(thumbnailURL).
 			SetColor(0xff0000).MessageEmbed
@@ -1031,7 +1035,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	} else {
 		embed := NewEmbed().
 			AddField("URL", mediaURL).
-			AddField("Duration", "0s").
+			AddField("Current Time", "0s").
 			SetColor(0xffffff).MessageEmbed
 		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
 		embedMessageID = embedMessage.ID
@@ -1066,12 +1070,13 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 					fmt.Println("Playback not finished")
 				}
 			case <- ticker.C:
-				duration := Round(stream.PlaybackPosition(), time.Second)
+				currentTime := Round(stream.PlaybackPosition(), time.Second)
 				if regexpHasYouTube {
 					embed := NewEmbed().
 						SetTitle(title).
 						SetDescription(author).
-						AddField("Duration", duration.String()).
+						AddField("Current Time", currentTime.String()).
+						AddField("Duration", duration).
 						//SetImage(imageURL).
 						SetThumbnail(thumbnailURL).
 						SetColor(0xff0000).MessageEmbed
@@ -1079,7 +1084,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				} else {
 					embed := NewEmbed().
 						AddField("URL", mediaURL).
-						AddField("Duration", duration.String()).
+						AddField("Current Time", currentTime.String()).
 						SetColor(0xffffff).MessageEmbed
 					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
 				}
