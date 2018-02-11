@@ -1140,15 +1140,24 @@ func viewQueue(session *discordgo.Session, guildID, channelID string) {
 		count := 0
 		for _, queueRow := range guildQueue {
 			count += 1
-			if queueList == "" {
-				queueList = "``" + strconv.Itoa(count) + ".`` " + queueRow.URL
+			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", queueRow.URL)
+			if regexpHasYouTube {
+				if queueList == "" {
+					queueList = strconv.Itoa(count) + ". ``" + queueRow.Name + "`` by ``" + queueRow.Author + "``"
+				} else {
+					queueList = queueList + "\n" + strconv.Itoa(count) + ". ``" + queueRow.Name + "`` by ``" + queueRow.Author + "``"
+				}
 			} else {
-				queueList = queueList + "\n``" + strconv.Itoa(count) + ".`` " + queueRow.URL
+				if queueList == "" {
+					queueList = strconv.Itoa(count) + ". ``" + queueRow.URL + "``"
+				} else {
+					queueList = queueList + "\n" + strconv.Itoa(count) + ". ``" + queueRow.URL + "``"
+				}
 			}
 		}
 		guildDetails, _ := guildDetails(channelID, session)
 		queueEmbed := NewEmbed().
-			SetTitle("Queue for ``" + guildDetails.Name + "``").
+			SetTitle("Queue for " + guildDetails.Name).
 			SetDescription(queueList).
 			SetColor(0xfafafa).MessageEmbed
 		_, err := session.ChannelMessageSendEmbed(channelID, queueEmbed)
