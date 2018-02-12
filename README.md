@@ -94,3 +94,7 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
+
+## Donations
+All donations are appreciated and help pay for the costs of the server Clinet is officially hosted on. Even if it's not much, it helps a lot in the long run!
+You can find the donation link here: [Donation Link](https://paypal.me/JoshuaDoes)
