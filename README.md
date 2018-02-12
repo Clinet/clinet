@@ -6,11 +6,12 @@
 
 ## Using the official up-to-date version of Clinet
 
-1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server
+1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server.
     1. The 'Administrator' permission is not required. The invite link above
     will create a 'Clinet' role for the bot, and in the future some advanced
 	features may require the 'Administrator' permission.
-2. Enjoy!
+2. (Optional) Join the official [Clinet Discord server](https://discord.gg/Ns6j8n5) to get updates on the latest features and changes and also test-drive Clinet before using it on your own server.
+3. Enjoy!
 
 ## How does it work?
 
