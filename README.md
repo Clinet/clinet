@@ -10,7 +10,7 @@
     1. The 'Administrator' permission is not required. The invite link above
     will create a 'Clinet' role for the bot, and in the future some advanced
 	features may require the 'Administrator' permission.
-2. (Optional) Join the official [Clinet Discord server](https://discord.gg/Ns6j8n5) to get updates on the latest features and changes and also test-drive Clinet before using it on your own server.
+2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes and also test-drive Clinet before using it on your own server.
 3. Enjoy!
 
 ## How does it work?
