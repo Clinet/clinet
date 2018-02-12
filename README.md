@@ -28,12 +28,19 @@ text channel it was queried in.
 ## Commands
 
 ```
-cli$help - Lists available commands
-cli$play (url) - Plays the specified URL in a voice channel via YouTube-DL
-cli$stop - Stops the currently playing audio
-cli$leave - Leaves the current voice chat
-cli$youtube help - Lists available YouTube commands
-cli$youtube search (query) - Searches for the queried video and plays it in a voice channel via YouTube-DL
+cli$help - Lists available commands.
+cli$about - Displays information about Clinet and how to use it.
+cli$roll - Rolls a dice.
+cli$doubleroll - Rolls two die.
+cli$coinflip - Flips a coin.
+cli$xkcd (comic number|random|latest) - Displays an xkcd comic depending on the request type or comic number.
+cli$imgur (url) - Displays info about the specified Imgur image, album, gallery image, or gallery album.
+cli$play (url/YouTube search query) - lays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.
+cli$stop - Stops the currently playing audio.
+cli$skip - Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.
+cli$queue - Lists all entries in the queue.
+cli$clear - Clears the current queue.
+cli$leave - Leaves the current voice channel.
 ```
 
 ~~Here's a [list of supported sites](https://rg3.github.io/youtube-dl/supportedsites.html) under YouTube-DL.~~
@@ -51,8 +58,10 @@ In the below configuration template, use the following keymap:
 $BotToken$ - The bot token assigned to your bot application by Discord (string)
 $BotName$ - The name of your bot; used to detect queries (string)
 $BotPrefix$ - The prefix to use for various commands, ex. "cli$" for "cli$play" (string)
-$WolframAppID$ - The AppID for your Wolfram|Alpha account (string)
+$WolframAppID$ - The App ID for your Wolfram|Alpha account (string)
+$DuckDuckGoAppName$ - The app name to use for DuckDuckGo Instant Answer API queries (string)
 $YouTubeAPIKey$ - The API key to use for YouTube API v3 (string)
+$ImgurClientID$ - The Client ID to use for Imgur API info requests (string)
 $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 ```
 
@@ -63,7 +72,9 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 	"botName": "$BotName$",
 	"botPrefix": "$BotPrefix$",
 	"wolframAppID": "$WolframAppID",
+	"ddgAppName": "$DuckDuckGoAppName$",
 	"youtubeAPIKey": "$YouTubeAPIKey$",
+	"imgurClientID": "$ImgurClientID$",
 	"debugMode": $DebugMode$
 }
 ```
