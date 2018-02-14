@@ -26,6 +26,7 @@ import (
 	"github.com/JoshuaDoes/duckduckgolang" // Allows the usage of the DuckDuckGo API
 	"github.com/koffeinsource/go-imgur" // Allows usage of the Imgur API
 	"github.com/koffeinsource/go-klogger" // For some reason, this is required for go-imgur's logging
+	"github.com/robfig/cron" // Allows for better management of running tasks at specific intervals
 )
 
 type message struct {
@@ -82,9 +83,6 @@ var (
 	wolframClient *wolfram.Client
 	ddgClient *duckduckgo.Client
 	imgurClient imgur.Client
-	
-	guildCount int
-	guilds = make(map[string] string)
 	
 	/*
 	voiceConnections []*discordgo.VoiceConnection
@@ -174,9 +172,6 @@ func main() {
 	debugLog("> Registering MessageUpdate callback handler...")
 	dg.AddHandler(messageUpdate)
 	debugLog("> Registering GuildJoin callback handler...")
-	dg.AddHandler(guildCreate)
-	debugLog("> Registering GuildDelete callback handler...")
-	dg.AddHandler(guildDelete)
 
 	fmt.Println("> Establishing a connection to Discord...")
 	err = dg.Open()
@@ -213,43 +208,50 @@ func main() {
 	dg.Close()
 }
 
+func updateRandomStatus(s *discordgo.Session, event *discordgo.Ready, statusType int) {
+	guildCount := len(event.Guilds)
+	userCount := 0
+	roleCount := 0
+	emojiCount := 0
+	channelCount := 0
+	presenceCount := 0
+	for _, guild := range event.Guilds {
+		userCount += len(guild.Members)
+		roleCount += len(guild.Roles)
+		emojiCount += len(guild.Emojis)
+		channelCount += len(guild.Channels)
+		presenceCount += len(guild.Presences)
+	}
+	debugLog("Guild count: " + strconv.Itoa(guildCount))
+	debugLog("User count: " + strconv.Itoa(userCount))
+	debugLog("Role count: " + strconv.Itoa(roleCount))
+	debugLog("Emoji count: " + strconv.Itoa(emojiCount))
+	debugLog("Channel count: " + strconv.Itoa(channelCount))
+	debugLog("Presence count: " + strconv.Itoa(presenceCount))
+	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
+
+	if statusType == 0 { statusType = rand.Intn(6) + 1 }
+	switch statusType {
+		case 1:
+			s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " guilds!")
+		case 2:
+			s.UpdateListeningStatus("to " + strconv.Itoa(userCount) + " users!")
+		case 3:
+			s.UpdateStatus(0, "with " + strconv.Itoa(roleCount) + " roles!")
+		case 4:
+			s.UpdateListeningStatus("to " + strconv.Itoa(emojiCount) + " emojis!")
+		case 5:
+			s.UpdateListeningStatus("to " + strconv.Itoa(channelCount) + " channels!")
+		case 6:
+			s.UpdateStatus(0, "with " + strconv.Itoa(presenceCount) + " presences!")
+	}
+}
+
 func ready(s *discordgo.Session, event *discordgo.Ready) {
-	guildCount = len(s.State.Guilds)
-	debugLog("Server count: " + strconv.Itoa(guildCount))
-	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
-
-	guilds = make(map[string] string)
-
-	for _, guildRow := range s.State.Guilds {
-		guilds[guildRow.ID] = guildRow.Name
-		debugLog(guildRow.ID + ": " + guildRow.Name)
-	}
-}
-
-func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	guildCount = len(s.State.Guilds)
-	debugLog("Server count: " + strconv.Itoa(guildCount))
-	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
-
-	guilds = make(map[string] string)
-
-	for _, guildRow := range s.State.Guilds {
-		guilds[guildRow.ID] = guildRow.Name
-		debugLog(guildRow.ID + ": " + guildRow.Name)
-	}
-}
-
-func guildDelete(s *discordgo.Session, event *discordgo.GuildDelete) {
-	guildCount = len(s.State.Guilds)
-	debugLog("Server count: " + strconv.Itoa(guildCount))
-	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
-
-	guilds = make(map[string] string)
-
-	for _, guildRow := range s.State.Guilds {
-		guilds[guildRow.ID] = guildRow.Name
-		debugLog(guildRow.ID + ": " + guildRow.Name)
-	}
+	updateRandomStatus(s, event, 1)
+	cronjob := cron.New()
+	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(s, event, 0) })
+	cronjob.Start()
 }
 
 func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
