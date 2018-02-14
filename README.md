@@ -121,6 +121,7 @@ with the prefix `Clinet` and the suffix `?` in mind.**
 | [ytdl](https://github.com/rylio/ytdl) |
 | [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
 | [go-imgur](https://github.com/koffeinsource/go-imgur) |
+| [cron](https://github.com/robfig/cron) |
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
