@@ -235,13 +235,13 @@ func updateRandomStatus(s *discordgo.Session, event *discordgo.Ready, statusType
 		case 1:
 			s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " guilds!")
 		case 2:
-			s.UpdateListeningStatus("to " + strconv.Itoa(userCount) + " users!")
+			s.UpdateListeningStatus(strconv.Itoa(userCount) + " users!")
 		case 3:
 			s.UpdateStatus(0, "with " + strconv.Itoa(roleCount) + " roles!")
 		case 4:
-			s.UpdateListeningStatus("to " + strconv.Itoa(emojiCount) + " emojis!")
+			s.UpdateListeningStatus(strconv.Itoa(emojiCount) + " emojis!")
 		case 5:
-			s.UpdateListeningStatus("to " + strconv.Itoa(channelCount) + " channels!")
+			s.UpdateListeningStatus(strconv.Itoa(channelCount) + " channels!")
 		case 6:
 			s.UpdateStatus(0, "with " + strconv.Itoa(presenceCount) + " presences!")
 	}
