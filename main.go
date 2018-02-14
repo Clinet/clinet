@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -51,6 +52,14 @@ type VoiceData struct {
 	WasPlaybackStoppedManually bool
 }
 
+type CustomResponses struct {
+	CustomResponses []CustomResponse `json:"customResponses"`
+}
+type CustomResponse struct {
+	RegEx string `json:"regex"`
+	Response string `json:"response"`
+}
+
 var (
 	conf = configure.New()
 	confBotToken = conf.String("botToken", "", "Bot Token")
@@ -91,6 +100,9 @@ var (
 	
 	messages = make(map[string]chan message)
 	responses = make(map[string] string)
+	
+	configFile = "config.json"
+	customResponses = &CustomResponses{}
 )
 
 func debugLog(msg string) {
@@ -101,7 +113,7 @@ func debugLog(msg string) {
 
 func init() {
 	conf.Use(configure.NewFlag())
-	conf.Use(configure.NewJSONFromFile("config.json"))
+	conf.Use(configure.NewJSONFromFile(configFile))
 }
 
 func main() {
@@ -130,6 +142,22 @@ func main() {
 		debugLog("youtubeAPIKey: " + youtubeAPIKey)
 		debugLog("imgurClientID: " + imgurClientID)
 		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
+	}
+	
+	debugLog("> Loading extra configuration...")
+	configFileHandle, err := os.Open(configFile)
+	if err != nil {
+		debugLog("> Error loading config file")
+	} else {
+		configParser := json.NewDecoder(configFileHandle)
+		debugLog("> Loading custom responses...")
+		if err = configParser.Decode(&customResponses); err != nil {
+			debugLog("> Error finding custom responses")
+		} else {
+			for _, response := range customResponses.CustomResponses {
+				debugLog("> Found custom response:\n" + response.RegEx + " | " + response.Response)
+			}
+		}
 	}
 	
 	debugLog("> Creating a new Discord session...")
@@ -568,6 +596,24 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 				}
 				debugLog("Sanitized query: " + query)
 				
+				usedCustomResponse := false
+				if len(customResponses.CustomResponses) > 0 {
+					for _, response := range customResponses.CustomResponses {
+						regexpMatched, _ := regexp.MatchString(response.RegEx, query)
+						if regexpMatched {
+							usedCustomResponse = true
+							message, err := session.ChannelMessageSend(channelID, response.Response)
+							if err == nil {
+								responses[messageID] = message.ID
+								session.MessageReactionAdd(channelID, messageID, "\u2705")
+							} else {
+								debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
+							}
+							return
+						}
+					}
+				}
+				if usedCustomResponse { return }
 				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID)
 				if iErr {
 					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID)
