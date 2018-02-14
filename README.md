@@ -81,6 +81,35 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 }
 ```
 
+In addition, you may use RegEx to add custom responses for `Clinet` to use.
+Custom responses are checked before `Clinet` attempts to query online sources
+for answers, so you may override answers or even add your own using custom
+responses.
+
+To add custom responses to `Clinet`, you must edit your `config.json` file
+to include them, like so:
+
+```JSON
+{
+	...
+	"debugMode": true,
+	"customResponses": [
+		{
+			"regex": "(.*)what's your name(.*)",
+			"response": "My name is Clinet."
+		},
+		{
+			"regex": "(.*)who created you(.*)",
+			"response": "I was created by JoshuaDoes."
+		}
+	]
+}
+```
+
+**Note: Before custom responses are checked, the query still runs through the
+usual sanitization methods. When creating your custom responses, craft the regex
+with the prefix `Clinet` and the suffix `?` in mind.**
+
 ----
 
 ## Dependencies
