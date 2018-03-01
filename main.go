@@ -575,7 +575,7 @@ func handleMessage(session *discordgo.Session, content string, contentWithMentio
 		}
 	} else {
 		go func() {
-			regexpBotName, _ := regexp.MatchString("(.*?)" + botName + "(.*?)", content)
+			regexpBotName, _ := regexp.MatchString("(.*?)(?i)" + botName + "(.*?)", content)
 			if regexpBotName && strings.HasSuffix(content, "?") {
 				session.ChannelTyping(channelID) // Send a typing event
 				
