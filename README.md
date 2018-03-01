@@ -118,15 +118,20 @@ with the prefix `Clinet` and the suffix `?` in mind.**
 
 ## Dependencies
 
-| [configure](https://github.com/paked/configure) |
-| [DiscordGo](https://github.com/bwmarrin/discordgo) |
-| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
-| [dca](https://github.com/jonas747/dca) |
-| [ytdl](https://github.com/rylio/ytdl) |
-| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
-| [go-imgur](https://github.com/koffeinsource/go-imgur) |
-| [cron](https://github.com/robfig/cron) |
-| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) |
+| Package Name | Usage in Clinet |
+| ------------ | --------------- |
+| [configure](https://github.com/paked/configure) | Used to configure the bot with `config.json` |
+| [DiscordGo](https://github.com/bwmarrin/discordgo) | Used to allow the bot to operate on Discord |
+| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) | Used to allow the bot to query Wolfram\|Alpha with questions |
+| [dca](https://github.com/jonas747/dca) | Used to allow audio encoding/decoding to/from Discord voice channels |
+| [ytdl](https://github.com/rylio/ytdl) | Used to allow video fetching from YouTube URLs |
+| [transport](https://google.golang.org/api/googleapi/transport) | Used to make authenticated API requests to Google |
+| [youtube](https://google.golang.org/api/youtube/v3) | Used to allow metadata fetching from YouTube URLs |
+| [go-xkcd](https://github.com/nishanths/go-xkcd) | Used to allow fetching XKCD comics |
+| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) | Used to allow the bot to query DuckDuckGo with questions |
+| [go-imgur](https://github.com/koffeinsource/go-imgur) | Used to allow access to the Imgur API |
+| [cron](https://github.com/robfig/cron) | Used to allow for better management of running tasks at specific intervals |
+| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) | Used to allow metadata and audio fetching from SoundCloud URLs |
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
