@@ -27,6 +27,7 @@ import (
 	"github.com/koffeinsource/go-imgur" // Allows usage of the Imgur API
 	"github.com/koffeinsource/go-klogger" // For some reason, this is required for go-imgur's logging
 	"github.com/robfig/cron" // Allows for better management of running tasks at specific intervals
+	"github.com/JoshuaDoes/go-soundcloud" // Allows usage of the SoundCloud API
 )
 
 type message struct {
@@ -70,6 +71,8 @@ var (
 	confDuckDuckGoAppName = conf.String("ddgAppName", "", "DuckDuckGo App Name")
 	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
 	confImgurClientID = conf.String("imgurClientID", "", "Imgur Client ID")
+	confSoundCloudClientID = conf.String("soundcloudClientID", "", "SoundCloud Client ID")
+	confSoundCloudAppVersion = conf.String("soundcloudAppVersion", "", "SoundCloud App Version")
 	confDebugMode = conf.Bool("debugMode", false, "Debug Mode")
 	botToken string = ""
 	botName string = ""
@@ -78,11 +81,14 @@ var (
 	ddgAppName string = ""
 	youtubeAPIKey string = ""
 	imgurClientID string = ""
+	soundcloudClientID string = ""
+	soundcloudAppVersion string = ""
 	debugMode bool = false
 	
 	wolframClient *wolfram.Client
 	ddgClient *duckduckgo.Client
 	imgurClient imgur.Client
+	soundcloudClient *soundcloud.Client
 	
 	/*
 	voiceConnections []*discordgo.VoiceConnection
@@ -126,8 +132,10 @@ func main() {
 	ddgAppName = *confDuckDuckGoAppName
 	youtubeAPIKey = *confYouTubeAPIKey
 	imgurClientID = *confImgurClientID
+	soundcloudClientID = *confSoundCloudClientID
+	soundcloudAppVersion = *confSoundCloudAppVersion
 	debugMode = *confDebugMode
-	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "" || imgurClientID == "") {
+	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "" || imgurClientID == "" || soundcloudClientID == "" || soundcloudAppVersion == "") {
 		fmt.Println("> Configuration not properly setup, exiting...")
 		return
 	} else {
@@ -139,6 +147,7 @@ func main() {
 		debugLog("ddgAppName: " + ddgAppName)
 		debugLog("youtubeAPIKey: " + youtubeAPIKey)
 		debugLog("imgurClientID: " + imgurClientID)
+		debugLog("soundcloudClientID: " + soundcloudClientID)
 		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
 	}
 	
@@ -190,6 +199,9 @@ func main() {
 	imgurClient.HTTPClient = &http.Client{}
 	imgurClient.Log = &klogger.CLILogger{}
 	imgurClient.ImgurClientID = imgurClientID
+
+	fmt.Println("> Initializing SoundCloud...")
+	soundcloudClient = &soundcloud.Client{ClientID:soundcloudClientID,AppVersion:soundcloudAppVersion}
 
 	fmt.Println("> " + botName + " has started successfully.")
 
@@ -981,6 +993,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			thumbnailURL := ""
 			duration := ""
 			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
+			regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
 			if regexpHasYouTube {
 				videoInfo, err := ytdl.GetVideoInfo(url)
 				if err != nil {
@@ -997,6 +1010,14 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 				if err != nil {
 					return err
 				}
+			} else if regexpHasSoundCloud {
+				audioInfo, err := soundcloudClient.GetTrackInfo(url)
+				if err != nil {
+					return err
+				}
+				title = audioInfo.Title
+				author = audioInfo.Artist
+				imageURL = audioInfo.ArtURL
 			}
 			
 			newEntry := &Queue{Name:title, Author:author, ImageURL:imageURL, ThumbnailURL:thumbnailURL, URL:url, Duration:duration}
@@ -1010,6 +1031,13 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 					//SetImage(imageURL).
 					SetThumbnail(thumbnailURL).
 					SetColor(0xff0000).MessageEmbed
+				s.ChannelMessageSendEmbed(callerChannelID, embed)
+			} else if regexpHasSoundCloud {
+				embed := NewEmbed().
+					SetTitle("Added to Queue").
+					AddField(title, author).
+					SetThumbnail(imageURL).
+					SetColor(0xff7700).MessageEmbed
 				s.ChannelMessageSendEmbed(callerChannelID, embed)
 			} else {
 				s.ChannelMessageSend(callerChannelID, "Added ``" + url + "`` to the queue.")
@@ -1059,6 +1087,7 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 	thumbnailURL := ""
 	duration := ""
 	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
+	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
 	if regexpHasYouTube {
 		videoInfo, err := ytdl.GetVideoInfo(url)
 		if err != nil {
@@ -1085,12 +1114,32 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 			SetTitle(title).
 			SetDescription(author).
 			AddField("Current Time", "0s").
-			AddField("Duration", duration).
 			//SetImage(imageURL).
 			SetThumbnail(thumbnailURL).
 			SetColor(0xff0000).MessageEmbed
 		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
 		embedMessageID = embedMessage.ID
+	} else if regexpHasSoundCloud {
+			audioInfo, err := soundcloudClient.GetTrackInfo(url)
+			if err != nil {
+				return err
+			}
+
+			title = audioInfo.Title
+			author = audioInfo.Artist
+			thumbnailURL = audioInfo.ArtURL
+			mediaURL = audioInfo.DownloadURL
+
+			fmt.Println(title + ":" + author + ":" + thumbnailURL + ":" + mediaURL)
+
+			embed := NewEmbed().
+				SetTitle(title).
+				SetDescription(author).
+				AddField("Current Time", "0s").
+				SetThumbnail(thumbnailURL).
+				SetColor(0xff7700).MessageEmbed
+			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
+			embedMessageID = embedMessage.ID
 	} else {
 		embed := NewEmbed().
 			AddField("URL", mediaURL).
@@ -1139,6 +1188,14 @@ func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID 
 						//SetImage(imageURL).
 						SetThumbnail(thumbnailURL).
 						SetColor(0xff0000).MessageEmbed
+					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
+				} else if regexpHasSoundCloud {
+					embed := NewEmbed().
+						SetTitle(title).
+						SetDescription(author).
+						AddField("Current Time", currentTime.String()).
+						SetThumbnail(thumbnailURL).
+						SetColor(0xff7700).MessageEmbed
 					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
 				} else {
 					embed := NewEmbed().

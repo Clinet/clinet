@@ -37,7 +37,7 @@ cli$doubleroll - Rolls two die.
 cli$coinflip - Flips a coin.
 cli$xkcd (comic number|random|latest) - Displays an xkcd comic depending on the request type or comic number.
 cli$imgur (url) - Displays info about the specified Imgur image, album, gallery image, or gallery album.
-cli$play (url/YouTube search query) - lays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.
+cli$play (url/YouTube search query) - Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.
 cli$stop - Stops the currently playing audio.
 cli$skip - Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.
 cli$queue - Lists all entries in the queue.
@@ -64,7 +64,9 @@ $WolframAppID$ - The App ID for your Wolfram|Alpha account (string)
 $DuckDuckGoAppName$ - The app name to use for DuckDuckGo Instant Answer API queries (string)
 $YouTubeAPIKey$ - The API key to use for YouTube API v3 (string)
 $ImgurClientID$ - The Client ID to use for Imgur API info requests (string)
-$DebugMode$ - Whether or not to enable debug mode (bool, optional)
+$SoundCloudClientID$ - The Client ID to use for SoundCloud audio URL requests (string)
+$SoundCloudAppVersion$ - The App Version to use for SoundCloud audio URL requests (string)
+$DebugMode$ - Whether or not to enable debug mode (boolean, optional)
 ```
 
 **Configuration template:**
@@ -77,6 +79,8 @@ $DebugMode$ - Whether or not to enable debug mode (bool, optional)
 	"ddgAppName": "$DuckDuckGoAppName$",
 	"youtubeAPIKey": "$YouTubeAPIKey$",
 	"imgurClientID": "$ImgurClientID$",
+	"soundcloudClientID": "$SoundCloudClientID$",
+	"soundcloudAppVersion": "$SoundCloudAppVersion$",
 	"debugMode": $DebugMode$
 }
 ```
@@ -122,6 +126,7 @@ with the prefix `Clinet` and the suffix `?` in mind.**
 | [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
 | [go-imgur](https://github.com/koffeinsource/go-imgur) |
 | [cron](https://github.com/robfig/cron) |
+| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) |
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
