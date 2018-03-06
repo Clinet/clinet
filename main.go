@@ -15,212 +15,405 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/paked/configure" // Allows configuration of the program via external sources
-	"github.com/bwmarrin/discordgo" // Allows usage of the Discord API
-	"github.com/JoshuaDoes/go-wolfram" // Allows usage of the Wolfram|Alpha API
-	"github.com/jonas747/dca" // Allows the encoding/decoding of the Discord Audio format
-	"github.com/rylio/ytdl" // Allows the fetching of YouTube video metadata and download URLs
-	"google.golang.org/api/googleapi/transport" // Allows the making of authenticated API requests to Google
-	"google.golang.org/api/youtube/v3" // Allows usage of the YouTube API
-	"github.com/nishanths/go-xkcd" // Allows the fetching of XKCD comics
-	"github.com/JoshuaDoes/duckduckgolang" // Allows the usage of the DuckDuckGo API
-	"github.com/koffeinsource/go-imgur" // Allows usage of the Imgur API
-	"github.com/koffeinsource/go-klogger" // For some reason, this is required for go-imgur's logging
-	"github.com/robfig/cron" // Allows for better management of running tasks at specific intervals
-	"github.com/JoshuaDoes/go-soundcloud" // Allows usage of the SoundCloud API
+	"github.com/paked/configure" //Allows configuration of the program via external sources
+	"github.com/bwmarrin/discordgo" //Allows usage of the Discord API
+	"github.com/JoshuaDoes/go-wolfram" //Allows usage of the Wolfram|Alpha API
+	"github.com/jonas747/dca" //Allows the encoding/decoding of the Discord Audio format
+	"github.com/rylio/ytdl" //Allows the fetching of YouTube video metadata and download URLs
+	"google.golang.org/api/googleapi/transport" //Allows the making of authenticated API requests to Google
+	"google.golang.org/api/youtube/v3" //Allows usage of the YouTube API
+	"github.com/nishanths/go-xkcd" //Allows the fetching of XKCD comics
+	"github.com/JoshuaDoes/duckduckgolang" //Allows the usage of the DuckDuckGo API
+	"github.com/koffeinsource/go-imgur" //Allows usage of the Imgur API
+	"github.com/koffeinsource/go-klogger" //For some reason, this is required for go-imgur's logging
+	"github.com/robfig/cron" //Allows for better management of running tasks at specific intervals
+	"github.com/JoshuaDoes/go-soundcloud" //Allows usage of the SoundCloud API
+)
+var ( //Used during development, delete later when all imports are in use
+	_ = rand.Intn
+	_ = url.ParseRequestURI
+	_ = strconv.Itoa
+	_ = strings.Replace
+	_ = time.NewTicker
+	_ = ytdl.GetVideoInfo
+	_ = &transport.APIKey{}
+	_ = youtube.New
+	_ = xkcd.NewClient
+	_ = cron.New
 )
 
-type message struct {
-    ID  string
-    ChannelID string   
+//Bot data structs
+type BotClients struct {
+	DuckDuckGo *duckduckgo.Client
+	Imgur imgur.Client
+	SoundCloud *soundcloud.Client
+	Wolfram *wolfram.Client
 }
-type GuildQueue struct {
-	Queue []Queue
+type BotData struct {
+	BotClients BotClients
+	BotKeys BotKeys `json:"botKeys"`
+	BotName string `json:"botName"`
+	BotOptions BotOptions `json:"botOptions"`
+	BotToken string `json:"botToken"`
+	CommandPrefix string `json:"cmdPrefix"`
+	CustomResponses []CustomResponse `json:"customResponses"`
+	DebugMode bool `json:"debugMode"`
 }
-type Queue struct {
-	Name string
+type BotKeys struct {
+	DuckDuckGoAppName string `json:"ddgAppName"`
+	ImgurClientID string `json:"imgurClientID"`
+	SoundCloudAppVersion string `json:"soundcloudAppVersion"`
+	SoundCloudClientID string `json:"soundcloudClientID"`
+	WolframAppID string `json:"wolframAppID"`
+	YouTubeAPIKey string `json:"youtubeAPIKey"`
+}
+type BotOptions struct {
+	SendTypingEvent bool `json:"sendTypingEvent"`
+	UseDuckDuckGo bool `json:"useDuckDuckGo"`
+	UseImgur bool `json:"useImgur"`
+	UseSoundCloud bool `json:"useSoundCloud"`
+	UseWolframAlpha bool `json:"useWolframAlpha"`
+	UseXKCD bool `json:"useXKCD"`
+	UseYouTube bool `json:"useYouTube"`
+}
+type CustomResponse struct {
+	Expression string `json:"expression"`
+	Regexp *regexp.Regexp
+	Responses []string `json:"response"`
+}
+func (configData *BotData) PrepConfig() error {
+	// Bot config checks
+	if configData.BotName == "" {
+		return errors.New("config:{botName: \"\"}")
+	}
+	if configData.BotToken == "" {
+		return errors.New("config:{botName: \"\"}")
+	}
+	if configData.CommandPrefix == "" {
+		return errors.New("config:{cmdPrefix: \"\"}")
+	}
+
+	// Bot key checks
+	if configData.BotOptions.UseDuckDuckGo && configData.BotKeys.DuckDuckGoAppName == "" {
+		return errors.New("config:{botOptions:{useDuckDuckGo: true}} not permitted, config:{botKeys:{ddgAppName: \"\"}}")
+	}
+	if configData.BotOptions.UseImgur && configData.BotKeys.ImgurClientID == "" {
+		return errors.New("config:{botOptions:{useImgur: true}} not permitted, config:{botKeys:{imgurClientID: \"\"}}")
+	}
+	if configData.BotOptions.UseSoundCloud && configData.BotKeys.SoundCloudAppVersion == "" {
+		return errors.New("config:{botOptions:{useSoundCloud: true}} not permitted, config:{botKeys:{soundcloudAppVersion: \"\"}}")
+	}
+	if configData.BotOptions.UseSoundCloud && configData.BotKeys.SoundCloudClientID == "" {
+		return errors.New("config:{botOptions:{useSoundCloud: true}} not permitted, config:{botKeys:{soundcloudClientID: \"\"}}")
+	}
+	if configData.BotOptions.UseWolframAlpha && configData.BotKeys.WolframAppID == "" {
+		return errors.New("config:{botOptions:{useWolframAlpha: true}} not permitted, config:{botKeys:{wolframAppID: \"\"}}")
+	}
+	if configData.BotOptions.UseYouTube && configData.BotKeys.YouTubeAPIKey == "" {
+		return errors.New("config:{botOptions:{useYouTube: true}} not permitted, config:{botKeys:{youtubeAPIKey: \"\"}}")
+	}
+
+	// Custom response checks
+	for i, customResponse := range configData.CustomResponses {
+		regexp, err := regexp.Compile(customResponse.Expression)
+		if err != nil {
+			return err
+		} else {
+			configData.CustomResponses[i].Regexp = regexp
+		}
+	}
+	return nil
+}
+
+//Guild data structs
+type GuildData struct {
+	AudioQueue []AudioQueueEntry
+	VoiceData VoiceData
+	Queries map[string]*Query //*GuildData.Queries["messageID"] = *Query
+}
+func (guild *GuildData) QueueAdd(author, imageURL, title, thumbnailURL, mediaURL string, requester *discordgo.User) {
+	var queueData AudioQueueEntry
+	queueData.Author = author
+	queueData.ImageURL = imageURL
+	queueData.MediaURL = mediaURL
+	queueData.Requester = requester
+	queueData.ThumbnailURL = thumbnailURL
+	queueData.Title = title
+	guild.AudioQueue = append(guild.AudioQueue, queueData)
+}
+func (guild *GuildData) QueueRemove(entry int) {
+	guild.AudioQueue = append(guild.AudioQueue[:entry], guild.AudioQueue[entry+1:]...)
+}
+func (guild *GuildData) QueueRemoveRange(start int, end int) {
+	for entry := end; entry < start; entry-- {
+		guild.AudioQueue = append(guild.AudioQueue[:entry], guild.AudioQueue[entry+1:]...)
+	}
+}
+func (guild *GuildData) QueueClear() {
+	guild.AudioQueue = nil
+}
+type AudioQueueEntry struct {
 	Author string
-	Duration string
 	ImageURL string
+	MediaURL string
+	Requester *discordgo.User
 	ThumbnailURL string
-	Requester string
-	URL string
+	Title string
+}
+type Query struct {
+	ResponseMessageID string
+
+	UsingEmbed bool //Whether or not the response is using an embed
 }
 type VoiceData struct {
 	VoiceConnection *discordgo.VoiceConnection
 	EncodingSession *dca.EncodeSession
 	Stream *dca.StreamingSession
-	IsPlaybackRunning bool
-	WasPlaybackStoppedManually bool
-}
 
-type CustomResponses struct {
-	CustomResponses []CustomResponse `json:"customResponses"`
-}
-type CustomResponse struct {
-	RegEx string `json:"regex"`
-	Response string `json:"response"`
+	IsPlaybackRunning bool //Whether or not playback is currently running
+	WasStoppedManually bool //Whether or not playback was stopped manually or automatically
 }
 
 var (
-	conf = configure.New()
-	confBotToken = conf.String("botToken", "", "Bot Token")
-	confBotName = conf.String("botName", "", "Bot Name")
-	confBotPrefix = conf.String("botPrefix", "", "Bot Prefix")
-	confWolframAppID = conf.String("wolframAppID", "", "Wolfram App ID")
-	confDuckDuckGoAppName = conf.String("ddgAppName", "", "DuckDuckGo App Name")
-	confYouTubeAPIKey = conf.String("youtubeAPIKey", "", "YouTube API Key")
-	confImgurClientID = conf.String("imgurClientID", "", "Imgur Client ID")
-	confSoundCloudClientID = conf.String("soundcloudClientID", "", "SoundCloud Client ID")
-	confSoundCloudAppVersion = conf.String("soundcloudAppVersion", "", "SoundCloud App Version")
-	confDebugMode = conf.Bool("debugMode", false, "Debug Mode")
-	botToken string = ""
-	botName string = ""
-	botPrefix string = ""
-	wolframAppID string = ""
-	ddgAppName string = ""
-	youtubeAPIKey string = ""
-	imgurClientID string = ""
-	soundcloudClientID string = ""
-	soundcloudAppVersion string = ""
-	debugMode bool = false
-	
-	wolframClient *wolfram.Client
-	ddgClient *duckduckgo.Client
-	imgurClient imgur.Client
-	soundcloudClient *soundcloud.Client
-	
-	/*
-	voiceConnections []*discordgo.VoiceConnection
-	encodingSessions []*dca.EncodeSession
-	streams []*dca.StreamingSession
-	playbackRunning []bool
-	playbackStopped []bool
-	queue = make(map[string] []string)
-	*/
-	
-	queue = make(map[string] *GuildQueue)
-	voiceData = make(map[string] *VoiceData)
-	
-	messages = make(map[string]chan message)
-	responses = make(map[string] string)
-	
-	configFile = "config.json"
-	customResponses = &CustomResponses{}
-)
+	botData *BotData = &BotData{}
+	guildData = map[string]GuildData{}
 
-func debugLog(msg string) {
-	if debugMode {
-		fmt.Println(msg)
-	}
-}
+	conf = configure.New()
+	confConfigFile = conf.String("config", "config.json", "The location of the JSON-structured configuration file")
+	configFile string = ""
+)
 
 func init() {
 	conf.Use(configure.NewFlag())
-	conf.Use(configure.NewJSONFromFile(configFile))
 }
 
 func main() {
-	fmt.Println("Clinet-Discord © JoshuaDoes: 2018.\n")
+	debugLog("Clinet-Discord © JoshuaDoes: 2018.\n", true)
 
-	fmt.Println("> Loading configuration...")
+	debugLog("> Loading settings...", true)
 	conf.Parse()
-	botToken = *confBotToken
-	botName = *confBotName
-	botPrefix = *confBotPrefix
-	wolframAppID = *confWolframAppID
-	ddgAppName = *confDuckDuckGoAppName
-	youtubeAPIKey = *confYouTubeAPIKey
-	imgurClientID = *confImgurClientID
-	soundcloudClientID = *confSoundCloudClientID
-	soundcloudAppVersion = *confSoundCloudAppVersion
-	debugMode = *confDebugMode
-	if (botToken == "" || botName == "" || botPrefix == "" || wolframAppID == "" || ddgAppName == "" || youtubeAPIKey == "" || imgurClientID == "" || soundcloudClientID == "" || soundcloudAppVersion == "") {
-		fmt.Println("> Configuration not properly setup, exiting...")
-		return
-	} else {
-		fmt.Println("> Successfully loaded configuration.")
-		debugLog("botToken: " + botToken)
-		debugLog("botName: " + botName)
-		debugLog("botPrefix: " + botPrefix)
-		debugLog("wolframAppID: " + wolframAppID)
-		debugLog("ddgAppName: " + ddgAppName)
-		debugLog("youtubeAPIKey: " + youtubeAPIKey)
-		debugLog("imgurClientID: " + imgurClientID)
-		debugLog("soundcloudClientID: " + soundcloudClientID)
-		debugLog("debugMode: " + fmt.Sprintf("%t", debugMode))
-	}
-	
-	debugLog("> Loading extra configuration...")
+	configFile = *confConfigFile
 	configFileHandle, err := os.Open(configFile)
 	if err != nil {
-		debugLog("> Error loading config file")
+		panic("Error loading configuration file `" + configFile + "`")
 	} else {
 		configParser := json.NewDecoder(configFileHandle)
-		debugLog("> Loading custom responses...")
-		if err = configParser.Decode(&customResponses); err != nil {
-			debugLog("> Error finding custom responses")
+		if err = configParser.Decode(&botData); err != nil {
+			panic(err)
 		} else {
-			for _, response := range customResponses.CustomResponses {
-				debugLog("> Found custom response:\n" + response.RegEx + " | " + response.Response)
+			configErr := botData.PrepConfig() //Check the configuration for any errors or inconsistencies, then prepare it for usage
+			if configErr != nil {
+				panic(configErr)
 			}
 		}
 	}
-	
-	debugLog("> Creating a new Discord session...")
-	dg, err := discordgo.New("Bot " + botToken)
-	if err != nil {
-		fmt.Println("Error creating Discord session: " + fmt.Sprintf("%v", err))
-		return
+
+	debugLog("> Initializing clients for external services...", true)
+	if botData.BotOptions.UseDuckDuckGo {
+		debugLog("> Initializing DuckDuckGo...", false)
+		botData.BotClients.DuckDuckGo = &duckduckgo.Client{AppName: botData.BotKeys.DuckDuckGoAppName}
 	}
-	
-	debugLog("> Registering Ready callback handler...")
-	dg.AddHandler(ready)
-	debugLog("> Registering MessageCreate callback handler...")
-	dg.AddHandler(messageCreate)
-	debugLog("> Registering MessageUpdate callback handler...")
-	dg.AddHandler(messageUpdate)
-	debugLog("> Registering GuildJoin callback handler...")
-
-	fmt.Println("> Establishing a connection to Discord...")
-	err = dg.Open()
-	if err != nil {
-		fmt.Println("Error opening connection: " + fmt.Sprintf("%v", err))
-		return
+	if botData.BotOptions.UseImgur {
+		debugLog("> Initializing Imgur HTTP client...", false)
+		botData.BotClients.Imgur.HTTPClient = &http.Client{}
+		debugLog("> Initializing Imgur CLILogger...", false)
+		botData.BotClients.Imgur.Log = &klogger.CLILogger{}
+		debugLog("> Initializing Imgur...", false)
+		botData.BotClients.Imgur.ImgurClientID = botData.BotKeys.ImgurClientID
 	}
-	
-	fmt.Println("> Initializing Wolfram...")
-	wolframClient = &wolfram.Client{AppID:wolframAppID}
-	
-	fmt.Println("> Initializing DuckDuckGo...")
-	ddgClient = &duckduckgo.Client{AppName:ddgAppName}
-	
-	fmt.Println("> Initializing Imgur...")
-	imgurClient.HTTPClient = &http.Client{}
-	imgurClient.Log = &klogger.CLILogger{}
-	imgurClient.ImgurClientID = imgurClientID
+	if botData.BotOptions.UseSoundCloud {
+		debugLog("> Initializing SoundCloud...", false)
+		botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
+	}
+	if botData.BotOptions.UseWolframAlpha {
+		debugLog("> Initializing Wolfram|Alpha...", false)
+		botData.BotClients.Wolfram = &wolfram.Client{AppID: botData.BotKeys.WolframAppID}
+	}
 
-	fmt.Println("> Initializing SoundCloud...")
-	soundcloudClient = &soundcloud.Client{ClientID:soundcloudClientID,AppVersion:soundcloudAppVersion}
+	debugLog("> Creating a Discord session...", true)
+	discord, err := discordgo.New("Bot " + botData.BotToken)
+	if err != nil {
+		panic(err)
+	}
 
-	fmt.Println("> " + botName + " has started successfully.")
+	debugLog("> Registering event handlers...", false)
+	discord.AddHandler(discordMessageCreate)
+	discord.AddHandler(discordMessageDelete)
+	discord.AddHandler(discordMessageDeleteBulk)
+	discord.AddHandler(discordMessageUpdate)
+	discord.AddHandler(discordReady)
+
+	debugLog("> Connecting to Discord...", true)
+	err = discord.Open()
+	if err != nil {
+		panic(err)
+	}
+	debugLog("> Connection successful", true)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-	
-	debugLog("> Closing any active voice connections...")
-	for _, voiceDataRow := range voiceData {
-		if voiceDataRow != nil {
-			voiceDataRow.VoiceConnection.Close()
+
+	debugLog("> Disconnecting from Discord...", true)
+	for _, guildDataRow := range guildData {
+		if guildDataRow.VoiceData.VoiceConnection != nil {
+			debugLog("> Closing connection to voice channel " + guildDataRow.VoiceData.VoiceConnection.ChannelID + "...", false)
+			guildDataRow.VoiceData.VoiceConnection.Close()
 		}
 	}
-	
-	fmt.Println("> Closing Discord session...")
-	dg.Close()
+	discord.Close()
 }
 
-func updateRandomStatus(s *discordgo.Session, event *discordgo.Ready, statusType int) {
+func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
+	message := messageCreateEventToMessage(event) //Make it easier to keep track of what's happening
+	if message.Author.ID == session.State.User.ID {
+		return //The bot should never reply to itself
+	}
+
+	go handleMessage(session, message, false)
+}
+func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
+	message := event //Make it easier to keep track of what's happening
+
+	guildChannel, err := session.State.Channel(message.ChannelID)
+	if err == nil {
+		guildID := guildChannel.GuildID
+
+		_, guildFound := guildData[guildID]
+		if guildFound {
+			_, messageFound := guildData[guildID].Queries[message.ID]
+			if messageFound {
+				session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
+				guildData[guildID].Queries[message.ID] = nil //Remove the message from the query list
+			}
+		}
+	}
+}
+func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.MessageDeleteBulk) {
+	messages := event.Messages
+	channelID := event.ChannelID
+
+	guildChannel, err := session.State.Channel(channelID)
+	if err == nil {
+		guildID := guildChannel.GuildID
+
+		_, guildFound := guildData[guildID]
+		if guildFound {
+			for i := 0; i > len(messages); i++ {
+				_, messageFound := guildData[guildID].Queries[messages[i]]
+				if messageFound {
+					message, err := session.State.Message(channelID, messages[i])
+					if err == nil {
+						session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
+						guildData[guildID].Queries[messages[i]] = nil //Remove the message from the query list
+					}
+				}
+			}
+		}
+	}
+}
+func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
+	message := messageUpdateEventToMessage(event) //Make it easier to keep track of what's happening
+	if message.Author.ID == session.State.User.ID {
+		return //The bot should never reply to itself
+	}
+
+	go handleMessage(session, message, true)
+}
+func discordReady(session *discordgo.Session, event *discordgo.Ready) {
+	updateRandomStatus(session, event, 0)
+	cronjob := cron.New()
+	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, event, 0) })
+	cronjob.Start()
+}
+
+func handleMessage(session *discordgo.Session, message *discordgo.Message, updateResponse bool) {
+	content, err := message.ContentWithMoreMentionsReplaced(session)
+	if err != nil {
+		return //There was an uhoh somewhere
+	}
+	channel, err := session.State.Channel(message.ChannelID)
+	if err != nil {
+		return //Error finding the channel
+	}
+	//guild, err := session.State.Guild(channel.GuildID)
+	_, err = session.State.Guild(channel.GuildID)
+	if err != nil {
+		return //Error finding the guild
+	}
+
+	if message.Author.Bot {
+		debugLog(message.Author.Username + "#" + message.Author.Discriminator + " [BOT]: " + content, false)
+	} else {
+		debugLog(message.Author.Username + "#" + message.Author.Discriminator + ": " + content, false)
+	}
+
+	if strings.HasPrefix(content, botData.CommandPrefix) {
+		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
+		cmd := strings.Split(cmdMsg, " ")
+		switch cmd[0] {
+			case "help":
+				helpEmbed := NewEmbed().
+					SetTitle(botData.BotName + " - Help").
+					SetDescription("A list of available commands for " + botData.BotName + ".").
+					AddField(botData.CommandPrefix + "help", "Displays this help message.").
+					AddField(botData.CommandPrefix + "about", "Displays information about " + botData.BotName + " and how to use it.").
+					AddField(botData.CommandPrefix + "roll", "Rolls a dice.").
+					AddField(botData.CommandPrefix + "doubleroll", "Rolls two die.").
+					AddField(botData.CommandPrefix + "coinflip", "Flips a coin.").
+					AddField(botData.CommandPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
+					AddField(botData.CommandPrefix + "imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
+					AddField(botData.CommandPrefix + "play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
+					AddField(botData.CommandPrefix + "stop", "Stops the currently playing audio.").
+					AddField(botData.CommandPrefix + "skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
+					AddField(botData.CommandPrefix + "queue", "Lists all entries in the queue.").
+					AddField(botData.CommandPrefix + "clear", "Clears the current queue.").
+					AddField(botData.CommandPrefix + "leave", "Leaves the current voice channel.").
+					SetColor(0xfafafa).MessageEmbed
+				session.ChannelMessageSendEmbed(message.ChannelID, helpEmbed)
+		}
+	}
+}
+
+func messageCreateEventToMessage(messageCreateEvent *discordgo.MessageCreate) (*discordgo.Message) {
+	var message *discordgo.Message = &discordgo.Message{}
+	message.ID = messageCreateEvent.ID
+	message.ChannelID = messageCreateEvent.ChannelID
+	message.Content = messageCreateEvent.Content
+	message.Timestamp = messageCreateEvent.Timestamp
+	message.EditedTimestamp = messageCreateEvent.EditedTimestamp
+	message.MentionRoles = messageCreateEvent.MentionRoles
+	message.Tts = messageCreateEvent.Tts
+	message.MentionEveryone = messageCreateEvent.MentionEveryone
+	message.Author = messageCreateEvent.Author
+	message.Attachments = messageCreateEvent.Attachments
+	message.Embeds = messageCreateEvent.Embeds
+	message.Mentions = messageCreateEvent.Mentions
+	message.Reactions = messageCreateEvent.Reactions
+	message.Type = messageCreateEvent.Type
+	return message
+}
+func messageUpdateEventToMessage(messageUpdateEvent *discordgo.MessageUpdate) (*discordgo.Message) {
+	var message *discordgo.Message = &discordgo.Message{}
+	message.ID = messageUpdateEvent.ID
+	message.ChannelID = messageUpdateEvent.ChannelID
+	message.Content = messageUpdateEvent.Content
+	message.Timestamp = messageUpdateEvent.Timestamp
+	message.EditedTimestamp = messageUpdateEvent.EditedTimestamp
+	message.MentionRoles = messageUpdateEvent.MentionRoles
+	message.Tts = messageUpdateEvent.Tts
+	message.MentionEveryone = messageUpdateEvent.MentionEveryone
+	message.Author = messageUpdateEvent.Author
+	message.Attachments = messageUpdateEvent.Attachments
+	message.Embeds = messageUpdateEvent.Embeds
+	message.Mentions = messageUpdateEvent.Mentions
+	message.Reactions = messageUpdateEvent.Reactions
+	message.Type = messageUpdateEvent.Type
+	return message
+}
+
+func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
+	/*
 	guildCount := len(event.Guilds)
 	userCount := 0
 	roleCount := 0
@@ -234,1077 +427,33 @@ func updateRandomStatus(s *discordgo.Session, event *discordgo.Ready, statusType
 		channelCount += len(guild.Channels)
 		presenceCount += len(guild.Presences)
 	}
-	debugLog("Guild count: " + strconv.Itoa(guildCount))
-	debugLog("User count: " + strconv.Itoa(userCount))
-	debugLog("Role count: " + strconv.Itoa(roleCount))
-	debugLog("Emoji count: " + strconv.Itoa(emojiCount))
-	debugLog("Channel count: " + strconv.Itoa(channelCount))
-	debugLog("Presence count: " + strconv.Itoa(presenceCount))
-	s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " servers!")
-
 	if statusType == 0 { statusType = rand.Intn(6) + 1 }
 	switch statusType {
 		case 1:
-			s.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " guilds!")
+			session.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " guilds!") //Playing in x guilds!
 		case 2:
-			s.UpdateListeningStatus(strconv.Itoa(userCount) + " users!")
+			session.UpdateListeningStatus(strconv.Itoa(userCount) + " users!") //Listening to x users!
 		case 3:
-			s.UpdateStatus(0, "with " + strconv.Itoa(roleCount) + " roles!")
+			session.UpdateStatus(0, "with " + strconv.Itoa(roleCount) + " roles!") //Playing with x roles!
 		case 4:
-			s.UpdateListeningStatus(strconv.Itoa(emojiCount) + " emojis!")
+			session.UpdateListeningStatus(strconv.Itoa(emojiCount) + " emojis!") //Listening to x emojis!
 		case 5:
-			s.UpdateListeningStatus(strconv.Itoa(channelCount) + " channels!")
+			session.UpdateListeningStatus(strconv.Itoa(channelCount) + " channels!") //Listening to x channels!
 		case 6:
-			s.UpdateStatus(0, "with " + strconv.Itoa(presenceCount) + " presences!")
+			session.UpdateStatus(0, "with " + strconv.Itoa(presenceCount) + " presences!") //Playing with x presences!
+	}
+	*/
+	session.UpdateStatus(0, "experimentally!")
+}
+
+func typingEvent(session *discordgo.Session, channelID string) {
+	if botData.BotOptions.SendTypingEvent {
+		session.ChannelTyping(channelID)
 	}
 }
 
-func ready(s *discordgo.Session, event *discordgo.Ready) {
-	updateRandomStatus(s, event, 1)
-	cronjob := cron.New()
-	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(s, event, 0) })
-	cronjob.Start()
-}
-
-func messageUpdate(s *discordgo.Session, m *discordgo.MessageUpdate) {
-	if m.Content == "" {
-		return //No need to continue if there's no message
+func debugLog(msg string, overrideConfig bool) {
+	if botData.DebugMode || overrideConfig {
+		fmt.Println(msg)
 	}
-
-	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
-		return //Don't want the bot to reply to itself or to thin air
-	}
-	
-	if m.ChannelID == "" {
-		return //Where did this message even come from!?
-	}
-	
-	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
-
-	doesMessageExist := false
-	for _, v := range messages {
-		for obj := range v {
-			if (obj.ChannelID == m.ChannelID && obj.ID == m.ID) {
-				doesMessageExist = true
-				break
-			}
-		}
-		if doesMessageExist {
-			break
-		} else {
-			return
-		}
-	}
-
-	go handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, true)
-}
-
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Content == "" {
-		return //No need to continue if there's no message
-	}
-
-	if (m.Author.ID == s.State.User.ID || m.Author.ID == "" || m.Author.Username == "") {
-		return //Don't want the bot to reply to itself or to thin air
-	}
-	
-	if m.ChannelID == "" {
-		return //Where did this message even come from!?
-	}
-	
-	contentWithMentionsReplaced := m.ContentWithMentionsReplaced()
-	
-	if messages[m.ChannelID] == nil {
-		messages[m.ChannelID] = make(chan message, 0)
-	}
-	go func() {
-		messages[m.ChannelID] <- message{ID:m.ID, ChannelID:m.ChannelID}
-	}()
-
-	go handleMessage(s, m.Content, contentWithMentionsReplaced, m.Author.ID, m.Author.Username, m.Author.Discriminator, m.ChannelID, m.ID, false)
-}
-
-func handleMessage(session *discordgo.Session, content string, contentWithMentionsReplaced string, authorID string, authorUsername string, authorDiscriminator string, channelID string, messageID string, updateMessage bool) {
-	guildDetails, _ := guildDetails(channelID, session)
-	channelDetails, _ := channelDetails(channelID, session)
-	
-	if guildDetails == nil || channelDetails == nil {
-		return
-	}
-
-	debugLog("[" + guildDetails.Name + " #" + channelDetails.Name + "] " + authorUsername + "#" + authorDiscriminator + ": " + contentWithMentionsReplaced)
-	
-	if strings.HasPrefix(content, botPrefix) {
-		c, err := session.State.Channel(channelID)
-		if err != nil {
-			// Could not find channel.
-			return
-		}
-		g, err := session.State.Guild(c.GuildID)
-		if err != nil {
-			// Could not find guild.
-			return
-		}
-		
-		session.ChannelTyping(channelID) // Send a typing event
-		
-		cmdMsg := strings.Replace(content, botPrefix, "", 1)
-		cmd := strings.Split(cmdMsg, " ")
-		switch cmd[0] {
-			case "help":
-				helpEmbed := NewEmbed().
-					SetTitle(botName + " - Help").
-					SetDescription("A list of available commands for " + botName + ".").
-					AddField(botPrefix + "help", "Displays this help message.").
-					AddField(botPrefix + "about", "Displays information about " + botName + " and how to use it.").
-					AddField(botPrefix + "roll", "Rolls a dice.").
-					AddField(botPrefix + "doubleroll", "Rolls two die.").
-					AddField(botPrefix + "coinflip", "Flips a coin.").
-					AddField(botPrefix + "xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
-					AddField(botPrefix + "imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
-					AddField(botPrefix + "play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
-					AddField(botPrefix + "stop", "Stops the currently playing audio.").
-					AddField(botPrefix + "skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
-					AddField(botPrefix + "queue", "Lists all entries in the queue.").
-					AddField(botPrefix + "clear", "Clears the current queue.").
-					AddField(botPrefix + "leave", "Leaves the current voice channel.").
-					SetColor(0xfafafa).MessageEmbed
-				session.ChannelMessageSendEmbed(channelID, helpEmbed)
-			case "about":
-				aboutEmbed := NewEmbed().
-					SetTitle(botName + " - About").
-					SetDescription(botName + " is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
-					AddField("How can I use " + botName + " in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
-					AddField("How can I help keep " + botName + " running?", "The best ways to help keep " + botName + " running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
-					AddField("How can I use " + botName + "?", "There are many ways to make use of " + botName + ".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask " + botName + " a question, ex: ``Clinet, what time is it?`` or ``Clinet, what is DiscordApp?``.").
-					AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
-					AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
-					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
-					SetColor(0x1c1c1c).MessageEmbed
-				session.ChannelMessageSendEmbed(channelID, aboutEmbed)
-			case "imgur":
-				if len(cmd) > 1 {
-					iErr := queryImgur(session, channelID, guildDetails.ID, cmd[1])
-					if iErr {
-						session.ChannelMessageSend(channelID, "Error finding info about the specified URL on Imgur.")
-					}
-				} else {
-					session.ChannelMessageSend(channelID, "You must specify an Imgur URL to query Imgur.")
-				}
-			case "xkcd":
-				if len(cmd) > 1 {
-					switch cmd[1] {
-						case "random":
-							client := xkcd.NewClient()
-							comic, err := client.Random()
-							if err != nil {
-								session.ChannelMessageSend(channelID, "Error finding random xkcd comic.")
-								return
-							}
-							xkcdRandomEmbed := NewEmbed().
-								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
-								SetDescription(comic.Title).
-								SetImage(comic.ImageURL).
-								SetColor(0x96a8c8).MessageEmbed
-							session.ChannelMessageSendEmbed(channelID, xkcdRandomEmbed)
-						case "latest":
-							client := xkcd.NewClient()
-							comic, err := client.Latest()
-							if err != nil {
-								session.ChannelMessageSend(channelID, "Error finding latest xkcd comic.")
-								return
-							}
-							xkcdLatestEmbed := NewEmbed().
-								SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
-								SetDescription(comic.Title).
-								SetImage(comic.ImageURL).
-								SetColor(0x96a8c8).MessageEmbed
-							session.ChannelMessageSendEmbed(channelID, xkcdLatestEmbed)
-						default:
-							client := xkcd.NewClient()
-							comicNumber, err := strconv.Atoi(cmd[1])
-							if err != nil {
-								session.ChannelMessageSend(channelID, "``" + cmd[1] + "`` is not a valid number.")
-							} else {
-								comic, err := client.Get(comicNumber)
-								if err != nil {
-									session.ChannelMessageSend(channelID, "Error finding xkcd comic #" + cmd[1] + ".")
-									return
-								}
-								xkcdSpecifiedEmbed := NewEmbed().
-									SetTitle("xkcd - #" + cmd[1]).
-									SetDescription(comic.Title).
-									SetImage(comic.ImageURL).
-									SetColor(0x96a8c8).MessageEmbed
-								session.ChannelMessageSendEmbed(channelID, xkcdSpecifiedEmbed)
-							}
-					}
-				} else {
-					client := xkcd.NewClient()
-					comic, err := client.Random()
-					if err != nil {
-						session.ChannelMessageSend(channelID, "Error finding random xkcd comic.")
-					}
-					xkcdRandomEmbed := NewEmbed().
-						SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
-						SetDescription(comic.Title).
-						SetImage(comic.ImageURL).
-						SetColor(0x96a8c8).MessageEmbed
-					session.ChannelMessageSendEmbed(channelID, xkcdRandomEmbed)
-				}
-			case "play":
-				go func() {
-					for _, vs := range g.VoiceStates {
-						if vs.UserID == authorID {
-							if len(cmd) < 2 {
-								err := playSound(session, g.ID, vs.ChannelID, channelID, "")
-								if err != nil {
-									debugLog("Error playing sound: " + fmt.Sprintf("%v", err))
-									session.ChannelMessageSend(channelID, "Error playing sound.")
-									return
-								}
-							} else {
-								soundURL := cmd[1]
-								_, err := url.ParseRequestURI(soundURL)
-								if err != nil {
-									query := strings.Replace(content, botPrefix + "play", "", -1)
-									for {
-										if strings.HasPrefix(query, " ") {
-											query = strings.Replace(query, " ", "", 1)
-										} else {
-											break
-										}
-									}
-									if query == "" {
-										session.ChannelMessageSend(channelID, "You must specify either a valid URL or a YouTube search query.")
-										return
-									}
-									go func() {
-										client := &http.Client{
-											Transport: &transport.APIKey{Key: youtubeAPIKey},
-										}
-										service, err := youtube.New(client)
-										if err != nil {
-											session.ChannelMessageSend(channelID, "There was an error creating a new YouTube client.")
-											return
-										}
-										call := service.Search.List("id,snippet").
-												Q(query).
-												MaxResults(50)
-										response, err := call.Do()
-										if err != nil {
-											session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
-											return
-										}
-										for _, item := range response.Items {
-											switch item.Id.Kind {
-												case "youtube#video":
-													url := "https://youtube.com/watch?v=" + item.Id.VideoId
-													for _, vs := range g.VoiceStates {
-														if vs.UserID == authorID {
-															err := playSound(session, g.ID, vs.ChannelID, channelID, url)
-															if err != nil {
-																debugLog("Error playing YouTube sound: " + fmt.Sprintf("%v", err))
-																session.ChannelMessageSend(channelID, "There was an error playing the queried YouTube video.")
-															}
-														}
-													}
-													return
-											}
-										}
-										session.ChannelMessageSend(channelID, "There was an error searching YouTube for the specified query.")
-									}()
-								} else {
-									err := playSound(session, g.ID, vs.ChannelID, channelID, soundURL)
-									if err != nil {
-										debugLog("Error playing sound: " + fmt.Sprintf("%v", err))
-										session.ChannelMessageSend(channelID, "Error playing sound.")
-										return
-									}
-								}
-							}
-							return
-						}
-					}
-					session.ChannelMessageSend(channelID, "Error finding voice channel to play audio in.")
-				}()
-			case "stop":
-				go func() {
-					for _, vs := range g.VoiceStates {
-						if vs.UserID == authorID {
-							stopSound(g.ID, vs.ChannelID)
-							session.ChannelMessageSend(channelID, "Stopped playing sound.")
-							return
-						}
-					}
-					session.ChannelMessageSend(channelID, "Error finding voice channel to stop audio playback in.")
-				}()
-			case "skip":
-				go func() {
-					for _, vs := range g.VoiceStates {
-						if vs.UserID == authorID {
-							skipSound(session, g.ID, vs.ChannelID, channelID)
-							return
-						}
-					}
-					session.ChannelMessageSend(channelID, "Error finding voice channel to skip to the next audio in.")
-				}()
-			case "leave":
-				go func() {
-					for _, vs := range g.VoiceStates {
-						if vs.UserID == authorID {
-							voiceLeave(session, g.ID, vs.ChannelID)
-							session.ChannelMessageSend(channelID, "Left voice channel.")
-							return
-						}
-					}
-					session.ChannelMessageSend(channelID, "Error finding voice channel to leave.")
-				}()
-			case "queue":
-				viewQueue(session, g.ID, channelID)
-			case "clear":
-				clearQueue(session, g.ID, channelID, true)
-			case "roll":
-				random := rand.Intn(6) + 1
-				session.ChannelMessageSend(channelID, "You rolled a " + strconv.Itoa(random) + "!")
-			case "doubleroll":
-				random1 := rand.Intn(6) + 1
-				random2 := rand.Intn(6) + 1
-				randomTotal := random1 + random2
-				session.ChannelMessageSend(channelID, "You rolled a " + strconv.Itoa(random1) + " and a " + strconv.Itoa(random2) + ". The total is " + strconv.Itoa(randomTotal) + "!")
-			case "coinflip":
-				random := rand.Intn(3)
-				switch random {
-					case 0:
-						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed on heads!")
-					case 1:
-						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed on tails!")
-					default:
-						session.ChannelMessageSend(channelID, "I flipped my coin... and it landed sideways!")
-				}
-			default:
-				session.ChannelMessageSend(channelID, "Unknown command. Type ``cli$help`` for a list of commands.")
-		}
-	} else {
-		go func() {
-			regexpBotName, _ := regexp.MatchString("(.*?)(?i)" + botName + "(.*?)", content)
-			if regexpBotName && strings.HasSuffix(content, "?") {
-				session.ChannelTyping(channelID) // Send a typing event
-				
-				debugLog("### [START] Query")
-				
-				query := content
-				debugLog("Original query: " + query)
-				
-				// Sanitize for Wolfram|Alpha
-				replace := NewCaseInsensitiveReplacer("Clinet", "")
-				query = replace.Replace(query)
-				for {
-					if strings.HasPrefix(query, " ") {
-						query = strings.Replace(query, " ", "", 1)
-					} else if strings.HasPrefix(query, ",") {
-						query = strings.Replace(query, ",", "", 1)
-					} else {
-						break
-					}
-				}
-				debugLog("Sanitized query: " + query)
-				
-				usedCustomResponse := false
-				if len(customResponses.CustomResponses) > 0 {
-					for _, response := range customResponses.CustomResponses {
-						regexpMatched, _ := regexp.MatchString(response.RegEx, query)
-						if regexpMatched {
-							usedCustomResponse = true
-							message, err := session.ChannelMessageSend(channelID, response.Response)
-							if err == nil {
-								responses[messageID] = message.ID
-								session.MessageReactionAdd(channelID, messageID, "\u2705")
-							} else {
-								debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-							}
-							return
-						}
-					}
-				}
-				if usedCustomResponse { return }
-				iErr := queryDDG(channelID, session, query, messageID, guildDetails.ID)
-				if iErr {
-					iErr = queryWolfram(channelID, session, query, messageID, guildDetails.ID)
-					if iErr {
-						message, err := session.ChannelMessageSend(channelID, botName + " was unable to process your request.")
-						if err == nil {
-							responses[messageID] = message.ID
-							session.MessageReactionAdd(channelID, messageID, "\u274C")
-						} else {
-							debugLog("Error sending message in [" + guildDetails.ID + ":" + channelID + "]")
-						}
-					}
-				}
-				
-				debugLog("### [END]")
-			}
-		}()
-	}
-}
-
-func queryWolfram(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
-	queryResultObject, err := wolframClient.GetQueryResult(query, nil)
-	if err != nil {
-		debugLog(fmt.Sprintf("[Wolfram|Alpha] Error getting query result: %v", err))
-		return true
-	}
-	
-	queryResult := queryResultObject.QueryResult
-	pods := queryResult.Pods
-	
-	if len(pods) < 1 {
-		debugLog("[Wolfram|Alpha] Error getting pods from query")
-		return true
-	}
-
-	fields := []*discordgo.MessageEmbedField{}
-	embedImage := ""
-	
-	for podN, pod := range pods {
-		podTitle := pod.Title
-		switch podTitle {
-			case "Locations":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "Nearby locations":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "Local map":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "Inferred local map":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "Inferred nearest city center":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "IP address":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-			case "IP address registrant":
-				debugLog("[Wolfram|Alpha] Denied pod: " + podTitle)
-				continue
-		}
-		
-		subPods := pod.SubPods
-		if len(subPods) > 0 {
-			debugLog("[Wolfram|Alpha] Pod #" + strconv.Itoa(podN + 1))
-			for subPodN, subPod := range subPods {
-				debugLog("[Wolfram|Alpha] Sub Pod #" + strconv.Itoa(subPodN + 1))
-
-				plaintext := subPod.Plaintext
-				imageSRC := subPod.Image.Src
-				if plaintext != "" {
-					// Make nicer for Discord
-					plaintext = strings.Replace(plaintext, "Wolfram|Alpha", botName, -1)
-					plaintext = strings.Replace(plaintext, "Wolfram Alpha", botName, -1)
-					plaintext = strings.Replace(plaintext, "I was created by Stephen Wolfram and his team.", "I was created by JoshuaDoes.", -1)
-
-					debugLog("Pod Title: " + podTitle)
-					debugLog("Plaintext: " + plaintext)
-					fields = append(fields, &discordgo.MessageEmbedField{Name:podTitle, Value:plaintext})
-				}
-				if imageSRC != "" && embedImage == "" && podTitle != "Input" && podTitle != "Input interpretation" {
-					debugLog("Image SRC: " + imageSRC)
-					embedImage = imageSRC
-				}
-			}
-		}
-	}
-	
-	resultEmbed := NewEmbed().
-		SetColor(0xda0e1a).MessageEmbed
-	
-	if len(fields) == 0 {
-		if embedImage != "" {
-			resultEmbed.Image = &discordgo.MessageEmbedImage{URL:embedImage}
-		} else {
-			debugLog("[Wolfram|Alpha] Error getting legal data from available pods")
-			return true
-		}
-	} else {
-		resultEmbed.Fields = fields
-		if embedImage != "" {
-			resultEmbed.Image = &discordgo.MessageEmbedImage{URL:embedImage}
-		}
-	}
-	message, err := session.ChannelMessageSendEmbed(channelID, resultEmbed)
-	if err == nil {
-		responses[messageID] = message.ID
-		session.MessageReactionAdd(channelID, messageID, "\u2705")
-	} else {
-		debugLog("[Wolfram|Alpha] Error sending message in [" + guildID + ":" + channelID + "]")
-		return true
-	}
-	return false
-}
-
-func queryDDG(channelID string, session *discordgo.Session, query string, messageID string, guildID string) (bool) {
-	queryResult, err := ddgClient.GetQueryResult(query)
-	if err != nil {
-		debugLog(fmt.Sprintf("[DuckDuckGo] Error getting query result: %v", err))
-		return true
-	}
-	
-	result := ""
-	if queryResult.Definition != "" {
-		result = queryResult.Definition
-	} else if queryResult.Answer != "" {
-		result = queryResult.Answer
-	} else if queryResult.AbstractText != "" {
-		result = queryResult.AbstractText
-	}
-	if result == "" {
-		debugLog("[DuckDuckGo] Error getting query result from response")
-		return true
-	}
-
-	resultEmbed := NewEmbed().
-		SetTitle(queryResult.Heading).
-		SetDescription(result).
-		SetColor(0xdf5730).MessageEmbed
-	if queryResult.Image != "" {
-		resultEmbed.Image = &discordgo.MessageEmbedImage{URL:queryResult.Image}
-	}
-	message, err := session.ChannelMessageSendEmbed(channelID, resultEmbed)
-	if err == nil {
-		responses[messageID] = message.ID
-		session.MessageReactionAdd(channelID, messageID, "\u2705")
-	} else {
-		debugLog("[DuckDuckGo] Error sending message in [" + guildID + ":" + channelID + "]")
-		return true
-	}
-	return false
-}
-
-func queryImgur(session *discordgo.Session, channelID, guildID, url string) (bool) {
-	imgurInfo, _, err := imgurClient.GetInfoFromURL(url)
-	if err != nil {
-		debugLog("[Imgur] Error getting info from URL [" + url + "]")
-		return true
-	}
-	if imgurInfo.Image != nil {
-		debugLog("[Imgur] Detected image from URL [" + url + "]")
-		imgurImage := imgurInfo.Image
-		imgurEmbed := NewEmbed().
-			SetTitle(imgurImage.Title).
-			SetDescription(imgurImage.Description).
-			AddField("Views", strconv.Itoa(imgurImage.Views)).
-			AddField("NSFW", strconv.FormatBool(imgurImage.Nsfw)).
-			SetColor(0x89c623).MessageEmbed
-		_, err := session.ChannelMessageSendEmbed(channelID, imgurEmbed)
-		if err != nil {
-			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
-	} else if imgurInfo.Album != nil {
-		debugLog("[Imgur] Detected album from URL [" + url + "]")
-		imgurAlbum := imgurInfo.Album
-		imgurEmbed := NewEmbed().
-			SetTitle(imgurAlbum.Title).
-			SetDescription(imgurAlbum.Description).
-			AddField("Uploader", imgurAlbum.AccountURL).
-			AddField("Image Count", strconv.Itoa(imgurAlbum.ImagesCount)).
-			AddField("Views", strconv.Itoa(imgurAlbum.Views)).
-			AddField("NSFW", strconv.FormatBool(imgurAlbum.Nsfw)).
-			SetColor(0x89c623).MessageEmbed
-		_, err = session.ChannelMessageSendEmbed(channelID, imgurEmbed)
-		if err != nil {
-			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
-	} else if imgurInfo.GImage != nil {
-		debugLog("[Imgur] Detected gallery image from URL [" + url + "]")
-		imgurGImage := imgurInfo.GImage
-		imgurEmbed := NewEmbed().
-			SetTitle(imgurGImage.Title).
-			SetDescription(imgurGImage.Description).
-			AddField("Topic", imgurGImage.Topic).
-			AddField("Uploader", imgurGImage.AccountURL).
-			AddField("Views", strconv.Itoa(imgurGImage.Views)).
-			AddField("NSFW", strconv.FormatBool(imgurGImage.Nsfw)).
-			AddField("Comment Count", strconv.Itoa(imgurGImage.CommentCount)).
-			AddField("Upvotes", strconv.Itoa(imgurGImage.Ups)).
-			AddField("Downvotes", strconv.Itoa(imgurGImage.Downs)).
-			AddField("Points", strconv.Itoa(imgurGImage.Points)).
-			AddField("Score", strconv.Itoa(imgurGImage.Score)).
-			SetColor(0x89c623).MessageEmbed
-		_, err := session.ChannelMessageSendEmbed(channelID, imgurEmbed)
-		if err != nil {
-			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
-	} else if imgurInfo.GAlbum != nil {
-		debugLog("[Imgur] Detected gallery album from URL [" + url + "]")
-		imgurGAlbum := imgurInfo.GAlbum
-		imgurEmbed := NewEmbed().
-			SetTitle(imgurGAlbum.Title).
-			SetDescription(imgurGAlbum.Description).
-			AddField("Topic", imgurGAlbum.Topic).
-			AddField("Uploader", imgurGAlbum.AccountURL).
-			AddField("Views", strconv.Itoa(imgurGAlbum.Views)).
-			AddField("NSFW", strconv.FormatBool(imgurGAlbum.Nsfw)).
-			AddField("Comment Count", strconv.Itoa(imgurGAlbum.CommentCount)).
-			AddField("Upvotes", strconv.Itoa(imgurGAlbum.Ups)).
-			AddField("Downvotes", strconv.Itoa(imgurGAlbum.Downs)).
-			AddField("Points", strconv.Itoa(imgurGAlbum.Points)).
-			AddField("Score", strconv.Itoa(imgurGAlbum.Score)).
-			SetColor(0x89c623).MessageEmbed
-		_, err = session.ChannelMessageSendEmbed(channelID, imgurEmbed)
-		if err != nil {
-			debugLog("[Imgur] Error sending message in [" + guildID + ":" + channelID + "]")
-			return true
-		}
-	} else {
-		debugLog("[Imgur] Error detecting Imgur type from URL [" + url + "]")
-		return true
-	}
-	return false
-}
-
-func guildDetails(channelID string, s *discordgo.Session) (*discordgo.Guild, error) {
-	channelInGuild, err := s.State.Channel(channelID)
-	if err != nil {
-		return nil, err
-	}
-	guildDetails, err := s.State.Guild(channelInGuild.GuildID)
-	if err != nil {
-		return nil, err
-	}
-	return guildDetails, nil
-}
-
-func channelDetails(channelID string, s *discordgo.Session) (*discordgo.Channel, error) {
-	channelInGuild, err := s.State.Channel(channelID)
-	if err != nil {
-		return nil, err
-	}
-	return channelInGuild, nil
-}
-
-func clearVoiceSession(guildID string) {
-	voiceData[guildID] = &VoiceData{}
-}
-
-func clearQueue(s *discordgo.Session, guildID, channelID string, wasClearedManually bool) {
-	queue[guildID] = &GuildQueue{}
-	if wasClearedManually {
-		s.ChannelMessageSend(channelID, "Cleared the guild queue.")
-	}
-}
-
-func voiceLeave(s *discordgo.Session, guildID, channelID string) {
-	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection != nil {
-			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				stopSound(guildID, channelID)
-				debugLog("> Leaving voice channel [" + guildID + ":" + channelID + "]...")
-				voiceDataRow.VoiceConnection.Disconnect()
-				
-				clearVoiceSession(guildID)
-				clearQueue(s, guildID, channelID, false)
-				
-				return
-			}
-		}
-	}
-}
-
-func stopSound(guildID, channelID string) {
-	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection != nil {
-			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				debugLog("> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-				
-				debugLog("> Cleaning up encoding session...")
-				voiceDataRow.EncodingSession.Stop()
-				voiceDataRow.EncodingSession.Cleanup()
-				voiceDataRow.EncodingSession.Truncate()
-		
-				debugLog("> Setting speaking to false in voice channel [" + voiceDataRow.VoiceConnection.GuildID + ":" + voiceDataRow.VoiceConnection.ChannelID + "]...")
-				voiceDataRow.VoiceConnection.Speaking(false)
-				
-				debugLog("> Setting WasPlaybackStoppedManually to true and IsPlaybackRunning to false...")
-				voiceDataRow.WasPlaybackStoppedManually = true
-				voiceDataRow.IsPlaybackRunning = false
-				
-				return
-			}
-		}
-	}
-}
-
-func skipSound(s *discordgo.Session, guildID, channelID, callerChannelID string) {
-	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection != nil {
-			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				debugLog("> Stopping sound on voice channel [" + guildID + ":" + channelID + "]...")
-				stopSound(guildID, channelID)
-				debugLog("> Attempting to play next sound on voice channel [" + guildID + ":" + channelID + "]...")
-				playSound(s, guildID, channelID, callerChannelID, "")
-			}
-		}
-	}
-}
-
-func playSound(s *discordgo.Session, guildID, channelID string, callerChannelID string, url string) (err error) {
-	var voiceConnection *discordgo.VoiceConnection = nil
-	var encodingSession *dca.EncodeSession = nil
-	var stream *dca.StreamingSession = nil
-	var isPlaybackRunning bool = false
-	for _, voiceDataRow := range voiceData {
-		if voiceDataRow.VoiceConnection != nil {
-			if voiceDataRow.VoiceConnection.ChannelID == channelID {
-				debugLog("A> Found previous connection to voice channel [" + guildID + ":" + channelID + "]")
-				voiceConnection = voiceDataRow.VoiceConnection
-				encodingSession = voiceDataRow.EncodingSession
-				stream = voiceDataRow.Stream
-				isPlaybackRunning = voiceDataRow.IsPlaybackRunning
-				break
-			}
-		}
-	}
-
-	if voiceConnection == nil {
-		debugLog("1B> Connecting to voice channel [" + guildID + ":" + channelID + "]...")
-		voiceConnection, err = s.ChannelVoiceJoin(guildID, channelID, false, false)
-		if err != nil {
-			debugLog("1C> Error connecting to voice channel [" + guildID + ":" + channelID + "]")
-			voiceConnection.Disconnect()
-			return err
-		}
-	}
-	
-	_, ok := queue[guildID]
-	if ok {
-		debugLog("Guild queue previously initialized")
-		if isPlaybackRunning {
-			debugLog("Playback in progress, appending to guild queue...")
-			
-			title := ""
-			author := ""
-			imageURL := ""
-			thumbnailURL := ""
-			duration := ""
-			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-			regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
-			if regexpHasYouTube {
-				videoInfo, err := ytdl.GetVideoInfo(url)
-				if err != nil {
-					return err
-				}
-				title = videoInfo.Title
-				author = videoInfo.Author
-				imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
-				thumbnailURL = videoInfo.GetThumbnailURL("default").String()
-				duration = videoInfo.Duration.String()
-				
-				format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-				_, err = videoInfo.GetDownloadURL(format)
-				if err != nil {
-					return err
-				}
-			} else if regexpHasSoundCloud {
-				audioInfo, err := soundcloudClient.GetTrackInfo(url)
-				if err != nil {
-					return err
-				}
-				title = audioInfo.Title
-				author = audioInfo.Artist
-				imageURL = audioInfo.ArtURL
-			}
-			
-			newEntry := &Queue{Name:title, Author:author, ImageURL:imageURL, ThumbnailURL:thumbnailURL, URL:url, Duration:duration}
-			queue[guildID].Queue = append(queue[guildID].Queue, *newEntry)
-			debugLog(fmt.Sprintf("%v", queue))
-			if regexpHasYouTube {
-				embed := NewEmbed().
-					SetTitle("Added to Queue").
-					AddField(title, author).
-					AddField("Duration", duration).
-					//SetImage(imageURL).
-					SetThumbnail(thumbnailURL).
-					SetColor(0xff0000).MessageEmbed
-				s.ChannelMessageSendEmbed(callerChannelID, embed)
-			} else if regexpHasSoundCloud {
-				embed := NewEmbed().
-					SetTitle("Added to Queue").
-					AddField(title, author).
-					SetThumbnail(imageURL).
-					SetColor(0xff7700).MessageEmbed
-				s.ChannelMessageSendEmbed(callerChannelID, embed)
-			} else {
-				s.ChannelMessageSend(callerChannelID, "Added ``" + url + "`` to the queue.")
-			}
-			return
-		} else {
-			debugLog("Continuing with playback")
-			if url == "" {
-				if len(queue[guildID].Queue) > 0 {
-					debugLog("Queued URL found in guild queue, fetching URL...")
-					url = queue[guildID].Queue[0].URL
-					debugLog("Removing queued URL from guild queue...")
-					queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
-					queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
-					debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
-					debugLog("Playing URL [" + url + "] from guild queue...")
-					playSound(s, guildID, channelID, callerChannelID, url)
-					return
-				} else {
-					debugLog("No entries left in the guild queue")
-					s.ChannelMessageSend(callerChannelID, "No entries were found in the guild queue.")
-					return errors.New("Unable to find an entry in the guild queue")
-				}
-			}
-		}
-	} else {
-		debugLog("Initializing guild queue...")
-		queue[guildID] = &GuildQueue{}
-		debugLog(fmt.Sprintf("%v", queue))
-		debugLog("Continuing with playback")
-	}
-
-	debugLog("1D> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-	voiceConnection.Speaking(false)
-	
-	options := dca.StdEncodeOptions
-	options.RawOutput = true
-	options.Bitrate = 96
-	options.Application = "lowdelay"
-	
-	mediaURL := url
-	var embedMessage *discordgo.Message
-	embedMessageID := ""
-	title := ""
-	author := ""
-	//imageURL := ""
-	thumbnailURL := ""
-	duration := ""
-	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
-	if regexpHasYouTube {
-		videoInfo, err := ytdl.GetVideoInfo(url)
-		if err != nil {
-			debugLog("1E> Error getting video info from [" + url + "]")
-			return err
-		}
-		
-		debugLog("1F> Storing video metadata...")
-		title = videoInfo.Title
-		author = videoInfo.Author
-		//imageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
-		thumbnailURL = videoInfo.GetThumbnailURL("default").String()
-		duration = videoInfo.Duration.String()
-		
-		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-		downloadURL, err := videoInfo.GetDownloadURL(format)
-		if err != nil {
-			debugLog("1G> Error getting download URL from [" + url + "]")
-			return err
-		}
-		mediaURL = downloadURL.String()
-		
-		embed := NewEmbed().
-			SetTitle(title).
-			SetDescription(author).
-			AddField("Current Time", "0s").
-			//SetImage(imageURL).
-			SetThumbnail(thumbnailURL).
-			SetColor(0xff0000).MessageEmbed
-		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-		embedMessageID = embedMessage.ID
-	} else if regexpHasSoundCloud {
-			audioInfo, err := soundcloudClient.GetTrackInfo(url)
-			if err != nil {
-				return err
-			}
-
-			title = audioInfo.Title
-			author = audioInfo.Artist
-			thumbnailURL = audioInfo.ArtURL
-			mediaURL = audioInfo.DownloadURL
-
-			fmt.Println(title + ":" + author + ":" + thumbnailURL + ":" + mediaURL)
-
-			embed := NewEmbed().
-				SetTitle(title).
-				SetDescription(author).
-				AddField("Current Time", "0s").
-				SetThumbnail(thumbnailURL).
-				SetColor(0xff7700).MessageEmbed
-			embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-			embedMessageID = embedMessage.ID
-	} else {
-		embed := NewEmbed().
-			AddField("URL", mediaURL).
-			AddField("Current Time", "0s").
-			SetColor(0xffffff).MessageEmbed
-		embedMessage, _ = s.ChannelMessageSendEmbed(callerChannelID, embed)
-		embedMessageID = embedMessage.ID
-	}
-	
-	encodingSession, err = dca.EncodeFile(mediaURL, options)
-	if err != nil {
-		debugLog("1I> Error encoding file [" + mediaURL + "]")
-		return err
-	}
-    
-	debugLog("1K> Setting speaking to true in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-	voiceConnection.Speaking(true)
-    
-	done := make(chan error)
-	stream = dca.NewStream(encodingSession, voiceConnection, done)
-
-	debugLog("1L> Storing voiceConnection, encodingSession, stream, and playbackRunning handles/states in memory...")
-	voiceData[guildID] = &VoiceData{VoiceConnection:voiceConnection, EncodingSession:encodingSession, Stream:stream, IsPlaybackRunning:true, WasPlaybackStoppedManually:false}
-	isPlaybackRunning = true
-
-	ticker := time.NewTicker(time.Second)
-	
-	for voiceData[guildID].IsPlaybackRunning {
-		select {
-			case err := <- done:
-				if err != nil {
-					fmt.Println("Playback finished")
-					voiceData[guildID].IsPlaybackRunning = false
-					break
-				} else {
-					fmt.Println("Playback not finished")
-				}
-			case <- ticker.C:
-				currentTime := Round(stream.PlaybackPosition(), time.Second)
-				if regexpHasYouTube {
-					embed := NewEmbed().
-						SetTitle(title).
-						SetDescription(author).
-						AddField("Current Time", currentTime.String()).
-						AddField("Duration", duration).
-						//SetImage(imageURL).
-						SetThumbnail(thumbnailURL).
-						SetColor(0xff0000).MessageEmbed
-					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-				} else if regexpHasSoundCloud {
-					embed := NewEmbed().
-						SetTitle(title).
-						SetDescription(author).
-						AddField("Current Time", currentTime.String()).
-						SetThumbnail(thumbnailURL).
-						SetColor(0xff7700).MessageEmbed
-					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-				} else {
-					embed := NewEmbed().
-						AddField("URL", mediaURL).
-						AddField("Current Time", currentTime.String()).
-						SetColor(0xffffff).MessageEmbed
-					s.ChannelMessageEditEmbed(callerChannelID, embedMessageID, embed)
-				}
-		}
-	}
-	
-	ticker.Stop()
-	
-	if voiceData[guildID].WasPlaybackStoppedManually == false {
-		debugLog("1T> Cleaning up encoding session...")
-		encodingSession.Stop()
-		encodingSession.Cleanup()
-		encodingSession.Truncate()
-		
-		debugLog("1U> Setting speaking to false in voice channel [" + voiceConnection.GuildID + ":" + voiceConnection.ChannelID + "]...")
-		voiceConnection.Speaking(false)
-		
-		isPlaybackRunning = false
-		
-		if len(queue[guildID].Queue) == 0 {
-			debugLog("Guild queue empty, leaving voice channel...")
-			voiceLeave(s, guildID, channelID)
-		} else {
-			debugLog("Queued URL found in guild queue, fetching URL...")
-			url = queue[guildID].Queue[0].URL
-			debugLog("Removing queued URL from guild queue...")
-			queue[guildID].Queue[len(queue[guildID].Queue) - 1], queue[guildID].Queue[0] = queue[guildID].Queue[0], queue[guildID].Queue[len(queue[guildID].Queue) - 1]
-			queue[guildID].Queue = queue[guildID].Queue[:len(queue[guildID].Queue) - 1]
-			debugLog("Current guild queue: " + fmt.Sprintf("%v", queue))
-			debugLog("Playing URL [" + url + "] from guild queue...")
-			playSound(s, guildID, channelID, callerChannelID, url)
-		}
-	}
-	
-	return nil
-}
-
-func viewQueue(session *discordgo.Session, guildID, channelID string) {
-	guildQueue := queue[guildID].Queue
-	if len(guildQueue) > 0 {
-		queueList := ""
-		count := 0
-		for _, queueRow := range guildQueue {
-			count += 1
-			regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", queueRow.URL)
-			if regexpHasYouTube {
-				if queueList == "" {
-					queueList = strconv.Itoa(count) + ". ``" + queueRow.Name + "`` by ``" + queueRow.Author + "``"
-				} else {
-					queueList = queueList + "\n" + strconv.Itoa(count) + ". ``" + queueRow.Name + "`` by ``" + queueRow.Author + "``"
-				}
-			} else {
-				if queueList == "" {
-					queueList = strconv.Itoa(count) + ". ``" + queueRow.URL + "``"
-				} else {
-					queueList = queueList + "\n" + strconv.Itoa(count) + ". ``" + queueRow.URL + "``"
-				}
-			}
-		}
-		guildDetails, _ := guildDetails(channelID, session)
-		queueEmbed := NewEmbed().
-			SetTitle("Queue for " + guildDetails.Name).
-			SetDescription(queueList).
-			SetColor(0xfafafa).MessageEmbed
-		_, err := session.ChannelMessageSendEmbed(channelID, queueEmbed)
-		if err != nil {
-			debugLog("Error sending message in [" + guildID + ":" + channelID + "]")
-		}
-	} else {
-		session.ChannelMessageSend(channelID, "There are no entries in the queue.")
-	}
-}
-
-func Round(d, r time.Duration) time.Duration {
-	if r <= 0 {
-		return d
-	}
-	neg := d < 0
-	if neg {
-		d = -d
-	}
-	if m := d % r; m+m < r {
-		d = d - m
-	} else {
-		d = d + r - m
-	}
-	if neg {
-		return -d
-	}
-	return d
-}
-
-type CaseInsensitiveReplacer struct {
-	toReplace   *regexp.Regexp
-	replaceWith string
-}
-
-func NewCaseInsensitiveReplacer(toReplace, with string) *CaseInsensitiveReplacer {
-	return &CaseInsensitiveReplacer{
-		toReplace:   regexp.MustCompile("(?i)" + toReplace),
-		replaceWith: with,
-	}
-}
-
-func (cir *CaseInsensitiveReplacer) Replace(str string) string {
-	return cir.toReplace.ReplaceAllString(str, cir.replaceWith)
 }
