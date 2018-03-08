@@ -404,6 +404,84 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 					AddField(botData.CommandPrefix + "clear", "Clears the current queue.").
 					AddField(botData.CommandPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
+			case "about":
+				responseEmbed = NewEmbed().
+					SetTitle(botData.BotName + " - About").
+					SetDescription(botData.BotName + " is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
+					AddField("How can I use " + botData.BotName + " in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
+					AddField("How can I help keep " + botData.BotName + " running?", "The best ways to help keep " + botData.BotName + " running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
+					AddField("How can I use " + botData.BotName + "?", "There are many ways to make use of " + botData.BotName + ".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask " + botData.BotName + " a question, ex: ``" + botData.BotName + ", what time is it?`` or ``" + botData.BotName + ", what is DiscordApp?``.").
+					AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
+					AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
+					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
+					SetColor(0x1c1c1c).MessageEmbed
+			case "imgur":
+				if len(cmd) > 1 {
+					responseEmbed, err = queryImgur(cmd[1])
+					if err != nil {
+						responseEmbed = NewErrorEmbed("Could not find the specified URL on Imgur.")
+					}
+				} else {
+					responseEmbed = NewErrorEmbed("You must specify an Imgur URL to query Imgur with.")
+				}
+			case "xkcd":
+				if len(cmd) > 1 {
+					switch cmd[1] {
+						case "random":
+							client := xkcd.NewClient()
+							comic, err := client.Random()
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Error finding random XKCD comic.")
+							} else {
+								responseEmbed = NewEmbed().
+									SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+									SetDescription(comic.Title).
+									SetImage(comic.ImageURL).
+									SetColor(0x96a8c8).MessageEmbed
+							}
+						case "latest":
+							client := xkcd.NewClient()
+							comic, err := client.Latest()
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Error finding latest XKCD comic.")
+							} else {
+								responseEmbed = NewEmbed().
+									SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+									SetDescription(comic.Title).
+									SetImage(comic.ImageURL).
+									SetColor(0x96a8c8).MessageEmbed
+							}
+						default:
+							comicNumber, err := strconv.Atoi(cmd[1])
+							if err != nil {
+								responseEmbed = NewErrorEmbed("``" + cmd[1] + "`` is not a valid number.")
+							} else {
+								client := xkcd.NewClient()
+								comic, err := client.Get(comicNumber)
+								if err != nil {
+									responseEmbed = NewErrorEmbed("Error finding XKCD comic #" + cmd[1] + ".")
+								} else {
+									responseEmbed = NewEmbed().
+										SetTitle("xkcd - #" + cmd[1]).
+										SetDescription(comic.Title).
+										SetImage(comic.ImageURL).
+										SetColor(0x96a8c8).MessageEmbed
+								}
+							}
+					}
+				} else {
+					client := xkcd.NewClient()
+					comic, err := client.Random()
+					if err != nil {
+						responseEmbed = NewErrorEmbed("Error finding random XKCD comic.")
+					} else {
+						responseEmbed = NewEmbed().
+							SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
+							SetDescription(comic.Title).
+							SetImage(comic.ImageURL).
+							SetColor(0x96a8c8).MessageEmbed
+					}
+				}
 		}
 	}
 
@@ -443,6 +521,83 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 			}
 		}
 	}
+}
+
+func NewErrorEmbed(errorMsg string) (*discordgo.MessageEmbed) {
+	errorEmbed := NewEmbed().
+		SetTitle("Error").
+		SetDescription(errorMsg).
+		SetColor(0x1c1c1c).MessageEmbed
+	return errorEmbed
+}
+
+func queryImgur(url string) (*discordgo.MessageEmbed, error) {
+	imgurInfo, _, err := botData.BotClients.Imgur.GetInfoFromURL(url)
+	if err != nil {
+		debugLog("[Imgur] Error getting info from URL [" + url + "]", false)
+		return nil, errors.New("Error getting info from URL")
+	}
+	if imgurInfo.Image != nil {
+		debugLog("[Imgur] Detected image from URL [" + url + "]", false)
+		imgurImage := imgurInfo.Image
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurImage.Title).
+			SetDescription(imgurImage.Description).
+			AddField("Views", strconv.Itoa(imgurImage.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurImage.Nsfw)).
+			SetColor(0x89c623).MessageEmbed
+		return imgurEmbed, nil
+	} else if imgurInfo.Album != nil {
+		debugLog("[Imgur] Detected album from URL [" + url + "]", false)
+		imgurAlbum := imgurInfo.Album
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurAlbum.Title).
+			SetDescription(imgurAlbum.Description).
+			AddField("Uploader", imgurAlbum.AccountURL).
+			AddField("Image Count", strconv.Itoa(imgurAlbum.ImagesCount)).
+			AddField("Views", strconv.Itoa(imgurAlbum.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurAlbum.Nsfw)).
+			SetColor(0x89c623).MessageEmbed
+		return imgurEmbed, nil
+	} else if imgurInfo.GImage != nil {
+		debugLog("[Imgur] Detected gallery image from URL [" + url + "]", false)
+		imgurGImage := imgurInfo.GImage
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurGImage.Title).
+			SetDescription(imgurGImage.Description).
+			AddField("Topic", imgurGImage.Topic).
+			AddField("Uploader", imgurGImage.AccountURL).
+			AddField("Views", strconv.Itoa(imgurGImage.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurGImage.Nsfw)).
+			AddField("Comment Count", strconv.Itoa(imgurGImage.CommentCount)).
+			AddField("Upvotes", strconv.Itoa(imgurGImage.Ups)).
+			AddField("Downvotes", strconv.Itoa(imgurGImage.Downs)).
+			AddField("Points", strconv.Itoa(imgurGImage.Points)).
+			AddField("Score", strconv.Itoa(imgurGImage.Score)).
+			SetColor(0x89c623).MessageEmbed
+		return imgurEmbed, nil
+	} else if imgurInfo.GAlbum != nil {
+		debugLog("[Imgur] Detected gallery album from URL [" + url + "]", false)
+		imgurGAlbum := imgurInfo.GAlbum
+		imgurEmbed := NewEmbed().
+			SetTitle(imgurGAlbum.Title).
+			SetDescription(imgurGAlbum.Description).
+			AddField("Topic", imgurGAlbum.Topic).
+			AddField("Uploader", imgurGAlbum.AccountURL).
+			AddField("Views", strconv.Itoa(imgurGAlbum.Views)).
+			AddField("NSFW", strconv.FormatBool(imgurGAlbum.Nsfw)).
+			AddField("Comment Count", strconv.Itoa(imgurGAlbum.CommentCount)).
+			AddField("Upvotes", strconv.Itoa(imgurGAlbum.Ups)).
+			AddField("Downvotes", strconv.Itoa(imgurGAlbum.Downs)).
+			AddField("Points", strconv.Itoa(imgurGAlbum.Points)).
+			AddField("Score", strconv.Itoa(imgurGAlbum.Score)).
+			SetColor(0x89c623).MessageEmbed
+		return imgurEmbed, nil
+	} else {
+		debugLog("[Imgur] Error detecting Imgur type from URL [" + url + "]", false)
+		return nil, errors.New("Error detecting Imgur URL type")
+	}
+	return nil, errors.New("Error detecting Imgur URL type")
 }
 
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
