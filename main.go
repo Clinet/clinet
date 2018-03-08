@@ -162,8 +162,6 @@ type AudioQueueEntry struct {
 }
 type Query struct {
 	ResponseMessageID string
-
-	UsingEmbed bool //Whether or not the response is using an embed
 }
 type VoiceData struct {
 	VoiceConnection *discordgo.VoiceConnection
@@ -176,7 +174,7 @@ type VoiceData struct {
 
 var (
 	botData *BotData = &BotData{}
-	guildData = map[string]GuildData{}
+	guildData = make(map[string] *GuildData)
 
 	conf = configure.New()
 	confConfigFile = conf.String("config", "config.json", "The location of the JSON-structured configuration file")
@@ -265,17 +263,35 @@ func main() {
 }
 
 func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
-	message := messageCreateEventToMessage(event) //Make it easier to keep track of what's happening
+	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
+	if err != nil {
+		debugLog("> Error fnding message: " + fmt.Sprintf("%v", err), false)
+		return //Error finding message
+	}
 	if message.Author.ID == session.State.User.ID {
+		debugLog("> Message author ID matched bot ID, ignoring message", false)
 		return //The bot should never reply to itself
 	}
+	content, err := message.ContentWithMoreMentionsReplaced(session)
+	if err != nil {
+		debugLog("> Error finding message content", false)
+		return //There was an uhoh somewhere
+	}
 
-	go handleMessage(session, message, false)
+	if message.Author.Bot {
+		debugLog("[S] " + message.Author.Username + "#" + message.Author.Discriminator + " [BOT]: " + content, false)
+	} else {
+		debugLog("[S] " + message.Author.Username + "#" + message.Author.Discriminator + ": " + content, false)
+	}
+
+	go handleMessage(session, message)
 }
 func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
 	message := event //Make it easier to keep track of what's happening
 
-	guildChannel, err := session.State.Channel(message.ChannelID)
+	debugLog("[D] ID: " + message.ID, false)
+
+	guildChannel, err := session.Channel(message.ChannelID)
 	if err == nil {
 		guildID := guildChannel.GuildID
 
@@ -283,10 +299,17 @@ func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDe
 		if guildFound {
 			_, messageFound := guildData[guildID].Queries[message.ID]
 			if messageFound {
+				debugLog("> Deleting message...", false)
 				session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
 				guildData[guildID].Queries[message.ID] = nil //Remove the message from the query list
+			} else {
+				debugLog("> Error finding deleted message in queries list", false)
 			}
+		} else {
+			debugLog("> Error finding guild for deleted message", false)
 		}
+	} else {
+		debugLog("> Error finding channel for deleted message", false)
 	}
 }
 func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.MessageDeleteBulk) {
@@ -300,8 +323,7 @@ func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.Messa
 		_, guildFound := guildData[guildID]
 		if guildFound {
 			for i := 0; i > len(messages); i++ {
-				_, messageFound := guildData[guildID].Queries[messages[i]]
-				if messageFound {
+				if guildData[guildID].Queries[messages[i]] != nil {
 					message, err := session.State.Message(channelID, messages[i])
 					if err == nil {
 						session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
@@ -313,12 +335,26 @@ func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.Messa
 	}
 }
 func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
-	message := messageUpdateEventToMessage(event) //Make it easier to keep track of what's happening
+	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
+	if err != nil {
+		return //Error finding message
+	}
 	if message.Author.ID == session.State.User.ID {
 		return //The bot should never reply to itself
 	}
+	content, err := message.ContentWithMoreMentionsReplaced(session)
+	if err != nil {
+		debugLog("> Error finding message content", false)
+		return //There was an uhoh somewhere
+	}
 
-	go handleMessage(session, message, true)
+	if message.Author.Bot {
+		debugLog("[U] " + message.Author.Username + "#" + message.Author.Discriminator + " [BOT]: " + content, false)
+	} else {
+		debugLog("[U] " + message.Author.Username + "#" + message.Author.Discriminator + ": " + content, false)
+	}
+
+	go handleMessage(session, message)
 }
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	updateRandomStatus(session, event, 0)
@@ -327,33 +363,31 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	cronjob.Start()
 }
 
-func handleMessage(session *discordgo.Session, message *discordgo.Message, updateResponse bool) {
+func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 	content, err := message.ContentWithMoreMentionsReplaced(session)
 	if err != nil {
+		debugLog("> Error finding message content", false)
 		return //There was an uhoh somewhere
 	}
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
+		debugLog("> Error finding message channel", false)
 		return //Error finding the channel
 	}
-	//guild, err := session.State.Guild(channel.GuildID)
-	_, err = session.State.Guild(channel.GuildID)
+	guild, err := session.State.Guild(channel.GuildID)
 	if err != nil {
+		debugLog("> Error finding message guild", false)
 		return //Error finding the guild
 	}
 
-	if message.Author.Bot {
-		debugLog(message.Author.Username + "#" + message.Author.Discriminator + " [BOT]: " + content, false)
-	} else {
-		debugLog(message.Author.Username + "#" + message.Author.Discriminator + ": " + content, false)
-	}
+	var responseEmbed *discordgo.MessageEmbed
 
 	if strings.HasPrefix(content, botData.CommandPrefix) {
 		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
 		cmd := strings.Split(cmdMsg, " ")
 		switch cmd[0] {
 			case "help":
-				helpEmbed := NewEmbed().
+				responseEmbed = NewEmbed().
 					SetTitle(botData.BotName + " - Help").
 					SetDescription("A list of available commands for " + botData.BotName + ".").
 					AddField(botData.CommandPrefix + "help", "Displays this help message.").
@@ -370,46 +404,45 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					AddField(botData.CommandPrefix + "clear", "Clears the current queue.").
 					AddField(botData.CommandPrefix + "leave", "Leaves the current voice channel.").
 					SetColor(0xfafafa).MessageEmbed
-				session.ChannelMessageSendEmbed(message.ChannelID, helpEmbed)
 		}
 	}
-}
 
-func messageCreateEventToMessage(messageCreateEvent *discordgo.MessageCreate) (*discordgo.Message) {
-	var message *discordgo.Message = &discordgo.Message{}
-	message.ID = messageCreateEvent.ID
-	message.ChannelID = messageCreateEvent.ChannelID
-	message.Content = messageCreateEvent.Content
-	message.Timestamp = messageCreateEvent.Timestamp
-	message.EditedTimestamp = messageCreateEvent.EditedTimestamp
-	message.MentionRoles = messageCreateEvent.MentionRoles
-	message.Tts = messageCreateEvent.Tts
-	message.MentionEveryone = messageCreateEvent.MentionEveryone
-	message.Author = messageCreateEvent.Author
-	message.Attachments = messageCreateEvent.Attachments
-	message.Embeds = messageCreateEvent.Embeds
-	message.Mentions = messageCreateEvent.Mentions
-	message.Reactions = messageCreateEvent.Reactions
-	message.Type = messageCreateEvent.Type
-	return message
-}
-func messageUpdateEventToMessage(messageUpdateEvent *discordgo.MessageUpdate) (*discordgo.Message) {
-	var message *discordgo.Message = &discordgo.Message{}
-	message.ID = messageUpdateEvent.ID
-	message.ChannelID = messageUpdateEvent.ChannelID
-	message.Content = messageUpdateEvent.Content
-	message.Timestamp = messageUpdateEvent.Timestamp
-	message.EditedTimestamp = messageUpdateEvent.EditedTimestamp
-	message.MentionRoles = messageUpdateEvent.MentionRoles
-	message.Tts = messageUpdateEvent.Tts
-	message.MentionEveryone = messageUpdateEvent.MentionEveryone
-	message.Author = messageUpdateEvent.Author
-	message.Attachments = messageUpdateEvent.Attachments
-	message.Embeds = messageUpdateEvent.Embeds
-	message.Mentions = messageUpdateEvent.Mentions
-	message.Reactions = messageUpdateEvent.Reactions
-	message.Type = messageUpdateEvent.Type
-	return message
+	if responseEmbed != nil {
+		canUpdateMessage := false
+		responseID := ""
+
+		_, guildFound := guildData[guild.ID]
+		if guildFound {
+			if guildData[guild.ID].Queries[message.ID] != nil {
+				debugLog("> Found previous response", false)
+				canUpdateMessage = true
+				responseID = guildData[guild.ID].Queries[message.ID].ResponseMessageID
+			} else {
+				debugLog("> Previous response not found, initializing...", false)
+				guildData[guild.ID].Queries[message.ID] = &Query{}
+			}
+		} else {
+			debugLog("> Guild not found, initializing...", false)
+			guildData[guild.ID] = &GuildData{}
+			guildData[guild.ID].Queries = make(map[string] *Query)
+			debugLog("> Previous response not found, initializing...", false)
+			guildData[guild.ID].Queries[message.ID] = &Query{}
+		}
+
+		if canUpdateMessage {
+			debugLog("> Editing response...", false)
+			session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
+		} else {
+			debugLog("> Sending response...", false)
+			responseMessage, err := session.ChannelMessageSendEmbed(message.ChannelID, responseEmbed)
+			if err != nil {
+				debugLog("> Error sending response message", false)
+			} else {
+				debugLog("> Storing response...", false)
+				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID
+			}
+		}
+	}
 }
 
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
