@@ -500,6 +500,30 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 							SetColor(0x96a8c8).MessageEmbed
 					}
 				}
+			case "join":
+				foundVoiceChannel := false
+				for _, voiceState := range guild.VoiceStates {
+					if voiceState.UserID == message.Author.ID {
+						voiceJoin(session, guild.ID, voiceState.ChannelID)
+						foundVoiceChannel = true
+						responseEmbed = NewGenericEmbed("Clinet Voice", "Joined voice channel.")
+					}
+				}
+				if foundVoiceChannel == false {
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "Could not find voice channel to join.")
+				}
+			case "leave":
+				foundVoiceChannel := false
+				for _, voiceState := range guild.VoiceStates {
+					if voiceState.UserID == message.Author.ID {
+						voiceLeave(session, guild.ID, voiceState.ChannelID)
+						foundVoiceChannel = true
+						responseEmbed = NewGenericEmbed("Clinet Voice", "Left voice channel.")
+					}
+				}
+				if foundVoiceChannel == false {
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "Could not find voice channel to leave.")
+				}
 			default: //Invalid command specified
 				responseEmbed = NewErrorEmbed(botData.BotName + " Error", "Unknown command. Type ``cli$help`` for a list of commands.")
 		}
@@ -735,6 +759,45 @@ func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
 		duckduckgoEmbed.Image = &discordgo.MessageEmbedImage{URL:queryResult.Image}
 	}
 	return duckduckgoEmbed, nil
+}
+
+func voiceJoin(session *discordgo.Session, guildID, channelID string) (error) {
+	_, guildFound := guildData[guildID]
+	if guildFound {
+		if guildData[guildID].VoiceData.VoiceConnection != nil {
+			debugLog("> Found previous voice connection, leaving...", false)
+			err := voiceLeave(session, guildID, channelID)
+			if err != nil {
+				return errors.New("Error leaving specified voice channel")
+			}
+		}
+	} else {
+		debugLog("> Guild data not found, initializing...", false)
+		guildData[guildID] = &GuildData{}
+		guildData[guildID].VoiceData = VoiceData{}
+	}
+	voiceConnection, err := session.ChannelVoiceJoin(guildID, channelID, false, false)
+	if err != nil {
+		return errors.New("Error joining specified voice channel.")
+	} else {
+		guildData[guildID].VoiceData.VoiceConnection = voiceConnection
+		return nil
+	}
+}
+func voiceLeave(session *discordgo.Session, guildID, channelID string) (error) {
+	_, guildFound := guildData[guildID]
+	if guildFound {
+		if guildData[guildID].VoiceData.VoiceConnection != nil {
+			debugLog("> Found previous voice connection, leaving...", false)
+			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
+			guildData[guildID].VoiceData = VoiceData{}
+			return nil
+		} else {
+			return errors.New("Not connected to specified voice channel.")
+		}
+	} else {
+		return errors.New("Not connected to specified voice channel.")
+	}
 }
 
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
