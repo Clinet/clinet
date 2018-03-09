@@ -48,6 +48,7 @@ type BotClients struct {
 	Imgur imgur.Client
 	SoundCloud *soundcloud.Client
 	Wolfram *wolfram.Client
+	XKCD *xkcd.Client
 }
 type BotData struct {
 	BotClients BotClients
@@ -75,6 +76,7 @@ type BotOptions struct {
 	UseWolframAlpha bool `json:"useWolframAlpha"`
 	UseXKCD bool `json:"useXKCD"`
 	UseYouTube bool `json:"useYouTube"`
+	WolframDeniedPods []string `json:"wolframDeniedPods"`
 }
 type CustomResponse struct {
 	Expression string `json:"expression"`
@@ -226,6 +228,10 @@ func main() {
 	if botData.BotOptions.UseWolframAlpha {
 		debugLog("> Initializing Wolfram|Alpha...", false)
 		botData.BotClients.Wolfram = &wolfram.Client{AppID: botData.BotKeys.WolframAppID}
+	}
+	if botData.BotOptions.UseXKCD {
+		debugLog("> Initializing XKCD...", false)
+		botData.BotClients.XKCD = xkcd.NewClient()
 	}
 
 	debugLog("> Creating a Discord session...", true)
@@ -415,23 +421,38 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 					AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
 					AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
 					SetColor(0x1c1c1c).MessageEmbed
+			case "roll":
+				random := rand.Intn(6) + 1
+				responseEmbed = NewGenericEmbed("Roll", "You rolled a " + strconv.Itoa(random) + "!")
+			case "doubleroll", "rolldouble":
+				random1 := rand.Intn(6) + 1
+				random2 := rand.Intn(6) + 1
+				randomTotal := random1 + random2
+				responseEmbed = NewGenericEmbed("Double Roll", "You rolled a " + strconv.Itoa(random1) + " and a " + strconv.Itoa(random2) + ". The total is " + strconv.Itoa(randomTotal) + "!")
+			case "coinflip", "flipcoin":
+				random := rand.Intn(2)
+				switch random {
+					case 0:
+						responseEmbed = NewGenericEmbed("Coin Flip", "You got heads!")
+					case 1:
+						responseEmbed = NewGenericEmbed("Coin Flip", "You got tails!")
+				}
 			case "imgur":
 				if len(cmd) > 1 {
 					responseEmbed, err = queryImgur(cmd[1])
 					if err != nil {
-						responseEmbed = NewErrorEmbed("Could not find the specified URL on Imgur.")
+						responseEmbed = NewErrorEmbed("Imgur Error", fmt.Sprintf("%v", err))
 					}
 				} else {
-					responseEmbed = NewErrorEmbed("You must specify an Imgur URL to query Imgur with.")
+					responseEmbed = NewErrorEmbed("Imgur Error", "You must specify an Imgur URL to query Imgur with.")
 				}
 			case "xkcd":
 				if len(cmd) > 1 {
 					switch cmd[1] {
-						case "random":
-							client := xkcd.NewClient()
-							comic, err := client.Random()
+						case "random": //Get random XKCD comic
+							comic, err := botData.BotClients.XKCD.Random()
 							if err != nil {
-								responseEmbed = NewErrorEmbed("Error finding random XKCD comic.")
+								responseEmbed = NewErrorEmbed("XKCD Error", "Could not find a random XKCD comic.")
 							} else {
 								responseEmbed = NewEmbed().
 									SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -439,11 +460,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 									SetImage(comic.ImageURL).
 									SetColor(0x96a8c8).MessageEmbed
 							}
-						case "latest":
-							client := xkcd.NewClient()
-							comic, err := client.Latest()
+						case "latest": //Get latest XKCD comic
+							comic, err := botData.BotClients.XKCD.Latest()
 							if err != nil {
-								responseEmbed = NewErrorEmbed("Error finding latest XKCD comic.")
+								responseEmbed = NewErrorEmbed("XKCD Error", "Could not find the latest XKCD comic.")
 							} else {
 								responseEmbed = NewEmbed().
 									SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -451,15 +471,14 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 									SetImage(comic.ImageURL).
 									SetColor(0x96a8c8).MessageEmbed
 							}
-						default:
+						default: //Get specified XKCD comic
 							comicNumber, err := strconv.Atoi(cmd[1])
-							if err != nil {
-								responseEmbed = NewErrorEmbed("``" + cmd[1] + "`` is not a valid number.")
+							if err != nil { //Specified comic is not a valid integer
+								responseEmbed = NewErrorEmbed("XKCD Error", "``" + cmd[1] + "`` is not a valid number.")
 							} else {
-								client := xkcd.NewClient()
-								comic, err := client.Get(comicNumber)
+								comic, err := botData.BotClients.XKCD.Get(comicNumber)
 								if err != nil {
-									responseEmbed = NewErrorEmbed("Error finding XKCD comic #" + cmd[1] + ".")
+									responseEmbed = NewErrorEmbed("XKCD Error", "Could not find XKCD comic #" + cmd[1] + ".")
 								} else {
 									responseEmbed = NewEmbed().
 										SetTitle("xkcd - #" + cmd[1]).
@@ -469,11 +488,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 								}
 							}
 					}
-				} else {
-					client := xkcd.NewClient()
-					comic, err := client.Random()
+				} else { //Get random XKCD comic
+					comic, err := botData.BotClients.XKCD.Random()
 					if err != nil {
-						responseEmbed = NewErrorEmbed("Error finding random XKCD comic.")
+						responseEmbed = NewErrorEmbed("XKCD Error", "Error finding random XKCD comic.")
 					} else {
 						responseEmbed = NewEmbed().
 							SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -482,6 +500,48 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 							SetColor(0x96a8c8).MessageEmbed
 					}
 				}
+			default: //Invalid command specified
+				responseEmbed = NewErrorEmbed(botData.BotName + " Error", "Unknown command. Type ``cli$help`` for a list of commands.")
+		}
+	} else {
+		regexpBotName, _ := regexp.MatchString("(?i)" + botData.BotName + "(.*?)", content)
+		if regexpBotName && strings.HasSuffix(content, "?") {
+			typingEvent(session, message.ChannelID)
+
+			query := content
+
+			replace := NewCaseInsensitiveReplacer("Clinet", "")
+			query = replace.Replace(query)
+			for {
+				if strings.HasPrefix(query, " ") {
+					query = strings.Replace(query, " ", "", 1)
+				} else if strings.HasPrefix(query, ",") {
+					query = strings.Replace(query, ",", "", 1)
+				} else {
+					break
+				}
+			}
+
+			usedCustomResponse := false
+			if len(botData.CustomResponses) > 0 {
+				for _, response := range botData.CustomResponses {
+					regexpMatched, _ := regexp.MatchString(response.Expression, query)
+					if regexpMatched {
+						random := rand.Intn(len(response.Responses))
+						responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random])
+						usedCustomResponse = true
+					}
+				}
+			}
+			if usedCustomResponse == false {
+				responseEmbed, err = queryDuckDuckGo(query)
+				if err != nil {
+					responseEmbed, err = queryWolframAlpha(query)
+					if err != nil {
+						responseEmbed = NewErrorEmbed("Query Error", "There was an error finding the data you requested.")
+					}
+				}
+			}
 		}
 	}
 
@@ -523,19 +583,11 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 	}
 }
 
-func NewErrorEmbed(errorMsg string) (*discordgo.MessageEmbed) {
-	errorEmbed := NewEmbed().
-		SetTitle("Error").
-		SetDescription(errorMsg).
-		SetColor(0x1c1c1c).MessageEmbed
-	return errorEmbed
-}
-
 func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 	imgurInfo, _, err := botData.BotClients.Imgur.GetInfoFromURL(url)
 	if err != nil {
 		debugLog("[Imgur] Error getting info from URL [" + url + "]", false)
-		return nil, errors.New("Error getting info from URL")
+		return nil, errors.New("Error getting info from URL.")
 	}
 	if imgurInfo.Image != nil {
 		debugLog("[Imgur] Detected image from URL [" + url + "]", false)
@@ -595,9 +647,94 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 		return imgurEmbed, nil
 	} else {
 		debugLog("[Imgur] Error detecting Imgur type from URL [" + url + "]", false)
-		return nil, errors.New("Error detecting Imgur URL type")
+		return nil, errors.New("Error detecting Imgur URL type.")
 	}
-	return nil, errors.New("Error detecting Imgur URL type")
+	return nil, errors.New("Error detecting Imgur URL type.")
+}
+
+func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
+	debugLog("[Wolfram|Alpha] Getting result for query [" + query + "]...", false)
+	queryResultData, err := botData.BotClients.Wolfram.GetQueryResult(query, nil)
+	if err != nil {
+		debugLog("[Wolfram|Alpha] Error getting query result: " + fmt.Sprintf("%v", err), false)
+		return nil, errors.New("Error getting response from Wolfram|Alpha.")
+	}
+
+	result := queryResultData.QueryResult
+	pods := result.Pods
+	if len(pods) == 0 {
+		debugLog("[Wolfram|Alpha] Error getting pods from query", false)
+		return nil, errors.New("Error getting pods from query.")
+	}
+
+	fields := []*discordgo.MessageEmbedField{}
+
+	for _, pod := range pods {
+		podTitle := pod.Title
+		if wolframIsPodDenied(podTitle) {
+			debugLog("[Wolfram|Alpha] Denied pod: " + podTitle, false)
+			continue
+		}
+
+		subPods := pod.SubPods
+		if len(subPods) > 0 { //Skip this pod if no subpods are found
+			for _, subPod := range subPods {
+				plaintext := subPod.Plaintext
+				if plaintext != "" {
+					fields = append(fields, &discordgo.MessageEmbedField{Name:podTitle, Value:plaintext})
+				}
+			}
+		}
+	}
+
+	if len(fields) == 0 { //No results were found
+		debugLog("[Wolfram|Alpha] Error getting legal data from Wolfram|Alpha", false)
+		return nil, errors.New("Error getting legal data from Wolfram|Alpha.")
+	} else {
+		wolframEmbed := NewEmbed().
+			SetColor(0xda0e1a).MessageEmbed
+		wolframEmbed.Fields = fields
+		return wolframEmbed, nil
+	}
+}
+func wolframIsPodDenied(podTitle string) (bool) {
+	for _, deniedPodTitle := range botData.BotOptions.WolframDeniedPods {
+		if deniedPodTitle == podTitle {
+			return true //Pod is denied
+		}
+	}
+	return false //Pod is not denied
+}
+
+func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
+	debugLog("[DuckDuckGo] Getting result for query [" + query + "]...", false)
+	queryResult, err := botData.BotClients.DuckDuckGo.GetQueryResult(query)
+	if err != nil {
+		debugLog("[DuckDuckGo] Error getting query result: " + fmt.Sprintf("%v", err), false)
+		return nil, errors.New("Error getting response from DuckDuckGo.")
+	}
+
+	result := ""
+	if queryResult.Definition != "" {
+		result = queryResult.Definition
+	} else if queryResult.Answer != "" {
+		result = queryResult.Answer
+	} else if queryResult.AbstractText != "" {
+		result = queryResult.AbstractText
+	}
+	if result == "" {
+		debugLog("[DuckDuckGo] Error getting allowed result from response", false)
+		return nil, errors.New("Error getting allowed result from response")
+	}
+
+	duckduckgoEmbed := NewEmbed().
+		SetTitle(queryResult.Heading).
+		SetDescription(result).
+		SetColor(0xdf5730).MessageEmbed
+	if queryResult.Image != "" {
+		duckduckgoEmbed.Image = &discordgo.MessageEmbedImage{URL:queryResult.Image}
+	}
+	return duckduckgoEmbed, nil
 }
 
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
@@ -644,4 +781,18 @@ func debugLog(msg string, overrideConfig bool) {
 	if botData.DebugMode || overrideConfig {
 		fmt.Println(msg)
 	}
+}
+
+type CaseInsensitiveReplacer struct {
+	toReplace   *regexp.Regexp
+	replaceWith string
+}
+func NewCaseInsensitiveReplacer(toReplace, with string) *CaseInsensitiveReplacer {
+	return &CaseInsensitiveReplacer{
+		toReplace:   regexp.MustCompile("(?i)" + toReplace),
+		replaceWith: with,
+	}
+}
+func (cir *CaseInsensitiveReplacer) Replace(str string) string {
+	return cir.toReplace.ReplaceAllString(str, cir.replaceWith)
 }

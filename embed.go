@@ -236,3 +236,34 @@ func (e *Embed) TruncateFooter() *Embed {
 	}
 	return e
 }
+
+
+// Additional helper functions to make life simpler
+func NewGenericEmbed(embedTitle, embedMsg string) (*discordgo.MessageEmbed) {
+	genericEmbed := NewEmbed().
+		SetTitle(embedTitle).
+		SetDescription(embedMsg).
+		SetColor(0x1c1c1c).MessageEmbed
+	return genericEmbed
+}
+func NewGenericEmbedAdvanced(embedTitle, embedMsg string, embedColor int) (*discordgo.MessageEmbed) {
+	genericEmbed := NewEmbed().
+		SetTitle(embedTitle).
+		SetDescription(embedMsg).
+		SetColor(embedColor).MessageEmbed
+	return genericEmbed
+}
+func NewErrorEmbed(errorTitle, errorMsg string) (*discordgo.MessageEmbed) {
+	errorEmbed := NewEmbed().
+		SetTitle(errorTitle).
+		SetDescription(errorMsg).
+		SetColor(0x1c1c1c).MessageEmbed
+	return errorEmbed
+}
+func NewErrorEmbedAdvanced(errorTitle, errorMsg string, errorColor int) (*discordgo.MessageEmbed) {
+	errorEmbed := NewEmbed().
+		SetTitle(errorTitle).
+		SetDescription(errorMsg).
+		SetColor(errorColor).MessageEmbed
+	return errorEmbed
+}
