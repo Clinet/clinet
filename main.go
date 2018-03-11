@@ -159,6 +159,7 @@ type AudioQueueEntry struct {
 	ImageURL string
 	MediaURL string
 	Requester *discordgo.User
+	RequestMessageID string //Used for if someone edits their request
 	ThumbnailURL string
 	Title string
 }
@@ -168,7 +169,8 @@ type Query struct {
 type VoiceData struct {
 	VoiceConnection *discordgo.VoiceConnection
 	EncodingSession *dca.EncodeSession
-	Stream *dca.StreamingSession
+	StreamingSession *dca.StreamingSession
+	ChannelIDJoinedFrom string
 
 	IsPlaybackRunning bool //Whether or not playback is currently running
 	WasStoppedManually bool //Whether or not playback was stopped manually or automatically
@@ -504,13 +506,14 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 				foundVoiceChannel := false
 				for _, voiceState := range guild.VoiceStates {
 					if voiceState.UserID == message.Author.ID {
-						voiceJoin(session, guild.ID, voiceState.ChannelID)
+						voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
 						foundVoiceChannel = true
 						responseEmbed = NewGenericEmbed("Clinet Voice", "Joined voice channel.")
+						break
 					}
 				}
 				if foundVoiceChannel == false {
-					responseEmbed = NewErrorEmbed("Clinet Voice Error", "Could not find voice channel to join.")
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel to use before using the join command.")
 				}
 			case "leave":
 				foundVoiceChannel := false
@@ -519,10 +522,58 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 						voiceLeave(session, guild.ID, voiceState.ChannelID)
 						foundVoiceChannel = true
 						responseEmbed = NewGenericEmbed("Clinet Voice", "Left voice channel.")
+						break
 					}
 				}
 				if foundVoiceChannel == false {
-					responseEmbed = NewErrorEmbed("Clinet Voice Error", "Could not find voice channel to leave.")
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel " + botData.BotName + " is in before using the leave command.")
+				}
+			case "play":
+				foundVoiceChannel := false
+				for _, voiceState := range guild.VoiceStates {
+					if voiceState.UserID == message.Author.ID {
+						voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
+						foundVoiceChannel = true
+						break
+					}
+				}
+				if foundVoiceChannel {
+					if len(cmd) == 1 {
+						//Get first queue entry and play it
+					} else if len(cmd) >= 2 {
+						_, err := url.ParseRequestURI(cmd[1]) //Check to see if first parameter is URL
+						if err != nil { //First parameter is not URL
+							responseEmbed = NewErrorEmbed("Missing Feature", "YouTube search is currently not implemented. Try again later!")
+						} else { //First parameter is URL
+							err := voicePlay(session, guild.ID, cmd[1])
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+							}
+						}
+					}
+				} else {
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel to use before using the play command.")
+				}
+			case "pause":
+				foundVoiceChannel := false
+				for _, voiceState := range guild.VoiceStates {
+					if voiceState.UserID == message.Author.ID {
+						foundVoiceChannel = true
+						isPaused, err := voiceTogglePause(session, guild.ID)
+						if err != nil {
+							responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
+						} else {
+							if isPaused {
+								responseEmbed = NewGenericEmbed("Clinet Voice", "Paused the audio playback.")
+							} else {
+								responseEmbed = NewGenericEmbed("Clinet Voice", "Resumed the audio playback.")
+							}
+						}
+						break
+					}
+				}
+				if foundVoiceChannel == false {
+					responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel " + botData.BotName + " is in before using the leave command.")
 				}
 			default: //Invalid command specified
 				responseEmbed = NewErrorEmbed(botData.BotName + " Error", "Unknown command. Type ``cli$help`` for a list of commands.")
@@ -761,14 +812,19 @@ func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
 	return duckduckgoEmbed, nil
 }
 
-func voiceJoin(session *discordgo.Session, guildID, channelID string) (error) {
+func voiceJoin(session *discordgo.Session, guildID, channelID, channelIDJoinedFrom string) (error) {
 	_, guildFound := guildData[guildID]
 	if guildFound {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
-			debugLog("> Found previous voice connection, leaving...", false)
-			err := voiceLeave(session, guildID, channelID)
-			if err != nil {
-				return errors.New("Error leaving specified voice channel")
+			if guildData[guildID].VoiceData.VoiceConnection.ChannelID == channelID {
+				debugLog("> Found previous matching voice connection, staying...", false)
+				return nil //We're already in the selected voice channel
+			} else {
+				debugLog("> Found previous mismatch voice connection, leaving...", false)
+				err := voiceLeave(session, guildID, channelID)
+				if err != nil {
+					return errors.New("Error leaving specified voice channel")
+				}
 			}
 		}
 	} else {
@@ -781,9 +837,11 @@ func voiceJoin(session *discordgo.Session, guildID, channelID string) (error) {
 		return errors.New("Error joining specified voice channel.")
 	} else {
 		guildData[guildID].VoiceData.VoiceConnection = voiceConnection
+		guildData[guildID].VoiceData.ChannelIDJoinedFrom = channelIDJoinedFrom
 		return nil
 	}
 }
+
 func voiceLeave(session *discordgo.Session, guildID, channelID string) (error) {
 	_, guildFound := guildData[guildID]
 	if guildFound {
@@ -798,6 +856,70 @@ func voiceLeave(session *discordgo.Session, guildID, channelID string) (error) {
 	} else {
 		return errors.New("Not connected to specified voice channel.")
 	}
+}
+
+func voicePlay(session *discordgo.Session, guildID, url string) (error) {
+	if guildData[guildID].VoiceData.VoiceConnection == nil {
+		return errors.New("Not connected to a voice channel.")
+	}
+
+	//Setup pointers to guild data for local usage
+	var voiceConnection *discordgo.VoiceConnection = guildData[guildID].VoiceData.VoiceConnection
+	var encodingSession *dca.EncodeSession = guildData[guildID].VoiceData.EncodingSession
+	//var streamingSession *dca.StreamingSession = guildData[guildID].VoiceData.StreamingSession
+
+	//Setup the audio encoding options
+	options := dca.StdEncodeOptions
+	options.RawOutput = true
+	options.Bitrate = 96
+	options.Application = "lowdelay"
+
+	//Create the encoding session to encode the audio to DCA in a stream
+	encodingSession, err := dca.EncodeFile(url, options)
+	if err != nil {
+		debugLog("[Voice] Error encoding file [" + url + "]: " + fmt.Sprintf("%v", err), false)
+		return errors.New("Error encoding specified URL to DCA audio.")
+	}
+
+	//Set speaking to true
+	voiceConnection.Speaking(true)
+
+	//Make a channel for signals when playback is finished
+	done := make(chan error)
+
+	//Create the audio stream
+	//streamingSession = dca.NewStream(encodingSession, voiceConnection, done)
+	guildData[guildID].VoiceData.StreamingSession = dca.NewStream(encodingSession, voiceConnection, done)
+
+	//Set playback running bool to true
+	guildData[guildID].VoiceData.IsPlaybackRunning = true
+
+	for guildData[guildID].VoiceData.IsPlaybackRunning {
+		select {
+			case err := <- done:
+				if err != nil {
+					guildData[guildID].VoiceData.IsPlaybackRunning = false
+				}
+		}
+	}
+
+	//Cleanup encoding session
+	encodingSession.Stop()
+	encodingSession.Cleanup()
+
+	//Set speaking to false
+	voiceConnection.Speaking(false)
+
+	return nil
+}
+
+func voiceTogglePause(session *discordgo.Session, guildID string) (bool, error) {
+	if guildData[guildID].VoiceData.StreamingSession == nil {
+		return false, errors.New("Could not find the streaming session for the specified guild.")
+	}
+	isPaused := guildData[guildID].VoiceData.StreamingSession.Paused()
+	guildData[guildID].VoiceData.StreamingSession.SetPaused(!isPaused)
+	return !isPaused, nil
 }
 
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {

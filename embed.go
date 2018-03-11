@@ -257,7 +257,7 @@ func NewErrorEmbed(errorTitle, errorMsg string) (*discordgo.MessageEmbed) {
 	errorEmbed := NewEmbed().
 		SetTitle(errorTitle).
 		SetDescription(errorMsg).
-		SetColor(0x1c1c1c).MessageEmbed
+		SetColor(0xb40000).MessageEmbed
 	return errorEmbed
 }
 func NewErrorEmbedAdvanced(errorTitle, errorMsg string, errorColor int) (*discordgo.MessageEmbed) {
