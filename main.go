@@ -132,9 +132,10 @@ func (configData *BotData) PrepConfig() error {
 
 //Guild data structs
 type GuildData struct {
-	AudioQueue []AudioQueueEntry
-	VoiceData  VoiceData
-	Queries    map[string]*Query //*GuildData.Queries["messageID"] = *Query
+	AudioQueue      []AudioQueueEntry
+	AudioNowPlaying AudioQueueEntry
+	VoiceData       VoiceData
+	Queries         map[string]*Query
 }
 
 func (guild *GuildData) QueueAdd(author, imageURL, title, thumbnailURL, mediaURL string, requester *discordgo.User) {
@@ -158,6 +159,20 @@ func (guild *GuildData) QueueRemoveRange(start int, end int) {
 func (guild *GuildData) QueueClear() {
 	guild.AudioQueue = nil
 }
+func (guild *GuildData) QueueGet(guildID string, entry int) AudioQueueEntry {
+	if len(guildData[guildID].AudioQueue) >= entry {
+		return guildData[guildID].AudioQueue[entry]
+	} else {
+		return AudioQueueEntry{}
+	}
+}
+func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
+	if len(guildData[guildID].AudioQueue) > 0 {
+		return guildData[guildID].AudioQueue[0]
+	} else {
+		return AudioQueueEntry{}
+	}
+}
 
 type AudioQueueEntry struct {
 	Author           string
@@ -167,7 +182,100 @@ type AudioQueueEntry struct {
 	RequestMessageID string //Used for if someone edits their request
 	ThumbnailURL     string
 	Title            string
+	Type             string
 }
+
+func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageEmbed {
+	switch audioQueueEntry.Type {
+	case "youtube":
+		return NewEmbed().
+			SetTitle("Now Playing from YouTube").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF0000).MessageEmbed
+	case "soundcloud":
+		return NewEmbed().
+			SetTitle("Now Playing from SoundCloud").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF7700).MessageEmbed
+	default:
+		return NewEmbed().
+			SetTitle("Now Playing").
+			AddField("URL", audioQueueEntry.MediaURL).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetColor(0x1C1C1C).MessageEmbed
+	}
+}
+func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageEmbed {
+	if audioQueueEntry.Type == "" {
+		if isYouTubeURL(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "youtube"
+		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "soundcloud"
+		} else {
+			audioQueueEntry.Type = "direct"
+		}
+	}
+
+	switch audioQueueEntry.Type {
+	case "youtube":
+		return NewEmbed().
+			SetTitle("Added to Queue from YouTube").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF0000).MessageEmbed
+	case "soundcloud":
+		return NewEmbed().
+			SetTitle("Added to Queue from SoundCloud").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF7700).MessageEmbed
+	default:
+		return NewEmbed().
+			SetTitle("Added to Queue").
+			AddField("URL", audioQueueEntry.MediaURL).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetColor(0x1C1C1C).MessageEmbed
+	}
+}
+func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
+	if audioQueueEntry.Type == "" {
+		if isYouTubeURL(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "youtube"
+		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "soundcloud"
+		} else {
+			audioQueueEntry.Type = "direct"
+		}
+	}
+
+	switch audioQueueEntry.Type {
+	case "youtube":
+		videoInfo, err := ytdl.GetVideoInfo(audioQueueEntry.MediaURL)
+		if err != nil {
+			return
+		}
+		audioQueueEntry.Author = videoInfo.Author
+		audioQueueEntry.ImageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
+		audioQueueEntry.ThumbnailURL = videoInfo.GetThumbnailURL("default").String()
+		audioQueueEntry.Title = videoInfo.Title
+	case "soundcloud":
+		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(audioQueueEntry.MediaURL)
+		if err != nil {
+			return
+		}
+		audioQueueEntry.Author = audioInfo.Artist
+		audioQueueEntry.ImageURL = audioInfo.ArtURL
+		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
+		audioQueueEntry.Title = audioInfo.Title
+	}
+}
+
 type Query struct {
 	ResponseMessageID string
 }
@@ -278,13 +386,13 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	debugLog("> Disconnecting from Discord...", true)
 	for _, guildDataRow := range guildData {
 		if guildDataRow.VoiceData.VoiceConnection != nil {
 			debugLog("> Closing connection to voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
 			guildDataRow.VoiceData.VoiceConnection.Close()
 		}
 	}
+	debugLog("> Disconnecting from Discord...", true)
 	discord.Close()
 }
 
@@ -310,7 +418,7 @@ func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCr
 		debugLog("[S] "+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
 	}
 
-	go handleMessage(session, message)
+	go handleMessage(session, message, false)
 }
 func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
 	message := event //Make it easier to keep track of what's happening
@@ -342,19 +450,21 @@ func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.Messa
 	messages := event.Messages
 	channelID := event.ChannelID
 
-	guildChannel, err := session.State.Channel(channelID)
+	guildChannel, err := session.Channel(channelID)
 	if err == nil {
 		guildID := guildChannel.GuildID
 
 		_, guildFound := guildData[guildID]
 		if guildFound {
 			for i := 0; i > len(messages); i++ {
-				if guildData[guildID].Queries[messages[i]] != nil {
-					message, err := session.State.Message(channelID, messages[i])
-					if err == nil {
-						session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
-						guildData[guildID].Queries[messages[i]] = nil                                                              //Remove the message from the query list
-					}
+				debugLog("[D] ID: "+messages[i], false)
+				_, messageFound := guildData[guildID].Queries[messages[i]]
+				if messageFound {
+					debugLog("> Deleting message...", false)
+					session.ChannelMessageDelete(channelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
+					guildData[guildID].Queries[messages[i]] = nil                                                      //Remove the message from the query list
+				} else {
+					debugLog("> Error finding deleted message in queries list", false)
 				}
 			}
 		}
@@ -380,7 +490,7 @@ func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUp
 		debugLog("[U] "+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
 	}
 
-	go handleMessage(session, message)
+	go handleMessage(session, message, true)
 }
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	updateRandomStatus(session, event, 0)
@@ -389,7 +499,7 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	cronjob.Start()
 }
 
-func handleMessage(session *discordgo.Session, message *discordgo.Message) {
+func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
 	content, err := message.ContentWithMoreMentionsReplaced(session)
 	if err != nil {
 		debugLog("> Error finding message content", false)
@@ -429,7 +539,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 				AddField(botData.CommandPrefix+"queue", "Lists all entries in the queue.").
 				AddField(botData.CommandPrefix+"clear", "Clears the current queue.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
-				SetColor(0xfafafa).MessageEmbed
+				SetColor(0xFAFAFA).MessageEmbed
 		case "about":
 			responseEmbed = NewEmbed().
 				SetTitle(botData.BotName+" - About").
@@ -440,7 +550,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 				AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 				AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
 				AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
-				SetColor(0x1c1c1c).MessageEmbed
+				SetColor(0x1C1C1C).MessageEmbed
 		case "roll":
 			random := rand.Intn(6) + 1
 			responseEmbed = NewGenericEmbed("Roll", "You rolled a "+strconv.Itoa(random)+"!")
@@ -478,7 +588,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 							SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
 							SetDescription(comic.Title).
 							SetImage(comic.ImageURL).
-							SetColor(0x96a8c8).MessageEmbed
+							SetColor(0x96A8C8).MessageEmbed
 					}
 				case "latest": //Get latest XKCD comic
 					comic, err := botData.BotClients.XKCD.Latest()
@@ -489,7 +599,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 							SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
 							SetDescription(comic.Title).
 							SetImage(comic.ImageURL).
-							SetColor(0x96a8c8).MessageEmbed
+							SetColor(0x96A8C8).MessageEmbed
 					}
 				default: //Get specified XKCD comic
 					comicNumber, err := strconv.Atoi(cmd[1])
@@ -504,7 +614,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 								SetTitle("xkcd - #" + cmd[1]).
 								SetDescription(comic.Title).
 								SetImage(comic.ImageURL).
-								SetColor(0x96a8c8).MessageEmbed
+								SetColor(0x96A8C8).MessageEmbed
 						}
 					}
 				}
@@ -517,7 +627,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 						SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
 						SetDescription(comic.Title).
 						SetImage(comic.ImageURL).
-						SetColor(0x96a8c8).MessageEmbed
+						SetColor(0x96A8C8).MessageEmbed
 				}
 			}
 		case "join":
@@ -547,6 +657,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the leave command.")
 			}
 		case "play":
+			if updatedMessageEvent {
+				//Todo: Remove this once I figure out how to detect if message update was user-triggered
+				//Reason: If you use a YouTube/SoundCloud URL, Discord automatically updates the message with an embed
+				//	As far as I know, bots have no way to know if this was a Discord- or user-triggered message update
+				//I eventually want users to be able to edit their play command to change a now playing or a queue entry that was misspelled
+				return
+			}
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
@@ -575,16 +692,32 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 						if err != nil {
 							responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error getting a result for the specified query.")
 						} else {
-							err := voicePlay(guild.ID, queryURL)
-							if err != nil {
-								responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
-							}
+							queueData := AudioQueueEntry{MediaURL: queryURL, Requester: message.Author, Type: "youtube"}
+							queueData.FillMetadata()
+							guildData[guild.ID].AudioNowPlaying = queueData
+							responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+							go func() { //Create a thread for audio playback so the now playing embed gets sent
+								err := voicePlay(guild.ID, queueData.MediaURL)
+								if err != nil {
+									errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+									session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+									return
+								}
+							}()
 						}
 					} else { //First parameter is URL
-						err := voicePlay(guild.ID, cmd[1])
-						if err != nil {
-							responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
-						}
+						queueData := AudioQueueEntry{MediaURL: cmd[1], Requester: message.Author}
+						queueData.FillMetadata()
+						guildData[guild.ID].AudioNowPlaying = queueData
+						responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+						go func() { //Create a thread for audio playback so the now playing embed gets sent
+							err := voicePlay(guild.ID, queueData.MediaURL)
+							if err != nil {
+								errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+								session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+								return
+							}
+						}()
 					}
 				} else if len(cmd) >= 3 { //Multi-word query was specified
 					query := strings.Join(cmd[1:], " ") //Get the full search query without the play command
@@ -592,10 +725,18 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message) {
 					if err != nil {
 						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error getting a result for the specified query.")
 					} else {
-						err := voicePlay(guild.ID, queryURL)
-						if err != nil {
-							responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
-						}
+						queueData := AudioQueueEntry{MediaURL: queryURL, Requester: message.Author, Type: "youtube"}
+						queueData.FillMetadata()
+						guildData[guild.ID].AudioNowPlaying = queueData
+						responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+						go func() { //Create a thread for audio playback so the now playing embed gets sent
+							err := voicePlay(guild.ID, queueData.MediaURL)
+							if err != nil {
+								errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+								session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+								return
+							}
+						}()
 					}
 				}
 			} else {
@@ -748,7 +889,7 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 			SetDescription(imgurImage.Description).
 			AddField("Views", strconv.Itoa(imgurImage.Views)).
 			AddField("NSFW", strconv.FormatBool(imgurImage.Nsfw)).
-			SetColor(0x89c623).MessageEmbed
+			SetColor(0x89C623).MessageEmbed
 		return imgurEmbed, nil
 	} else if imgurInfo.Album != nil {
 		debugLog("[Imgur] Detected album from URL ["+url+"]", false)
@@ -760,7 +901,7 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 			AddField("Image Count", strconv.Itoa(imgurAlbum.ImagesCount)).
 			AddField("Views", strconv.Itoa(imgurAlbum.Views)).
 			AddField("NSFW", strconv.FormatBool(imgurAlbum.Nsfw)).
-			SetColor(0x89c623).MessageEmbed
+			SetColor(0x89C623).MessageEmbed
 		return imgurEmbed, nil
 	} else if imgurInfo.GImage != nil {
 		debugLog("[Imgur] Detected gallery image from URL ["+url+"]", false)
@@ -777,7 +918,7 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 			AddField("Downvotes", strconv.Itoa(imgurGImage.Downs)).
 			AddField("Points", strconv.Itoa(imgurGImage.Points)).
 			AddField("Score", strconv.Itoa(imgurGImage.Score)).
-			SetColor(0x89c623).MessageEmbed
+			SetColor(0x89C623).MessageEmbed
 		return imgurEmbed, nil
 	} else if imgurInfo.GAlbum != nil {
 		debugLog("[Imgur] Detected gallery album from URL ["+url+"]", false)
@@ -794,7 +935,7 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 			AddField("Downvotes", strconv.Itoa(imgurGAlbum.Downs)).
 			AddField("Points", strconv.Itoa(imgurGAlbum.Points)).
 			AddField("Score", strconv.Itoa(imgurGAlbum.Score)).
-			SetColor(0x89c623).MessageEmbed
+			SetColor(0x89C623).MessageEmbed
 		return imgurEmbed, nil
 	} else {
 		debugLog("[Imgur] Error detecting Imgur type from URL ["+url+"]", false)
@@ -843,7 +984,7 @@ func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
 		return nil, errors.New("Error getting legal data from Wolfram|Alpha.")
 	} else {
 		wolframEmbed := NewEmbed().
-			SetColor(0xda0e1a).MessageEmbed
+			SetColor(0xDA0E1A).MessageEmbed
 		wolframEmbed.Fields = fields
 		return wolframEmbed, nil
 	}
@@ -881,7 +1022,7 @@ func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
 	duckduckgoEmbed := NewEmbed().
 		SetTitle(queryResult.Heading).
 		SetDescription(result).
-		SetColor(0xdf5730).MessageEmbed
+		SetColor(0xDF5730).MessageEmbed
 	if queryResult.Image != "" {
 		duckduckgoEmbed.Image = &discordgo.MessageEmbedImage{URL: queryResult.Image}
 	}
@@ -989,6 +1130,11 @@ func voicePlay(guildID, mediaURL string) error {
 		}
 	}
 
+	_, err = guildData[guildID].VoiceData.StreamingSession.Finished()
+	if err != nil {
+		return err
+	}
+
 	//Cleanup encoding session
 	encodingSession.Stop()
 	encodingSession.Cleanup()
@@ -1064,8 +1210,7 @@ func voiceGetQuery(query string) (string, error) {
 }
 
 func getMediaURL(url string) (string, error) {
-	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-	if regexpHasYouTube {
+	if isYouTubeURL(url) {
 		videoInfo, err := ytdl.GetVideoInfo(url)
 		if err != nil {
 			return url, err
@@ -1081,8 +1226,7 @@ func getMediaURL(url string) (string, error) {
 		return mediaURL.String(), nil
 	}
 
-	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
-	if regexpHasSoundCloud {
+	if isSoundCloudURL(url) {
 		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(url)
 		if err != nil {
 			return url, err
@@ -1094,38 +1238,33 @@ func getMediaURL(url string) (string, error) {
 	return url, nil
 }
 
+func isYouTubeURL(url string) bool {
+	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
+	if regexpHasYouTube {
+		return true
+	}
+	return false
+}
+func isSoundCloudURL(url string) bool {
+	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
+	if regexpHasSoundCloud {
+		return true
+	}
+	return false
+}
+
 func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
-	/*
-		guildCount := len(event.Guilds)
-		userCount := 0
-		roleCount := 0
-		emojiCount := 0
-		channelCount := 0
-		presenceCount := 0
-		for _, guild := range event.Guilds {
-			userCount += len(guild.Members)
-			roleCount += len(guild.Roles)
-			emojiCount += len(guild.Emojis)
-			channelCount += len(guild.Channels)
-			presenceCount += len(guild.Presences)
-		}
-		if statusType == 0 { statusType = rand.Intn(6) + 1 }
-		switch statusType {
-			case 1:
-				session.UpdateStatus(0, "in " + strconv.Itoa(guildCount) + " guilds!") //Playing in x guilds!
-			case 2:
-				session.UpdateListeningStatus(strconv.Itoa(userCount) + " users!") //Listening to x users!
-			case 3:
-				session.UpdateStatus(0, "with " + strconv.Itoa(roleCount) + " roles!") //Playing with x roles!
-			case 4:
-				session.UpdateListeningStatus(strconv.Itoa(emojiCount) + " emojis!") //Listening to x emojis!
-			case 5:
-				session.UpdateListeningStatus(strconv.Itoa(channelCount) + " channels!") //Listening to x channels!
-			case 6:
-				session.UpdateStatus(0, "with " + strconv.Itoa(presenceCount) + " presences!") //Playing with x presences!
-		}
-	*/
-	session.UpdateStatus(0, "experimentally!")
+	if statusType == 0 {
+		statusType = rand.Intn(3) + 1
+	}
+	switch statusType {
+	case 1:
+		session.UpdateStatus(0, "`cli$help`!")
+	case 2:
+		session.UpdateStatus(0, "experimentally!")
+	case 3:
+		session.UpdateStatus(0, "in the Go Playground!")
+	}
 }
 
 func typingEvent(session *discordgo.Session, channelID string) {
