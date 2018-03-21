@@ -712,11 +712,30 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 								guildData[guild.ID].AudioNowPlaying = queueData
 								responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
 								go func() { //Create a thread for audio playback so the now playing embed gets sent
-									err := voicePlay(guild.ID, queueData.MediaURL)
+									err := voicePlay(guild.ID, queueData.MediaURL) // Doesn't return until audio fails to play, finishes, or stops abruptly
 									if err != nil {
 										errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 										session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
-										return
+										return // Prevent guild queue from playing
+									} else {
+										// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
+										for len(guildData[guild.ID].AudioQueue) > 0 {
+											// Move next guild queue entry into now playing slot
+											guildData[guild.ID].AudioNowPlaying = guildData[guild.ID].AudioQueue[0]
+											guildData[guild.ID].QueueRemove(0)
+
+											// Create and display now playing embed
+											nowPlayingEmbed := guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+											session.ChannelMessageSendEmbed(message.ChannelID, nowPlayingEmbed)
+
+											// Play audio
+											err := voicePlay(guild.ID, guildData[guild.ID].AudioNowPlaying.MediaURL)
+											if err != nil {
+												errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+												session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+												return // Prevent next guild queue entry from playing
+											}
+										}
 									}
 								}()
 							}
@@ -736,6 +755,21 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 									errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 									session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
 									return
+								} else {
+									for len(guildData[guild.ID].AudioQueue) > 0 {
+										guildData[guild.ID].AudioNowPlaying = guildData[guild.ID].AudioQueue[0]
+										guildData[guild.ID].QueueRemove(0)
+
+										nowPlayingEmbed := guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+										session.ChannelMessageSendEmbed(message.ChannelID, nowPlayingEmbed)
+
+										err := voicePlay(guild.ID, guildData[guild.ID].AudioNowPlaying.MediaURL)
+										if err != nil {
+											errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+											session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+											return
+										}
+									}
 								}
 							}()
 						}
@@ -760,6 +794,21 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 									errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 									session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
 									return
+								} else {
+									for len(guildData[guild.ID].AudioQueue) > 0 {
+										guildData[guild.ID].AudioNowPlaying = guildData[guild.ID].AudioQueue[0]
+										guildData[guild.ID].QueueRemove(0)
+
+										nowPlayingEmbed := guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+										session.ChannelMessageSendEmbed(message.ChannelID, nowPlayingEmbed)
+
+										err := voicePlay(guild.ID, guildData[guild.ID].AudioNowPlaying.MediaURL)
+										if err != nil {
+											errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+											session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+											return
+										}
+									}
 								}
 							}()
 						}
