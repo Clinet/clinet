@@ -576,8 +576,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
 				AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
-				AddField(botData.CommandPrefix+"queue", "Lists all entries in the queue.").
-				AddField(botData.CommandPrefix+"clear", "Clears the current queue.").
+				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
 				SetColor(0xFAFAFA).MessageEmbed
 		case "about":
@@ -916,6 +915,97 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			}
 			if foundVoiceChannel == false {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the resume command.")
+			}
+		case "queue":
+			if len(cmd) > 1 {
+				switch cmd[1] {
+				case "help":
+					responseEmbed = NewEmbed().
+						SetTitle(botData.BotName+" - Queue Help").
+						SetDescription("A list of available queue commands for "+botData.BotName+".").
+						AddField(botData.CommandPrefix+"queue help", "Displays this help message.").
+						AddField(botData.CommandPrefix+"queue clear", "Clears the current queue.").
+						AddField(botData.CommandPrefix+"queue list", "Lists all entries in the queue.").
+						AddField(botData.CommandPrefix+"queue remove (entry)", "Removes a specified entry from the queue.").
+						SetColor(0xFAFAFA).MessageEmbed
+				case "clear":
+					if len(guildData[guild.ID].AudioQueue) > 0 {
+						guildData[guild.ID].QueueClear()
+						responseEmbed = NewGenericEmbed("Clinet Queue", "Cleared the queue.")
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Queue Error", "There are no entries in the queue to clear.")
+					}
+				case "list":
+					queueList := ""
+					for queueEntryNumber, queueEntry := range guildData[guild.ID].AudioQueue {
+						displayNumber := strconv.Itoa(queueEntryNumber + 1)
+						if queueList != "" {
+							queueList += "\n"
+						}
+						switch queueEntry.Type {
+						case "youtube", "soundcloud":
+							queueList += displayNumber + ". ``" + queueEntry.Title + "`` by ``" + queueEntry.Author + "``\n\tRequested by " + queueEntry.Requester.String()
+						default:
+							queueList += displayNumber + ". ``" + queueEntry.MediaURL + "``\n\tRequested by " + queueEntry.Requester.String()
+						}
+					}
+					if queueList != "" {
+						responseEmbed = NewGenericEmbed("Queue for "+guild.Name, queueList)
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Queue Error", "There are no entries in the queue to list.")
+					}
+				case "remove":
+					if len(cmd) > 2 {
+						invalidQueueEntry := ""
+						for _, queueEntry := range cmd[2:] { // Range over all specified queue entries
+							queueEntryNumber, err := strconv.Atoi(queueEntry)
+							if err != nil { // Specified queue entry is not a valid integer
+								invalidQueueEntry = queueEntry
+								break
+							} else {
+								queueEntryNumber -= 1 // Compensate for 0-index
+							}
+
+							if queueEntryNumber > len(guildData[guild.ID].AudioQueue) || queueEntryNumber < 0 {
+								invalidQueueEntry = queueEntry
+								break
+							}
+						}
+						if invalidQueueEntry != "" {
+							responseEmbed = NewErrorEmbed("Clinet Queue Error", invalidQueueEntry+" is not a valid queue entry.")
+						} else {
+							var newAudioQueue []AudioQueueEntry
+							for queueEntryN, queueEntry := range guildData[guild.ID].AudioQueue {
+								keepQueueEntry := true
+								for _, removedQueueEntry := range cmd[2:] {
+									removedQueueEntryNumber, _ := strconv.Atoi(removedQueueEntry)
+									removedQueueEntryNumber -= 1
+									if queueEntryN == removedQueueEntryNumber {
+										keepQueueEntry = false
+										break
+									}
+								}
+								if keepQueueEntry {
+									newAudioQueue = append(newAudioQueue, queueEntry)
+								}
+							}
+
+							guildData[guild.ID].AudioQueue = newAudioQueue
+
+							if len(cmd) > 3 {
+								responseEmbed = NewGenericEmbed("Clinet Queue", "Successfully removed the specified queue entries.")
+							} else {
+								responseEmbed = NewGenericEmbed("Clinet Queue", "Successfully removed the specified queue entry.")
+							}
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Queue Error", "You must specify which entries to remove from the queue.")
+					}
+				default:
+
+				}
+			} else {
+				responseEmbed = NewErrorEmbed("Clinet Queue Error", "You must specify a queue command to use. For a list of queue commands, type ``"+botData.CommandPrefix+"queue help``.")
 			}
 		default: //Invalid command specified
 			responseEmbed = NewErrorEmbed(botData.BotName+" Error", "Unknown command. Type ``cli$help`` for a list of commands.")
