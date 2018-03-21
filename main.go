@@ -138,7 +138,7 @@ type GuildData struct {
 	Queries         map[string]*Query
 }
 
-func (guild *GuildData) QueueAdd(author, imageURL, title, thumbnailURL, mediaURL string, requester *discordgo.User) {
+func (guild *GuildData) QueueAddData(author, imageURL, title, thumbnailURL, mediaURL, sourceType string, requester *discordgo.User) {
 	var queueData AudioQueueEntry
 	queueData.Author = author
 	queueData.ImageURL = imageURL
@@ -146,7 +146,11 @@ func (guild *GuildData) QueueAdd(author, imageURL, title, thumbnailURL, mediaURL
 	queueData.Requester = requester
 	queueData.ThumbnailURL = thumbnailURL
 	queueData.Title = title
+	queueData.Type = sourceType
 	guild.AudioQueue = append(guild.AudioQueue, queueData)
+}
+func (guild *GuildData) QueueAdd(audioQueueEntry AudioQueueEntry) {
+	guild.AudioQueue = append(guild.AudioQueue, audioQueueEntry)
 }
 func (guild *GuildData) QueueRemove(entry int) {
 	guild.AudioQueue = append(guild.AudioQueue[:entry], guild.AudioQueue[entry+1:]...)
@@ -493,9 +497,9 @@ func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUp
 	go handleMessage(session, message, true)
 }
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
-	updateRandomStatus(session, event, 0)
+	updateRandomStatus(session, 0)
 	cronjob := cron.New()
-	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, event, 0) })
+	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, 0) })
 	cronjob.Start()
 }
 
@@ -634,8 +638,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
-					voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
 					foundVoiceChannel = true
+					voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
 					responseEmbed = NewGenericEmbed("Clinet Voice", "Joined voice channel.")
 					break
 				}
@@ -647,9 +651,16 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
-					voiceLeave(guild.ID, voiceState.ChannelID)
 					foundVoiceChannel = true
-					responseEmbed = NewGenericEmbed("Clinet Voice", "Left voice channel.")
+					if voiceIsStreaming(guild.ID) {
+						voiceStop(guild.ID)
+					}
+					err := voiceLeave(guild.ID, voiceState.ChannelID)
+					if err != nil {
+						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error leaving the voice channel.")
+					} else {
+						responseEmbed = NewGenericEmbed("Clinet Voice", "Left voice channel.")
+					}
 					break
 				}
 			}
@@ -667,8 +678,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
-					voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
 					foundVoiceChannel = true
+					voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
 					break
 				}
 			}
@@ -694,6 +705,29 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						} else {
 							queueData := AudioQueueEntry{MediaURL: queryURL, Requester: message.Author, Type: "youtube"}
 							queueData.FillMetadata()
+							if voiceIsStreaming(guild.ID) {
+								guildData[guild.ID].QueueAdd(queueData)
+								responseEmbed = queueData.GetQueueAddedEmbed()
+							} else {
+								guildData[guild.ID].AudioNowPlaying = queueData
+								responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+								go func() { //Create a thread for audio playback so the now playing embed gets sent
+									err := voicePlay(guild.ID, queueData.MediaURL)
+									if err != nil {
+										errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+										session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+										return
+									}
+								}()
+							}
+						}
+					} else { //First parameter is URL
+						queueData := AudioQueueEntry{MediaURL: cmd[1], Requester: message.Author}
+						queueData.FillMetadata()
+						if voiceIsStreaming(guild.ID) {
+							guildData[guild.ID].QueueAdd(queueData)
+							responseEmbed = queueData.GetQueueAddedEmbed()
+						} else {
 							guildData[guild.ID].AudioNowPlaying = queueData
 							responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
 							go func() { //Create a thread for audio playback so the now playing embed gets sent
@@ -705,19 +739,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 								}
 							}()
 						}
-					} else { //First parameter is URL
-						queueData := AudioQueueEntry{MediaURL: cmd[1], Requester: message.Author}
-						queueData.FillMetadata()
-						guildData[guild.ID].AudioNowPlaying = queueData
-						responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
-						go func() { //Create a thread for audio playback so the now playing embed gets sent
-							err := voicePlay(guild.ID, queueData.MediaURL)
-							if err != nil {
-								errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
-								session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
-								return
-							}
-						}()
 					}
 				} else if len(cmd) >= 3 { //Multi-word query was specified
 					query := strings.Join(cmd[1:], " ") //Get the full search query without the play command
@@ -727,20 +748,41 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					} else {
 						queueData := AudioQueueEntry{MediaURL: queryURL, Requester: message.Author, Type: "youtube"}
 						queueData.FillMetadata()
-						guildData[guild.ID].AudioNowPlaying = queueData
-						responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
-						go func() { //Create a thread for audio playback so the now playing embed gets sent
-							err := voicePlay(guild.ID, queueData.MediaURL)
-							if err != nil {
-								errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
-								session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
-								return
-							}
-						}()
+						if voiceIsStreaming(guild.ID) {
+							guildData[guild.ID].QueueAdd(queueData)
+							responseEmbed = queueData.GetQueueAddedEmbed()
+						} else {
+							guildData[guild.ID].AudioNowPlaying = queueData
+							responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
+							go func() { //Create a thread for audio playback so the now playing embed gets sent
+								err := voicePlay(guild.ID, queueData.MediaURL)
+								if err != nil {
+									errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+									session.ChannelMessageSendEmbed(message.ChannelID, errorEmbed)
+									return
+								}
+							}()
+						}
 					}
 				}
 			} else {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel to use before using the play command.")
+			}
+		case "stop":
+			foundVoiceChannel := false
+			for _, voiceState := range guild.VoiceStates {
+				if voiceState.UserID == message.Author.ID {
+					if voiceIsStreaming(guild.ID) {
+						voiceStop(guild.ID)
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
+					}
+					foundVoiceChannel = true
+					break
+				}
+			}
+			if foundVoiceChannel == false {
+				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the stop command.")
 			}
 		case "pause":
 			foundVoiceChannel := false
@@ -1091,8 +1133,8 @@ func voicePlay(guildID, mediaURL string) error {
 	}
 
 	//Setup pointers to guild data for local usage
-	var voiceConnection *discordgo.VoiceConnection = guildData[guildID].VoiceData.VoiceConnection
-	var encodingSession *dca.EncodeSession = guildData[guildID].VoiceData.EncodingSession
+	//var voiceConnection *discordgo.VoiceConnection = guildData[guildID].VoiceData.VoiceConnection
+	//var encodingSession *dca.EncodeSession = guildData[guildID].VoiceData.EncodingSession
 	//var streamingSession *dca.StreamingSession = guildData[guildID].VoiceData.StreamingSession
 
 	//Setup the audio encoding options
@@ -1102,21 +1144,21 @@ func voicePlay(guildID, mediaURL string) error {
 	options.Application = "lowdelay"
 
 	//Create the encoding session to encode the audio to DCA in a stream
-	encodingSession, err = dca.EncodeFile(mediaURL, options)
+	guildData[guildID].VoiceData.EncodingSession, err = dca.EncodeFile(mediaURL, options)
 	if err != nil {
 		debugLog("[Voice] Error encoding file ["+mediaURL+"]: "+fmt.Sprintf("%v", err), false)
 		return errors.New("Error encoding specified URL to DCA audio.")
 	}
 
 	//Set speaking to true
-	voiceConnection.Speaking(true)
+	guildData[guildID].VoiceData.VoiceConnection.Speaking(true)
 
 	//Make a channel for signals when playback is finished
 	done := make(chan error)
 
 	//Create the audio stream
 	//streamingSession = dca.NewStream(encodingSession, voiceConnection, done)
-	guildData[guildID].VoiceData.StreamingSession = dca.NewStream(encodingSession, voiceConnection, done)
+	guildData[guildID].VoiceData.StreamingSession = dca.NewStream(guildData[guildID].VoiceData.EncodingSession, guildData[guildID].VoiceData.VoiceConnection, done)
 
 	//Set playback running bool to true
 	guildData[guildID].VoiceData.IsPlaybackRunning = true
@@ -1131,25 +1173,35 @@ func voicePlay(guildID, mediaURL string) error {
 	}
 
 	_, err = guildData[guildID].VoiceData.StreamingSession.Finished()
+	guildData[guildID].VoiceData.StreamingSession = nil
 	if err != nil {
 		return err
 	}
 
 	//Cleanup encoding session
-	encodingSession.Stop()
-	encodingSession.Cleanup()
+	guildData[guildID].VoiceData.EncodingSession.Stop()
+	guildData[guildID].VoiceData.EncodingSession.Cleanup()
+	guildData[guildID].VoiceData.EncodingSession = nil
 
 	//Set speaking to false
-	voiceConnection.Speaking(false)
+	guildData[guildID].VoiceData.VoiceConnection.Speaking(false)
 
 	return nil
 }
 
+func voiceStop(guildID string) {
+	guildData[guildID].VoiceData.EncodingSession.Stop()
+	guildData[guildID].VoiceData.EncodingSession.Cleanup()
+	guildData[guildID].VoiceData.EncodingSession = nil
+
+	guildData[guildID].VoiceData.StreamingSession = nil
+}
+
 func voiceIsStreaming(guildID string) bool {
-	if guildData[guildID].VoiceData.StreamingSession == nil {
-		return false
+	if guildData[guildID].VoiceData.IsPlaybackRunning {
+		return true
 	}
-	return true
+	return false
 }
 
 func voiceGetPauseState(guildID string) (bool, error) {
@@ -1253,7 +1305,7 @@ func isSoundCloudURL(url string) bool {
 	return false
 }
 
-func updateRandomStatus(session *discordgo.Session, event *discordgo.Ready, statusType int) {
+func updateRandomStatus(session *discordgo.Session, statusType int) {
 	if statusType == 0 {
 		statusType = rand.Intn(3) + 1
 	}
