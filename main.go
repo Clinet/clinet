@@ -1350,7 +1350,7 @@ func voiceLeave(guildID, channelID string) error {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
 			debugLog("> Found previous voice connection, leaving...", false)
 			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
-			//guildData[guildID].VoiceData = VoiceData{}
+			guildData[guildID].VoiceData = VoiceData{}
 			return nil
 		} else {
 			return errors.New("Not connected to specified voice channel.")
