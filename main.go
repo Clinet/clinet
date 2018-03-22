@@ -755,8 +755,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 										return // Prevent guild queue from playing
 									} else {
 										if guildData[guild.ID].VoiceData.WasStoppedManually {
-											stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-											session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
+											guildData[guild.ID].VoiceData.WasStoppedManually = false
 										} else {
 											// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 											for len(guildData[guild.ID].AudioQueue) > 0 {
@@ -777,8 +776,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 													return // Prevent next guild queue entry from playing
 												} else {
 													if guildData[guild.ID].VoiceData.WasStoppedManually {
-														stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-														session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
 														guildData[guild.ID].VoiceData.WasStoppedManually = false
 														return // Prevent next guild queue entry from playing
 													}
@@ -807,8 +804,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 									return
 								} else {
 									if guildData[guild.ID].VoiceData.WasStoppedManually {
-										stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-										session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
+										guildData[guild.ID].VoiceData.WasStoppedManually = false
 									} else {
 										// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 										for len(guildData[guild.ID].AudioQueue) > 0 {
@@ -829,8 +825,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 												return // Prevent next guild queue entry from playing
 											} else {
 												if guildData[guild.ID].VoiceData.WasStoppedManually {
-													stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-													session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
 													guildData[guild.ID].VoiceData.WasStoppedManually = false
 													return // Prevent next guild queue entry from playing
 												}
@@ -864,8 +858,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 									return
 								} else {
 									if guildData[guild.ID].VoiceData.WasStoppedManually {
-										stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-										session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
+										guildData[guild.ID].VoiceData.WasStoppedManually = true
 									} else {
 										// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 										for len(guildData[guild.ID].AudioQueue) > 0 {
@@ -886,8 +879,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 												return // Prevent next guild queue entry from playing
 											} else {
 												if guildData[guild.ID].VoiceData.WasStoppedManually {
-													stoppedEmbed := NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
-													session.ChannelMessageSendEmbed(message.ChannelID, stoppedEmbed)
 													guildData[guild.ID].VoiceData.WasStoppedManually = false
 													return // Prevent next guild queue entry from playing
 												}
@@ -907,6 +898,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
 					if voiceIsStreaming(guild.ID) {
+						responseEmbed = NewGenericEmbed("Clinet Voice", "Stopped the audio playback.")
 						voiceStop(guild.ID)
 					} else {
 						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
