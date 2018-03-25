@@ -327,6 +327,7 @@ type VoiceData struct {
 
 	IsPlaybackRunning  bool //Whether or not playback is currently running
 	WasStoppedManually bool //Whether or not playback was stopped manually or automatically
+	WasSkipped         bool //Whether or not playback was skipped
 }
 
 var (
@@ -1334,7 +1335,9 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 	} else {
 		if guildData[guildID].VoiceData.WasStoppedManually {
 			guildData[guildID].VoiceData.WasStoppedManually = false
-		} else {
+		} else if guildData[guildID].VoiceData.IsPlaybackRunning == false || guildData[guildID].VoiceData.WasSkipped == true {
+			guildData[guildID].VoiceData.WasSkipped = false // Reset skip bool in case it was true
+
 			// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 			for len(guildData[guildID].AudioQueue) > 0 {
 				// Move next guild queue entry into now playing slot
@@ -1375,7 +1378,7 @@ func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
 		_, _ = voicePause(guildID)                             // Pause the audio, because *dca.StreamingSession has no stop function
 		guildData[guildID].VoiceData.IsPlaybackRunning = false // Let the voice play function clean up on its own
-		// When the play command sees that the audio has stopped, it won't see that the playback was stopped manually and will continue playing the next song
+		guildData[guildID].VoiceData.WasSkipped = true         // Let the voice play wrapper function continue to the next song if available
 	}
 }
 
@@ -1383,10 +1386,7 @@ func voiceIsStreaming(guildID string) bool {
 	if guildData[guildID] == nil {
 		return false
 	}
-	if guildData[guildID].VoiceData.IsPlaybackRunning {
-		return true
-	}
-	return false
+	return guildData[guildID].VoiceData.IsPlaybackRunning
 }
 
 func voiceGetPauseState(guildID string) (bool, error) {
