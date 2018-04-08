@@ -54,13 +54,13 @@ type BotClients struct {
 }
 type BotData struct {
 	BotClients      BotClients
-	BotKeys         BotKeys          `json:"botKeys"`
-	BotName         string           `json:"botName"`
-	BotOptions      BotOptions       `json:"botOptions"`
-	BotToken        string           `json:"botToken"`
-	CommandPrefix   string           `json:"cmdPrefix"`
-	CustomResponses []CustomResponse `json:"customResponses"`
-	DebugMode       bool             `json:"debugMode"`
+	BotKeys         BotKeys               `json:"botKeys"`
+	BotName         string                `json:"botName"`
+	BotOptions      BotOptions            `json:"botOptions"`
+	BotToken        string                `json:"botToken"`
+	CommandPrefix   string                `json:"cmdPrefix"`
+	CustomResponses []CustomResponseQuery `json:"customResponses"`
+	DebugMode       bool                  `json:"debugMode"`
 }
 type BotKeys struct {
 	DuckDuckGoAppName    string `json:"ddgAppName"`
@@ -80,10 +80,14 @@ type BotOptions struct {
 	UseYouTube        bool     `json:"useYouTube"`
 	WolframDeniedPods []string `json:"wolframDeniedPods"`
 }
-type CustomResponse struct {
+type CustomResponseQuery struct {
 	Expression string `json:"expression"`
 	Regexp     *regexp.Regexp
-	Responses  []string `json:"response"`
+	Responses  []CustomResponseReply `json:"response"`
+}
+type CustomResponseReply struct {
+	Response string `json:"text"`
+	ImageURL string `json:"imageURL"`
 }
 
 func (configData *BotData) PrepConfig() error {
@@ -197,17 +201,17 @@ type DynamicSettings struct {
 	Users  []UserSettings  `json:"users"`  // An array of user IDs with settings for each user
 }
 type GuildSettings struct { // By default this will only be configurable for users in a role with the server admin permission
-	AllowVoice              bool             `json:"allowVoice"`              // Whether voice commands should be usable in this guild
-	BotAdminRoles           []string         `json:"adminRoles"`              // An array of role IDs that can admin the bot
-	BotAdminUsers           []string         `json:"adminUsers"`              // An array of user IDs that can admin the bot
-	BotName                 string           `json:"botName"`                 // The bot name to use in this guild
-	BotOptions              BotOptions       `json:"botOptions"`              // The bot options to use in this guild (true gets overridden if global bot config is false)
-	BotPrefix               string           `json:"botPrefix"`               // The bot prefix to use in this guild
-	CustomResponses         []CustomResponse `json:"customResponses"`         // An array of custom responses specific to the guild
-	UserJoinMessage         string           `json:"userJoinMessage"`         // A message to send when a user joins
-	UserJoinMessageChannel  string           `json:"userJoinMessageChannel"`  // The channel to send the user join message to
-	UserLeaveMessage        string           `json:"userLeaveMessage"`        // A message to send when a user leaves
-	UserLeaveMessageChannel string           `json:"userLeaveMessageChannel"` // The channel to send the user leave message to
+	AllowVoice              bool                  `json:"allowVoice"`              // Whether voice commands should be usable in this guild
+	BotAdminRoles           []string              `json:"adminRoles"`              // An array of role IDs that can admin the bot
+	BotAdminUsers           []string              `json:"adminUsers"`              // An array of user IDs that can admin the bot
+	BotName                 string                `json:"botName"`                 // The bot name to use in this guild
+	BotOptions              BotOptions            `json:"botOptions"`              // The bot options to use in this guild (true gets overridden if global bot config is false)
+	BotPrefix               string                `json:"botPrefix"`               // The bot prefix to use in this guild
+	CustomResponses         []CustomResponseQuery `json:"customResponses"`         // An array of custom responses specific to the guild
+	UserJoinMessage         string                `json:"userJoinMessage"`         // A message to send when a user joins
+	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  // The channel to send the user join message to
+	UserLeaveMessage        string                `json:"userLeaveMessage"`        // A message to send when a user leaves
+	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel"` // The channel to send the user leave message to
 }
 type UserSettings struct {
 	Balance     int64  `json:"balance"`     // A balance to use as virtual currency for some bot tasks
@@ -328,6 +332,10 @@ type VoiceData struct {
 	IsPlaybackRunning  bool //Whether or not playback is currently running
 	WasStoppedManually bool //Whether or not playback was stopped manually or automatically
 	WasSkipped         bool //Whether or not playback was skipped
+
+	// Configuration settings that can be set via commands
+	Shuffle     bool //Whether or not to shuffle the current playback
+	RepeatLevel int  //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
 }
 
 var (
@@ -865,6 +873,32 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			if foundVoiceChannel == false {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the resume command.")
 			}
+		case "repeat":
+			foundVoiceChannel := false
+			for _, voiceState := range guild.VoiceStates {
+				if voiceState.UserID == message.Author.ID {
+					foundVoiceChannel = true
+					if voiceIsStreaming(guild.ID) {
+						switch guildData[guild.ID].VoiceData.RepeatLevel {
+						case 0: //No Repeat
+							guildData[guild.ID].VoiceData.RepeatLevel = 1
+							responseEmbed = NewGenericEmbed("Clinet Voice", "The current guild queue will be repeated.")
+						case 1: //Repeat Playlist
+							guildData[guild.ID].VoiceData.RepeatLevel = 2
+							responseEmbed = NewGenericEmbed("Clinet Voice", "The currently now playing audio will be repeated.")
+						case 2: //Repeat Now Playing
+							guildData[guild.ID].VoiceData.RepeatLevel = 0
+							responseEmbed = NewGenericEmbed("Clinet Voice", "The current guild queue will play through as normal.")
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
+					}
+					break
+				}
+			}
+			if foundVoiceChannel == false {
+				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the repeat command.")
+			}
 		case "queue":
 			if len(cmd) > 1 {
 				switch cmd[1] {
@@ -878,6 +912,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						AddField(botData.CommandPrefix+"queue remove (entry)", "Removes a specified entry from the queue.").
 						SetColor(0xFAFAFA).MessageEmbed
 				case "clear":
+					if guildData[guild.ID].AudioQueue == nil {
+						guildData[guild.ID].AudioQueue = make([]AudioQueueEntry, 0)
+					}
 					if len(guildData[guild.ID].AudioQueue) > 0 {
 						guildData[guild.ID].QueueClear()
 						responseEmbed = NewGenericEmbed("Clinet Queue", "Cleared the queue.")
@@ -885,25 +922,31 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						responseEmbed = NewErrorEmbed("Clinet Queue Error", "There are no entries in the queue to clear.")
 					}
 				case "list":
-					queueList := ""
-					for queueEntryNumber, queueEntry := range guildData[guild.ID].AudioQueue {
-						displayNumber := strconv.Itoa(queueEntryNumber + 1)
-						if queueList != "" {
-							queueList += "\n"
-						}
-						switch queueEntry.Type {
-						case "youtube", "soundcloud":
-							queueList += displayNumber + ". ``" + queueEntry.Title + "`` by ``" + queueEntry.Author + "``\n\tRequested by " + queueEntry.Requester.String()
-						default:
-							queueList += displayNumber + ". ``" + queueEntry.MediaURL + "``\n\tRequested by " + queueEntry.Requester.String()
-						}
+					if guildData[guild.ID].AudioQueue == nil {
+						guildData[guild.ID].AudioQueue = make([]AudioQueueEntry, 0)
 					}
-					if queueList != "" {
+					if len(guildData[guild.ID].AudioQueue) > 0 {
+						queueList := ""
+						for queueEntryNumber, queueEntry := range guildData[guild.ID].AudioQueue {
+							displayNumber := strconv.Itoa(queueEntryNumber + 1)
+							if queueList != "" {
+								queueList += "\n"
+							}
+							switch queueEntry.Type {
+							case "youtube", "soundcloud":
+								queueList += displayNumber + ". ``" + queueEntry.Title + "`` by ``" + queueEntry.Author + "``\n\tRequested by " + queueEntry.Requester.String()
+							default:
+								queueList += displayNumber + ". ``" + queueEntry.MediaURL + "``\n\tRequested by " + queueEntry.Requester.String()
+							}
+						}
 						responseEmbed = NewGenericEmbed("Queue for "+guild.Name, queueList)
 					} else {
 						responseEmbed = NewErrorEmbed("Clinet Queue Error", "There are no entries in the queue to list.")
 					}
 				case "remove":
+					if guildData[guild.ID].AudioQueue == nil {
+						guildData[guild.ID].AudioQueue = make([]AudioQueueEntry, 0)
+					}
 					if len(cmd) > 2 {
 						invalidQueueEntry := ""
 						for _, queueEntry := range cmd[2:] { // Range over all specified queue entries
@@ -984,7 +1027,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					regexpMatched, _ := regexp.MatchString(response.Expression, query)
 					if regexpMatched {
 						random := rand.Intn(len(response.Responses))
-						responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random])
+						responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random].Response)
 						usedCustomResponse = true
 					}
 				}
@@ -1326,7 +1369,24 @@ func voicePlay(guildID, mediaURL string) error {
 }
 
 func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL string) {
+
+	//0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
+
 	err := voicePlay(guildID, mediaURL)
+	if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
+		for guildData[guildID].VoiceData.RepeatLevel == 2 {
+			err = voicePlay(guildID, mediaURL)
+			if err != nil {
+				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+				errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+				session.ChannelMessageSendEmbed(channelID, errorEmbed)
+				return
+			}
+		}
+	}
+	if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
+		guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) // Shift the now playing entry to the end of the guild queue
+	}
 	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
 	if err != nil {
 		errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
@@ -1350,6 +1410,20 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 
 				// Play audio
 				err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
+				if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
+					for guildData[guildID].VoiceData.RepeatLevel == 2 {
+						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
+						if err != nil {
+							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+							errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+							session.ChannelMessageSendEmbed(channelID, errorEmbed)
+							return
+						}
+					}
+				}
+				if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
+					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) // Shift the now playing entry to the end of the guild queue
+				}
 				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
 				if err != nil {
 					errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
