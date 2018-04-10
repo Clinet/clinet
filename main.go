@@ -339,6 +339,18 @@ type VoiceData struct {
 }
 
 var (
+	//Variables filled in on compile time using github.com/JoshuaDoes/govvv
+	GitBranch    string
+	GitCommit    string
+	GitCommitMsg string
+	GitState     string
+	BuildDate    string
+
+	//A unique build ID inspired by the Android Open Source Project
+	BuildID string = "clinet_discord-" + GitState + " " + GitBranch + "-" + GitCommit
+)
+
+var (
 	botData   *BotData = &BotData{}
 	guildData          = make(map[string]*GuildData)
 
@@ -577,6 +589,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				SetDescription("A list of available commands for "+botData.BotName+".").
 				AddField(botData.CommandPrefix+"help", "Displays this help message.").
 				AddField(botData.CommandPrefix+"about", "Displays information about "+botData.BotName+" and how to use it.").
+				AddField(botData.CommandPrefix+"version", "Displays the current version of "+botData.BotName+".").
 				AddField(botData.CommandPrefix+"roll", "Rolls a dice.").
 				AddField(botData.CommandPrefix+"doubleroll", "Rolls two die.").
 				AddField(botData.CommandPrefix+"coinflip", "Flips a coin.").
@@ -598,6 +611,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 				AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
 				AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
+				SetColor(0x1C1C1C).MessageEmbed
+		case "version":
+			responseEmbed = NewEmbed().
+				SetTitle(botData.BotName+" - Version").
+				AddField("Build ID", BuildID).
+				AddField("Build Date", BuildDate).
+				AddField("Latest Development", GitCommitMsg).
 				SetColor(0x1C1C1C).MessageEmbed
 		case "roll":
 			random := rand.Intn(6) + 1
