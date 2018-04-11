@@ -750,21 +750,39 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			if foundVoiceChannel {
 				if len(cmd) == 1 { //No query or URL was specified
 					if voiceIsStreaming(guild.ID) {
-						isPaused, _ := voiceGetPauseState(guild.ID)
-						if isPaused {
-							_, _ = voiceResume(guild.ID)
-							responseEmbed = NewGenericEmbed("Clinet Voice", "Resumed the audio playback.")
+						if len(message.Attachments) > 0 {
+							for _, attachment := range message.Attachments {
+								queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: message.Author}
+								queueData.FillMetadata()
+								guildData[guild.ID].QueueAdd(queueData)
+							}
+							responseEmbed = NewGenericEmbed("Clinet Voice", "Added the attached files to the guild queue.")
 						} else {
-							responseEmbed = NewErrorEmbed("Clinet Voice Error", "The current audio is already playing.")
+							isPaused, _ := voiceGetPauseState(guild.ID)
+							if isPaused {
+								_, _ = voiceResume(guild.ID)
+								responseEmbed = NewGenericEmbed("Clinet Voice", "Resumed the audio playback.")
+							} else {
+								responseEmbed = NewErrorEmbed("Clinet Voice Error", "The current audio is already playing.")
+							}
 						}
 					} else {
-						if len(guildData[guild.ID].AudioQueue) > 0 {
-							queueData := guildData[guild.ID].AudioQueue[0]
-							queueData.FillMetadata()
-							guildData[guild.ID].QueueRemove(0)
-							go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
+						if len(message.Attachments) > 0 {
+							for _, attachment := range message.Attachments {
+								queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: message.Author}
+								queueData.FillMetadata()
+								guildData[guild.ID].QueueAdd(queueData)
+							}
+							responseEmbed = NewGenericEmbed("Clinet Voice", "Added the attached files to the guild queue. Use ``"+botData.CommandPrefix+"play`` to begin playback from the beginning of the queue.")
 						} else {
-							responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must specify either a YouTube search query or a YouTube/SoundCloud/direct URL to play.")
+							if len(guildData[guild.ID].AudioQueue) > 0 {
+								queueData := guildData[guild.ID].AudioQueue[0]
+								queueData.FillMetadata()
+								guildData[guild.ID].QueueRemove(0)
+								go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
+							} else {
+								responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must specify either a YouTube search query or a YouTube/SoundCloud/direct URL to play.")
+							}
 						}
 					}
 				} else if len(cmd) == 2 { //One-word query or URL was specified
