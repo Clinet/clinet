@@ -467,19 +467,21 @@ func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCr
 		debugLog("> Message author ID matched bot ID, ignoring message", false)
 		return //The bot should never reply to itself
 	}
-	content, err := message.ContentWithMoreMentionsReplaced(session)
-	if err != nil {
-		debugLog("> Error finding message content", false)
-		return //There was an uhoh somewhere
-	}
-
-	if message.Author.Bot {
-		debugLog("[S] "+message.Author.Username+"#"+message.Author.Discriminator+" [BOT]: "+content, false)
-	} else {
-		debugLog("[S] "+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
-	}
 
 	go handleMessage(session, message, false)
+}
+func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
+	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
+	if err != nil {
+		debugLog("> Error fnding message: "+fmt.Sprintf("%v", err), false)
+		return //Error finding message
+	}
+	if message.Author.ID == session.State.User.ID {
+		debugLog("> Message author ID matched bot ID, ignoring message", false)
+		return //The bot should never reply to itself
+	}
+
+	go handleMessage(session, message, true)
 }
 func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
 	message := event //Make it easier to keep track of what's happening
@@ -531,28 +533,6 @@ func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.Messa
 		}
 	}
 }
-func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
-	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
-	if err != nil {
-		return //Error finding message
-	}
-	if message.Author.ID == session.State.User.ID {
-		return //The bot should never reply to itself
-	}
-	content, err := message.ContentWithMoreMentionsReplaced(session)
-	if err != nil {
-		debugLog("> Error finding message content", false)
-		return //There was an uhoh somewhere
-	}
-
-	if message.Author.Bot {
-		debugLog("[U] "+message.Author.Username+"#"+message.Author.Discriminator+" [BOT]: "+content, false)
-	} else {
-		debugLog("[U] "+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
-	}
-
-	go handleMessage(session, message, true)
-}
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	updateRandomStatus(session, 0)
 	cronjob := cron.New()
@@ -561,11 +541,6 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 }
 
 func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
-	content, err := message.ContentWithMoreMentionsReplaced(session)
-	if err != nil {
-		debugLog("> Error finding message content", false)
-		return //There was an uhoh somewhere
-	}
 	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
 		debugLog("> Error finding message channel", false)
@@ -575,6 +550,41 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	if err != nil {
 		debugLog("> Error finding message guild", false)
 		return //Error finding the guild
+	}
+	content, err := message.ContentWithMoreMentionsReplaced(session)
+	if err != nil {
+		debugLog("> Error finding message content", false)
+		return //There was an uhoh somewhere
+	}
+	if content == "" {
+		return //The message was empty
+	}
+
+	/*
+		// If message is single-lined
+			[New][District JD - #main] @JoshuaDoes#0001: Hello, world!
+
+		// If message is multi-lined
+			[New][District JD - #main] @JoshuaDoes#0001:
+			Hello, world!
+			My name is Joshua.
+			This is a lot of fun!
+
+		// If user is bot
+			[New][District JD - #main] *Clinet#1823: Hello, world!
+	*/
+	eventType := "[New]"
+	if updatedMessageEvent {
+		eventType = "[Updated]"
+	}
+	userType := "@"
+	if message.Author.Bot {
+		userType = "*"
+	}
+	if strings.Contains(content, "\n") {
+		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+":\n"+content, false)
+	} else {
+		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
 	}
 
 	var responseEmbed *discordgo.MessageEmbed
