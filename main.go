@@ -587,15 +587,16 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
 	}
 
-	if !updatedMessageEvent {
-		typingEvent(session, message.ChannelID)
-	}
-
 	var responseEmbed *discordgo.MessageEmbed
 
 	if strings.HasPrefix(content, botData.CommandPrefix) {
+		if !updatedMessageEvent {
+			typingEvent(session, message.ChannelID)
+		}
+
 		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
 		cmd := strings.Split(cmdMsg, " ")
+
 		switch cmd[0] {
 		case "help":
 			responseEmbed = NewEmbed().
@@ -1057,6 +1058,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	} else {
 		regexpBotName, _ := regexp.MatchString("(?i)"+botData.BotName+"(.*?)", content)
 		if regexpBotName && strings.HasSuffix(content, "?") {
+			if !updatedMessageEvent {
+				typingEvent(session, message.ChannelID)
+			}
 			query := content
 
 			replace := NewCaseInsensitiveReplacer("Clinet", "")
