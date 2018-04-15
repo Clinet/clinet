@@ -612,7 +612,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
-				AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
+				//AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
 				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
 				SetColor(0xFAFAFA).MessageEmbed
@@ -623,9 +623,11 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField("How can I use "+botData.BotName+" in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
 				AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
 				AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``"+botData.BotName+", what time is it?`` or ``"+botData.BotName+", what is DiscordApp?``.").
+				AddField("Where can I join the "+botData.BotName+" Discord server?", "If you would like to get help and support with "+botData.BotName+" or experiment with the latest and greatest of "+botData.BotName+", use the Discord Server Invite Link at the end of this message.").
 				AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 				AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
 				AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
+				AddField("Discord Server Invite Link", "https://discord.gg/qkbKEWT").
 				SetColor(0x1C1C1C).MessageEmbed
 		case "version":
 			responseEmbed = NewEmbed().
