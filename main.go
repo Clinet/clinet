@@ -340,14 +340,18 @@ type VoiceData struct {
 
 var (
 	//Variables filled in on compile time using github.com/JoshuaDoes/govvv
-	GitBranch    string
-	GitCommit    string
-	GitCommitMsg string
-	GitState     string
-	BuildDate    string
+	GitBranch     string
+	GitCommit     string
+	GitCommitFull string
+	GitCommitMsg  string
+	GitState      string
+	BuildDate     string
 
 	//A unique build ID inspired by the Android Open Source Project
 	BuildID string = "clinet_discord-" + GitState + " " + GitBranch + "-" + GitCommit
+
+	//The URL to the current commit
+	GitHubCommitURL string = "https://github.com/JoshuaDoes/clinet-discord/commit/" + GitCommitFull
 )
 
 var (
@@ -635,6 +639,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField("Build ID", BuildID).
 				AddField("Build Date", BuildDate).
 				AddField("Latest Development", GitCommitMsg).
+				AddField("GitHub Commit URL", GitHubCommitURL).
 				SetColor(0x1C1C1C).MessageEmbed
 		case "roll":
 			random := rand.Intn(6) + 1
