@@ -1294,7 +1294,8 @@ func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
 		return nil, errors.New("Error getting legal data from Wolfram|Alpha.")
 	} else {
 		wolframEmbed := NewEmbed().
-			SetColor(0xDA0E1A).MessageEmbed
+			SetColor(0xDA0E1A).
+			SetFooter("Results from Wolfram|Alpha.", "https://upload.wikimedia.org/wikipedia/en/thumb/8/83/Wolfram_Alpha_December_2016.svg/257px-Wolfram_Alpha_December_2016.svg.png").MessageEmbed
 		wolframEmbed.Fields = fields
 		return wolframEmbed, nil
 	}
@@ -1332,7 +1333,8 @@ func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
 	duckduckgoEmbed := NewEmbed().
 		SetTitle(queryResult.Heading).
 		SetDescription(result).
-		SetColor(0xDF5730).MessageEmbed
+		SetColor(0xDF5730).
+		SetFooter("Results from DuckDuckGo.", "https://upload.wikimedia.org/wikipedia/en/9/90/The_DuckDuckGo_Duck.png").MessageEmbed
 	if queryResult.Image != "" {
 		duckduckgoEmbed.Image = &discordgo.MessageEmbedImage{URL: queryResult.Image}
 	}
