@@ -91,7 +91,7 @@ type CustomResponseReply struct {
 }
 
 func (configData *BotData) PrepConfig() error {
-	// Bot config checks
+	//Bot config checks
 	if configData.BotName == "" {
 		return errors.New("config:{botName: \"\"}")
 	}
@@ -102,7 +102,7 @@ func (configData *BotData) PrepConfig() error {
 		return errors.New("config:{cmdPrefix: \"\"}")
 	}
 
-	// Bot key checks
+	//Bot key checks
 	if configData.BotOptions.UseDuckDuckGo && configData.BotKeys.DuckDuckGoAppName == "" {
 		return errors.New("config:{botOptions:{useDuckDuckGo: true}} not permitted, config:{botKeys:{ddgAppName: \"\"}}")
 	}
@@ -122,7 +122,7 @@ func (configData *BotData) PrepConfig() error {
 		return errors.New("config:{botOptions:{useYouTube: true}} not permitted, config:{botKeys:{youtubeAPIKey: \"\"}}")
 	}
 
-	// Custom response checks
+	//Custom response checks
 	for i, customResponse := range configData.CustomResponses {
 		regexp, err := regexp.Compile(customResponse.Expression)
 		if err != nil {
@@ -197,25 +197,25 @@ func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
 }
 */
 type DynamicSettings struct {
-	Guilds []GuildSettings `json:"guilds"` // An array of guild IDs with settings for each guild
-	Users  []UserSettings  `json:"users"`  // An array of user IDs with settings for each user
+	Guilds []GuildSettings `json:"guilds"` //An array of guild IDs with settings for each guild
+	Users  []UserSettings  `json:"users"`  //An array of user IDs with settings for each user
 }
-type GuildSettings struct { // By default this will only be configurable for users in a role with the server admin permission
-	AllowVoice              bool                  `json:"allowVoice"`              // Whether voice commands should be usable in this guild
-	BotAdminRoles           []string              `json:"adminRoles"`              // An array of role IDs that can admin the bot
-	BotAdminUsers           []string              `json:"adminUsers"`              // An array of user IDs that can admin the bot
-	BotName                 string                `json:"botName"`                 // The bot name to use in this guild
-	BotOptions              BotOptions            `json:"botOptions"`              // The bot options to use in this guild (true gets overridden if global bot config is false)
-	BotPrefix               string                `json:"botPrefix"`               // The bot prefix to use in this guild
-	CustomResponses         []CustomResponseQuery `json:"customResponses"`         // An array of custom responses specific to the guild
-	UserJoinMessage         string                `json:"userJoinMessage"`         // A message to send when a user joins
-	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  // The channel to send the user join message to
-	UserLeaveMessage        string                `json:"userLeaveMessage"`        // A message to send when a user leaves
-	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel"` // The channel to send the user leave message to
+type GuildSettings struct { //By default this will only be configurable for users in a role with the server admin permission
+	AllowVoice              bool                  `json:"allowVoice"`              //Whether voice commands should be usable in this guild
+	BotAdminRoles           []string              `json:"adminRoles"`              //An array of role IDs that can admin the bot
+	BotAdminUsers           []string              `json:"adminUsers"`              //An array of user IDs that can admin the bot
+	BotName                 string                `json:"botName"`                 //The bot name to use in this guild
+	BotOptions              BotOptions            `json:"botOptions"`              //The bot options to use in this guild (true gets overridden if global bot config is false)
+	BotPrefix               string                `json:"botPrefix"`               //The bot prefix to use in this guild
+	CustomResponses         []CustomResponseQuery `json:"customResponses"`         //An array of custom responses specific to the guild
+	UserJoinMessage         string                `json:"userJoinMessage"`         //A message to send when a user joins
+	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  //The channel to send the user join message to
+	UserLeaveMessage        string                `json:"userLeaveMessage"`        //A message to send when a user leaves
+	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel"` //The channel to send the user leave message to
 }
 type UserSettings struct {
-	Balance     int64  `json:"balance"`     // A balance to use as virtual currency for some bot tasks
-	Description string `json:"description"` // A description set by the user
+	Balance     int64  `json:"balance"`     //A balance to use as virtual currency for some bot tasks
+	Description string `json:"description"` //A description set by the user
 }
 
 type AudioQueueEntry struct {
@@ -329,13 +329,13 @@ type VoiceData struct {
 	StreamingSession    *dca.StreamingSession
 	ChannelIDJoinedFrom string
 
-	IsPlaybackRunning  bool //Whether or not playback is currently running
-	WasStoppedManually bool //Whether or not playback was stopped manually or automatically
-	WasSkipped         bool //Whether or not playback was skipped
+	IsPlaybackPreparing bool //Whether or not the playback is being prepared
+	IsPlaybackRunning   bool //Whether or not playback is currently running
+	WasStoppedManually  bool //Whether or not playback was stopped manually or automatically
+	WasSkipped          bool //Whether or not playback was skipped
 
-	// Configuration settings that can be set via commands
-	Shuffle     bool //Whether or not to shuffle the current playback
-	RepeatLevel int  //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
+	//Configuration settings that can be set via commands
+	RepeatLevel int //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
 }
 
 var (
@@ -565,16 +565,16 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	}
 
 	/*
-		// If message is single-lined
+		//If message is single-lined
 			[New][District JD - #main] @JoshuaDoes#0001: Hello, world!
 
-		// If message is multi-lined
+		//If message is multi-lined
 			[New][District JD - #main] @JoshuaDoes#0001:
 			Hello, world!
 			My name is Joshua.
 			This is a lot of fun!
 
-		// If user is bot
+		//If user is bot
 			[New][District JD - #main] *Clinet#1823: Hello, world!
 	*/
 	eventType := "[New]"
@@ -617,6 +617,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
 				//AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
+				AddField(botData.CommandPrefix+"repeat", "Switches the repeat level between the entire guild queue, the currently now playing audio, and not repeating at all.").
+				AddField(botData.CommandPrefix+"shuffle", "Shuffles the current guild queue.").
 				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
 				SetColor(0xFAFAFA).MessageEmbed
@@ -761,6 +763,14 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				//I eventually want users to be able to edit their play command to change a now playing or a queue entry that was misspelled
 				return
 			}
+			if guildData[guild.ID] == nil {
+				guildData[guild.ID] = &GuildData{}
+				guildData[guild.ID].VoiceData = VoiceData{}
+			}
+			for guildData[guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playback command to finish
+			}
+			guildData[guild.ID].VoiceData.IsPlaybackPreparing = true
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
 				if voiceState.UserID == message.Author.ID {
@@ -858,6 +868,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			} else {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel to use before using the play command.")
 			}
+			guildData[guild.ID].VoiceData.IsPlaybackPreparing = false
 		case "stop":
 			foundVoiceChannel := false
 			for _, voiceState := range guild.VoiceStates {
@@ -959,6 +970,29 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			if foundVoiceChannel == false {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the repeat command.")
 			}
+		case "shuffle":
+			foundVoiceChannel := false
+			for _, voiceState := range guild.VoiceStates {
+				if voiceState.UserID == message.Author.ID {
+					foundVoiceChannel = true
+					if voiceIsStreaming(guild.ID) {
+						newAudioQueue := make([]AudioQueueEntry, len(guildData[guild.ID].AudioQueue))
+						permutation := rand.Perm(len(guildData[guild.ID].AudioQueue))
+						for i, v := range permutation {
+							newAudioQueue[v] = guildData[guild.ID].AudioQueue[i]
+						}
+						guildData[guild.ID].AudioQueue = newAudioQueue
+
+						responseEmbed = NewGenericEmbed("Clinet Voice", "The current guild queue has been shuffled.")
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
+					}
+					break
+				}
+			}
+			if foundVoiceChannel == false {
+				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the shuffle command.")
+			}
 		case "queue":
 			if len(cmd) > 1 {
 				switch cmd[1] {
@@ -1009,13 +1043,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					}
 					if len(cmd) > 2 {
 						invalidQueueEntry := ""
-						for _, queueEntry := range cmd[2:] { // Range over all specified queue entries
+						for _, queueEntry := range cmd[2:] { //Range over all specified queue entries
 							queueEntryNumber, err := strconv.Atoi(queueEntry)
-							if err != nil { // Specified queue entry is not a valid integer
+							if err != nil { //Specified queue entry is not a valid integer
 								invalidQueueEntry = queueEntry
 								break
 							} else {
-								queueEntryNumber -= 1 // Compensate for 0-index
+								queueEntryNumber -= 1 //Compensate for 0-index
 							}
 
 							if queueEntryNumber > len(guildData[guild.ID].AudioQueue) || queueEntryNumber < 0 {
@@ -1438,7 +1472,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 		for guildData[guildID].VoiceData.RepeatLevel == 2 {
 			err = voicePlay(guildID, mediaURL)
 			if err != nil {
-				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 				errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 				session.ChannelMessageSendEmbed(channelID, errorEmbed)
 				return
@@ -1446,9 +1480,9 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 		}
 	}
 	if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
-		guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) // Shift the now playing entry to the end of the guild queue
+		guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 	}
-	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 	if err != nil {
 		errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 		session.ChannelMessageSendEmbed(channelID, errorEmbed)
@@ -1457,25 +1491,25 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 		if guildData[guildID].VoiceData.WasStoppedManually {
 			guildData[guildID].VoiceData.WasStoppedManually = false
 		} else if guildData[guildID].VoiceData.IsPlaybackRunning == false || guildData[guildID].VoiceData.WasSkipped == true {
-			guildData[guildID].VoiceData.WasSkipped = false // Reset skip bool in case it was true
+			guildData[guildID].VoiceData.WasSkipped = false //Reset skip bool in case it was true
 
-			// When the song finishes playing, we should run on a loop to make sure the next songs continue playing
+			//When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 			for len(guildData[guildID].AudioQueue) > 0 {
-				// Move next guild queue entry into now playing slot
+				//Move next guild queue entry into now playing slot
 				guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[0]
 				guildData[guildID].QueueRemove(0)
 
-				// Create and display now playing embed
+				//Create and display now playing embed
 				nowPlayingEmbed := guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed()
 				session.ChannelMessageSendEmbed(channelID, nowPlayingEmbed)
 
-				// Play audio
+				//Play audio
 				err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
 				if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
 					for guildData[guildID].VoiceData.RepeatLevel == 2 {
 						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
 						if err != nil {
-							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 							errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 							session.ChannelMessageSendEmbed(channelID, errorEmbed)
 							return
@@ -1483,17 +1517,17 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 					}
 				}
 				if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
-					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) // Shift the now playing entry to the end of the guild queue
+					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 				}
-				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} // Clear now playing slot
+				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 				if err != nil {
 					errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
 					session.ChannelMessageSendEmbed(channelID, errorEmbed)
-					return // Prevent next guild queue entry from playing
+					return //Prevent next guild queue entry from playing
 				} else {
 					if guildData[guildID].VoiceData.WasStoppedManually {
 						guildData[guildID].VoiceData.WasStoppedManually = false
-						return // Prevent next guild queue entry from playing
+						return //Prevent next guild queue entry from playing
 					}
 				}
 			}
@@ -1503,17 +1537,17 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 
 func voiceStop(guildID string) {
 	if guildData[guildID] != nil {
-		_, _ = voicePause(guildID)                             // Pause the audio, because *dca.StreamingSession has no stop function
-		guildData[guildID].VoiceData.WasStoppedManually = true // Make sure other threads know it was stopped manually
-		guildData[guildID].VoiceData.IsPlaybackRunning = false // Let the voice play function clean up on its own
+		_, _ = voicePause(guildID)                             //Pause the audio, because *dca.StreamingSession has no stop function
+		guildData[guildID].VoiceData.WasStoppedManually = true //Make sure other threads know it was stopped manually
+		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
 	}
 }
 
 func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
-		_, _ = voicePause(guildID)                             // Pause the audio, because *dca.StreamingSession has no stop function
-		guildData[guildID].VoiceData.IsPlaybackRunning = false // Let the voice play function clean up on its own
-		guildData[guildID].VoiceData.WasSkipped = true         // Let the voice play wrapper function continue to the next song if available
+		_, _ = voicePause(guildID)                             //Pause the audio, because *dca.StreamingSession has no stop function
+		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
+		guildData[guildID].VoiceData.WasSkipped = true         //Let the voice play wrapper function continue to the next song if available
 	}
 }
 
