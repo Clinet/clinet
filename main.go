@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,15 +11,17 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
+	//"time"
 
 	"github.com/JoshuaDoes/duckduckgolang"      //Allows the usage of the DuckDuckGo API
 	"github.com/JoshuaDoes/go-soundcloud"       //Allows usage of the SoundCloud API
 	"github.com/JoshuaDoes/go-wolfram"          //Allows usage of the Wolfram|Alpha API
 	"github.com/bwmarrin/discordgo"             //Allows usage of the Discord API
+	"github.com/google/go-github/github"        //Allows usage of the GitHub API
 	"github.com/jonas747/dca"                   //Allows the encoding/decoding of the Discord Audio format
 	"github.com/koffeinsource/go-imgur"         //Allows usage of the Imgur API
 	"github.com/koffeinsource/go-klogger"       //For some reason, this is required for go-imgur's logging
@@ -30,22 +33,10 @@ import (
 	"google.golang.org/api/youtube/v3"          //Allows usage of the YouTube API
 )
 
-var ( //Used during development, delete later when all imports are in use
-	_ = rand.Intn
-	_ = url.ParseRequestURI
-	_ = strconv.Itoa
-	_ = strings.Replace
-	_ = time.NewTicker
-	_ = ytdl.GetVideoInfo
-	_ = &transport.APIKey{}
-	_ = youtube.New
-	_ = xkcd.NewClient
-	_ = cron.New
-)
-
 //Bot data structs
 type BotClients struct {
 	DuckDuckGo *duckduckgo.Client
+	GitHub     *github.Client
 	Imgur      imgur.Client
 	SoundCloud *soundcloud.Client
 	Wolfram    *wolfram.Client
@@ -73,6 +64,7 @@ type BotKeys struct {
 type BotOptions struct {
 	SendTypingEvent   bool     `json:"sendTypingEvent"`
 	UseDuckDuckGo     bool     `json:"useDuckDuckGo"`
+	UseGitHub         bool     `json:"useGitHub"`
 	UseImgur          bool     `json:"useImgur"`
 	UseSoundCloud     bool     `json:"useSoundCloud"`
 	UseWolframAlpha   bool     `json:"useWolframAlpha"`
@@ -352,6 +344,9 @@ var (
 
 	//The URL to the current commit
 	GitHubCommitURL string = "https://github.com/JoshuaDoes/clinet-discord/commit/" + GitCommitFull
+
+	//The version of Go used to build this release
+	GolangVersion string = runtime.Version()
 )
 
 var (
@@ -425,6 +420,10 @@ func main() {
 		} else {
 			botData.BotClients.YouTube = youtubeClient
 		}
+	}
+	if botData.BotOptions.UseGitHub {
+		debugLog("> Initializing GitHub...", false)
+		botData.BotClients.GitHub = github.NewClient(nil)
 	}
 
 	debugLog("> Creating a Discord session...", true)
@@ -555,14 +554,11 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		debugLog("> Error finding message guild", false)
 		return //Error finding the guild
 	}
-	content, err := message.ContentWithMoreMentionsReplaced(session)
-	if err != nil {
-		debugLog("> Error finding message content", false)
-		return //There was an uhoh somewhere
-	}
+	content := message.Content
 	if content == "" {
 		return //The message was empty
 	}
+	contentReplaced, _ := message.ContentWithMoreMentionsReplaced(session)
 
 	/*
 		//If message is single-lined
@@ -586,9 +582,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		userType = "*"
 	}
 	if strings.Contains(content, "\n") {
-		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+":\n"+content, false)
+		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+":\n"+contentReplaced, false)
 	} else {
-		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+content, false)
+		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+contentReplaced, false)
 	}
 
 	var responseEmbed *discordgo.MessageEmbed
@@ -602,6 +598,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		cmd := strings.Split(cmdMsg, " ")
 
 		switch cmd[0] {
+		case "debug":
+			debugLog(content+"\n"+"<@!"+session.State.User.ID+">", false)
 		case "help":
 			responseEmbed = NewEmbed().
 				SetTitle(botData.BotName+" - Help").
@@ -609,11 +607,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"help", "Displays this help message.").
 				AddField(botData.CommandPrefix+"about", "Displays information about "+botData.BotName+" and how to use it.").
 				AddField(botData.CommandPrefix+"version", "Displays the current version of "+botData.BotName+".").
+				AddField(botData.CommandPrefix+"credits", "Displays a list of credits for the creation and functionality of "+botData.BotName+".").
 				AddField(botData.CommandPrefix+"roll", "Rolls a dice.").
 				AddField(botData.CommandPrefix+"doubleroll", "Rolls two die.").
 				AddField(botData.CommandPrefix+"coinflip", "Flips a coin.").
 				AddField(botData.CommandPrefix+"xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
 				AddField(botData.CommandPrefix+"imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
+				AddField(botData.CommandPrefix+"github/gh username(/repo_name)", "Displays info about the specified GitHub user or repo.").
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
 				//AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
@@ -642,6 +642,28 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField("Build Date", BuildDate).
 				AddField("Latest Development", GitCommitMsg).
 				AddField("GitHub Commit URL", GitHubCommitURL).
+				AddField("Golang Version", GolangVersion).
+				SetColor(0x1C1C1C).MessageEmbed
+		case "credits":
+			responseEmbed = NewEmbed().
+				SetTitle(botData.BotName+" - Credits").
+				AddField("Bot Development", "- JoshuaDoes (2018)").
+				AddField("Programming Language", "- Golang").
+				AddField("Golang Libraries", "- https://github.com/bwmarrin/discordgo\n"+
+					"- https://github.com/JoshuaDoes/duckduckgolang\n"+
+					"- https://github.com/google/go-github/github\n"+
+					"- https://github.com/JoshuaDoes/go-soundcloud\n"+
+					"- https://github.com/JoshuaDoes/go-wolfram\n"+
+					"- https://github.com/koffeinsource/go-imgur\n"+
+					"- https://github.com/koffeinsource/go-klogger\n"+
+					"- https://github.com/nishanths/go-xkcd\n"+
+					"- https://github.com/paked/configure\n"+
+					"- https://github.com/robfig/cron\n"+
+					"- https://github.com/rylio/ytdl\n"+
+					"- https://google.golang.org/api/googleapi/transport\n"+
+					"- https://google.golang.org/api/youtube/v3").
+				AddField("Icon Design", "- thejsa").
+				AddField("Source Code", "- https://github.com/JoshuaDoes/clinet-discord").
 				SetColor(0x1C1C1C).MessageEmbed
 		case "roll":
 			random := rand.Intn(6) + 1
@@ -721,6 +743,114 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						SetImage(comic.ImageURL).
 						SetColor(0x96A8C8).MessageEmbed
 				}
+			}
+		case "github", "gh":
+			if len(cmd) > 1 {
+				request := strings.Split(cmd[1], "/")
+				switch len(request) {
+				case 1: //A user was specified
+					user, err := GitHubFetchUser(request[0])
+					if err != nil {
+						responseEmbed = NewErrorEmbed("GitHub Error", "There was an error finding info about that user.")
+					} else {
+						//Gather user info
+						bio := "Bio Not Found"
+						if user.Bio != nil {
+							bio = *user.Bio
+						}
+						username := *user.Login
+						name := "Not Found"
+						if user.Name != nil {
+							name = *user.Name
+						}
+						company := "Not Found"
+						if user.Company != nil {
+							company = *user.Company
+						}
+						blog := "Not Found"
+						if user.Blog != nil {
+							blog = *user.Blog
+						}
+						location := "Not Found"
+						if user.Location != nil {
+							location = *user.Location
+						}
+						publicRepositories := strconv.Itoa(*user.PublicRepos)
+						publicGists := strconv.Itoa(*user.PublicGists)
+						following := strconv.Itoa(*user.Following)
+						followers := strconv.Itoa(*user.Followers)
+						URL := *user.HTMLURL
+						avatarURL := *user.AvatarURL
+
+						//Build embed about user
+						responseEmbed = NewEmbed().
+							SetTitle("GitHub User: "+username).
+							SetDescription(bio).
+							AddField("Name", name).
+							AddField("Company", company).
+							AddField("Blog", blog).
+							AddField("Location", location).
+							AddField("Public Repositories", publicRepositories).
+							AddField("Public Gists", publicGists).
+							AddField("Following", following).
+							AddField("Followers", followers).
+							AddField("URL", URL).
+							SetImage(avatarURL).
+							SetColor(0x24292D).MessageEmbed
+					}
+				case 2: //A repo under a user was specified
+					repo, err := GitHubFetchRepo(request[0], request[1])
+					if err != nil {
+						responseEmbed = NewErrorEmbed("GitHub Error", "There was an error finding info about that repo.")
+					} else {
+						//Gather repo info
+						description := "Not Found"
+						if repo.Description != nil {
+							description = *repo.Description
+						}
+						name := *repo.FullName
+						homepage := "Not Found"
+						if repo.Homepage != nil {
+							homepage = *repo.Homepage
+						}
+						topics := strings.Join(repo.Topics, ", ")
+						defaultBranch := *repo.DefaultBranch
+						isFork := strconv.FormatBool(*repo.Fork)
+						forks := strconv.Itoa(*repo.ForksCount)
+						networks := strconv.Itoa(*repo.NetworkCount)
+						openIssues := strconv.Itoa(*repo.OpenIssuesCount)
+						stargazers := strconv.Itoa(*repo.StargazersCount)
+						subscribers := strconv.Itoa(*repo.SubscribersCount)
+						watchers := strconv.Itoa(*repo.WatchersCount)
+						URL := *repo.HTMLURL
+						cloneURL := *repo.CloneURL
+						gitURL := *repo.GitURL
+
+						//Build embed about repo
+						responseEmbed = NewEmbed().
+							SetTitle("GitHub Repo: "+name).
+							SetDescription(description).
+							AddField("Homepage", homepage).
+							AddField("Topics", topics).
+							AddField("Default Branch", defaultBranch).
+							AddField("Is Fork", isFork).
+							AddField("Forks", forks).
+							AddField("Networks", networks).
+							AddField("Open Issues", openIssues).
+							AddField("Stargazers", stargazers).
+							AddField("Subscribers", subscribers).
+							AddField("Watchers", watchers).
+							AddField("URL", URL).
+							AddField("Clone URL", cloneURL).
+							AddField("Git URL", gitURL).
+							SetColor(0x24292D).MessageEmbed
+					}
+				case 3: //A branch under a repo was specified
+
+				case 4: //A commit under a branch was specified
+				}
+			} else {
+				responseEmbed = NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")
 			}
 		case "join":
 			foundVoiceChannel := false
@@ -1093,24 +1223,24 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			} else {
 				responseEmbed = NewErrorEmbed("Clinet Queue Error", "You must specify a queue command to use. For a list of queue commands, type ``"+botData.CommandPrefix+"queue help``.")
 			}
-		default: //Invalid command specified
-			responseEmbed = NewErrorEmbed(botData.BotName+" Error", "Unknown command. Type ``cli$help`` for a list of commands.")
 		}
 	} else {
-		regexpBotName, _ := regexp.MatchString("(?i)"+botData.BotName+"(.*?)", content)
+		regexpBotName, _ := regexp.MatchString("<(@|@\\!)"+session.State.User.ID+">(.*?)", content)
 		if regexpBotName && strings.HasSuffix(content, "?") {
 			if !updatedMessageEvent {
 				typingEvent(session, message.ChannelID)
 			}
 			query := content
 
-			replace := NewCaseInsensitiveReplacer("Clinet", "")
-			query = replace.Replace(query)
+			query = strings.Replace(query, "<@!"+session.State.User.ID+">", "", -1)
+			query = strings.Replace(query, "<@"+session.State.User.ID+">", "", -1)
 			for {
 				if strings.HasPrefix(query, " ") {
 					query = strings.Replace(query, " ", "", 1)
 				} else if strings.HasPrefix(query, ",") {
 					query = strings.Replace(query, ",", "", 1)
+				} else if strings.HasPrefix(query, ":") {
+					query = strings.Replace(query, ":", "", 1)
 				} else {
 					break
 				}
@@ -1140,6 +1270,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	}
 
 	if responseEmbed != nil {
+		fixedEmbed := Embed{responseEmbed}
+		fixedEmbed.InlineAllFields().Truncate()
+		responseEmbed = fixedEmbed.MessageEmbed
+
 		canUpdateMessage := false
 		responseID := ""
 
@@ -1548,8 +1682,8 @@ func voiceStop(guildID string) {
 func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
 		_, _ = voicePause(guildID)                             //Pause the audio, because *dca.StreamingSession has no stop function
-		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
 		guildData[guildID].VoiceData.WasSkipped = true         //Let the voice play wrapper function continue to the next song if available
+		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play wrapper function clean up on its own
 	}
 }
 
@@ -1700,4 +1834,19 @@ func NewCaseInsensitiveReplacer(toReplace, with string) *CaseInsensitiveReplacer
 }
 func (cir *CaseInsensitiveReplacer) Replace(str string) string {
 	return cir.toReplace.ReplaceAllString(str, cir.replaceWith)
+}
+
+func GitHubFetchUser(username string) (*github.User, error) {
+	user, _, err := botData.BotClients.GitHub.Users.Get(context.Background(), username)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+func GitHubFetchRepo(owner string, repository string) (*github.Repository, error) {
+	repo, _, err := botData.BotClients.GitHub.Repositories.Get(context.Background(), owner, repository)
+	if err != nil {
+		return nil, err
+	}
+	return repo, nil
 }
