@@ -598,8 +598,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		cmd := strings.Split(cmdMsg, " ")
 
 		switch cmd[0] {
-		case "debug":
-			debugLog(content+"\n"+"<@!"+session.State.User.ID+">", false)
 		case "help":
 			responseEmbed = NewEmbed().
 				SetTitle(botData.BotName+" - Help").
@@ -745,6 +743,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				}
 			}
 		case "github", "gh":
+			// https://godoc.org/github.com/google/go-github/github
 			if len(cmd) > 1 {
 				request := strings.Split(cmd[1], "/")
 				switch len(request) {
@@ -753,101 +752,84 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					if err != nil {
 						responseEmbed = NewErrorEmbed("GitHub Error", "There was an error finding info about that user.")
 					} else {
+						fields := []*discordgo.MessageEmbedField{}
+
 						//Gather user info
-						bio := "Bio Not Found"
 						if user.Bio != nil {
-							bio = *user.Bio
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Bio", Value: *user.Bio})
 						}
-						username := *user.Login
-						name := "Not Found"
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Username", Value: *user.Login})
 						if user.Name != nil {
-							name = *user.Name
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Name", Value: *user.Name})
 						}
-						company := "Not Found"
 						if user.Company != nil {
-							company = *user.Company
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Company", Value: *user.Company})
 						}
-						blog := "Not Found"
-						if user.Blog != nil {
-							blog = *user.Blog
+						if *user.Blog != "" {
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Blog", Value: *user.Blog})
 						}
-						location := "Not Found"
 						if user.Location != nil {
-							location = *user.Location
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Location", Value: *user.Location})
 						}
-						publicRepositories := strconv.Itoa(*user.PublicRepos)
-						publicGists := strconv.Itoa(*user.PublicGists)
-						following := strconv.Itoa(*user.Following)
-						followers := strconv.Itoa(*user.Followers)
-						URL := *user.HTMLURL
-						avatarURL := *user.AvatarURL
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Public Repos", Value: strconv.Itoa(*user.PublicRepos)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Public Gists", Value: strconv.Itoa(*user.PublicGists)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Following", Value: strconv.Itoa(*user.Following)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Followers", Value: strconv.Itoa(*user.Followers)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "GitHub URL", Value: *user.HTMLURL})
+
+						for i := 0; i < len(fields); i++ {
+							debugLog(fields[i].Name+": "+fields[i].Value, false)
+						}
 
 						//Build embed about user
 						responseEmbed = NewEmbed().
-							SetTitle("GitHub User: "+username).
-							SetDescription(bio).
-							AddField("Name", name).
-							AddField("Company", company).
-							AddField("Blog", blog).
-							AddField("Location", location).
-							AddField("Public Repositories", publicRepositories).
-							AddField("Public Gists", publicGists).
-							AddField("Following", following).
-							AddField("Followers", followers).
-							AddField("URL", URL).
-							SetImage(avatarURL).
+							SetTitle("GitHub User: " + *user.Login).
+							SetImage(*user.AvatarURL).
 							SetColor(0x24292D).MessageEmbed
+						responseEmbed.Fields = fields
 					}
 				case 2: //A repo under a user was specified
 					repo, err := GitHubFetchRepo(request[0], request[1])
 					if err != nil {
 						responseEmbed = NewErrorEmbed("GitHub Error", "There was an error finding info about that repo.")
 					} else {
+						fields := []*discordgo.MessageEmbedField{}
+
 						//Gather repo info
-						description := "Not Found"
 						if repo.Description != nil {
-							description = *repo.Description
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Description", Value: *repo.Description})
 						}
-						name := *repo.FullName
-						homepage := "Not Found"
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Name", Value: *repo.FullName})
 						if repo.Homepage != nil {
-							homepage = *repo.Homepage
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Homepage", Value: *repo.Homepage})
 						}
-						topics := strings.Join(repo.Topics, ", ")
-						defaultBranch := *repo.DefaultBranch
-						isFork := strconv.FormatBool(*repo.Fork)
-						forks := strconv.Itoa(*repo.ForksCount)
-						networks := strconv.Itoa(*repo.NetworkCount)
-						openIssues := strconv.Itoa(*repo.OpenIssuesCount)
-						stargazers := strconv.Itoa(*repo.StargazersCount)
-						subscribers := strconv.Itoa(*repo.SubscribersCount)
-						watchers := strconv.Itoa(*repo.WatchersCount)
-						URL := *repo.HTMLURL
-						cloneURL := *repo.CloneURL
-						gitURL := *repo.GitURL
+						if len(repo.Topics) > 0 {
+							fields = append(fields, &discordgo.MessageEmbedField{Name: "Topics", Value: strings.Join(repo.Topics, ", ")})
+						}
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Default Branch", Value: *repo.DefaultBranch})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Is Fork", Value: strconv.FormatBool(*repo.Fork)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Forks", Value: strconv.Itoa(*repo.ForksCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Networks", Value: strconv.Itoa(*repo.NetworkCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Open Issues", Value: strconv.Itoa(*repo.OpenIssuesCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Stargazers", Value: strconv.Itoa(*repo.StargazersCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Subscribers", Value: strconv.Itoa(*repo.SubscribersCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Watchers", Value: strconv.Itoa(*repo.WatchersCount)})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "GitHub URL", Value: *repo.HTMLURL})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Clone URL", Value: *repo.CloneURL})
+						fields = append(fields, &discordgo.MessageEmbedField{Name: "Git URL", Value: *repo.GitURL})
+
+						for i := 0; i < len(fields); i++ {
+							debugLog(fields[i].Name+": "+fields[i].Value, false)
+						}
 
 						//Build embed about repo
 						responseEmbed = NewEmbed().
-							SetTitle("GitHub Repo: "+name).
-							SetDescription(description).
-							AddField("Homepage", homepage).
-							AddField("Topics", topics).
-							AddField("Default Branch", defaultBranch).
-							AddField("Is Fork", isFork).
-							AddField("Forks", forks).
-							AddField("Networks", networks).
-							AddField("Open Issues", openIssues).
-							AddField("Stargazers", stargazers).
-							AddField("Subscribers", subscribers).
-							AddField("Watchers", watchers).
-							AddField("URL", URL).
-							AddField("Clone URL", cloneURL).
-							AddField("Git URL", gitURL).
+							SetTitle("GitHub Repo: " + *repo.FullName).
 							SetColor(0x24292D).MessageEmbed
+						responseEmbed.Fields = fields
 					}
-				case 3: //A branch under a repo was specified
-
-				case 4: //A commit under a branch was specified
+				default:
+					responseEmbed = NewErrorEmbed("GitHub Error", "You got a little too specific there! Make sure to only specify either a user or a user/repo combination.")
 				}
 			} else {
 				responseEmbed = NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")
