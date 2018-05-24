@@ -650,6 +650,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField("Golang Libraries", "- https://github.com/bwmarrin/discordgo\n"+
 					"- https://github.com/JoshuaDoes/duckduckgolang\n"+
 					"- https://github.com/google/go-github/github\n"+
+					"- https://github.com/jonas747/dca\n"+
 					"- https://github.com/JoshuaDoes/go-soundcloud\n"+
 					"- https://github.com/JoshuaDoes/go-wolfram\n"+
 					"- https://github.com/koffeinsource/go-imgur\n"+
