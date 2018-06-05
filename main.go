@@ -51,6 +51,7 @@ type BotData struct {
 	BotToken        string                `json:"botToken"`
 	CommandPrefix   string                `json:"cmdPrefix"`
 	CustomResponses []CustomResponseQuery `json:"customResponses"`
+	CustomStatuses  []CustomStatus        `json:"customStatuses"`
 	DebugMode       bool                  `json:"debugMode"`
 }
 type BotKeys struct {
@@ -80,6 +81,11 @@ type CustomResponseQuery struct {
 type CustomResponseReply struct {
 	Response string `json:"text"`
 	ImageURL string `json:"imageURL"`
+}
+type CustomStatus struct {
+	Type   int    `json:"type"`
+	Status string `json:"status"`
+	URL    string `json:"url,omitempty"`
 }
 
 func (configData *BotData) PrepConfig() error {
@@ -1778,17 +1784,19 @@ func isSoundCloudURL(url string) bool {
 	return false
 }
 
-func updateRandomStatus(session *discordgo.Session, statusType int) {
-	if statusType == 0 {
-		statusType = rand.Intn(3) + 1
+func updateRandomStatus(session *discordgo.Session, status int) {
+	if status == 0 {
+		status = rand.Intn(len(botData.CustomStatuses)) + 1
 	}
-	switch statusType {
+	status -= 0
+
+	switch botData.CustomStatuses[status].Type {
+	case 0:
+		session.UpdateStatus(0, botData.CustomStatuses[status].Status)
 	case 1:
-		session.UpdateStatus(0, "`cli$help`!")
+		session.UpdateListeningStatus(botData.CustomStatuses[status].Status)
 	case 2:
-		session.UpdateStatus(0, "experimentally!")
-	case 3:
-		session.UpdateStatus(0, "in the Go Playground!")
+		session.UpdateStreamingStatus(0, botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
 	}
 }
 

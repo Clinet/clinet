@@ -211,6 +211,33 @@ The following is an example configuration file:
 				}
 			]
 		}
+	],
+	"customStatuses": [
+		{
+			"type": 0,
+			"status": "`cli$help`!"
+		},
+		{
+			"type": 0,
+			"status": "experimentally!"
+		},
+		{
+			"type": 0,
+			"status": "in the Go Playground!"
+		},
+		{
+			"type": 0,
+			"status": "a nearly finished me!"
+		},
+		{
+			"type": 1,
+			"status": "some tunes with users!"
+		},
+		{
+			"type": 2,
+			"status": "rewritten code!",
+			"url": "https://github.com/JoshuaDoes/clinet-discord"
+		}
 	]
 }
 ```
@@ -224,6 +251,7 @@ Most of the above configuration options should be self-explanatory, but here's s
 | `botOptions` -> `wolframDeniedPods` | An array of pod titles to skip over when creating a list of responses to use in a rich embed response from a Wolfram\|Alpha query. The default list is highly recommended for bot hosters concerned with the privacy of the bot's host location. |
 | `debugMode` | Debug mode enables various console debugging features, such as chat output and other detailed information about what Clinet is up to. |
 | `customResponses` | Stored as objects in an array, custom responses are exactly what the name depicts. Each object contains an `expression` variable, which stores a valid regular expression, and a `response` array, which itself contains objects randomly selected by the main program for different `text` responses each time the custom response is queried. |
+| `customStatuses` | Stored as objects in an array, custom statuses are used to set the bot's presence. Each object contains a `type` variable, which stores integers 0, 1, and 2, which are "Playing", "Listening to", and "Streaming" respectively, and a `status` variable, which stores the status text to use. If the type is set to 2, you can also set a `url` variable to use as the stream URL. |
 
 The configuration file by default will never be included in git commits, as declared by `.gitignore`. This is to prevent accidental leakage of API keys and bot tokens.
 
