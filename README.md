@@ -4,138 +4,240 @@
 
 ----
 
-## Using the official up-to-date version of Clinet
+## Using the official development version of Clinet (based on this repo)
 
 1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server.
-    1. The 'Administrator' permission is not required. The invite link above
-    will create a 'Clinet' role for the bot, and in the future some advanced
-	features may require the 'Administrator' permission.
-2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes and also test-drive Clinet before using it on your own server.
+    1. The `Administrator` permission is not required. The invite link above
+    only requests the permission for when new features arrive that require
+    individual permissions, saving time from going through and adding missing
+    permissions. Should you still wish to manage these permissions yourself,
+    do not grant the bot the `Administrator` permission. At a later date, the
+    bot will give errors for permissions it does not have when asked to do
+    something, and should sending the error message fail it will warn the
+    server owner in a DM.
+2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes Clinet has to offer. It even sports bot testing channels to test-drive the bot before deciding if it's right for your community!
 3. Enjoy!
 
-## How does it work?
+## What does it do?
 
 After the `Clinet` bot is invited to your Discord server, it will immediately
 begin listening for certain keywords within conversations to trigger certain
 events.
 
-Currently, `Clinet` will listen for its name and a question mark (?) at the end of
-a message to detect when it is being queried with a question. It will then query
-DuckDuckGo with the question and then send a message with the response to the
-text channel it was queried in. Though, if DuckDuckGo fails, it will next attempt
-to use Wolfram|Alpha. If both fail, Clinet tells the user that there was an error.
+`Clinet` will listen for a message that tags it and contains a question mark (?) suffix to
+detect when it is being queried with a question. It begins by checking a list of RegEx expressions
+stored in the bot configuration to look for configurable responses that bot hosters can set
+for their specific instance of the bot. If nothing is found, it then continues on to query
+DuckDuckGo's Instant Answers API for a possible response. If DuckDuckGo comes up short, it
+finally queries Wolfram|Alpha as a last resort (as Wolfram|Alpha's API services are limited for
+non-paying developers). Should no responses be found from any of the three sources, Clinet tells
+the user that there was an error finding the response.
 
-**Note: Clinet is not yet ready for use in public servers. You have been warned.**
+Additionally, `Clinet` supports various functionalities not available in question-response queries
+using commands. Commands are prefixed by default using `cli$` and sometimes take parameters to
+control the output and action of the command.
+
+Finally, `Clinet` has some very useful message management features proven to be successful in the
+servers it resides in. If you send a query and make a mistake, for example you misspell a word,
+forget to tag the bot, or forget a question mark, you don't have to send a whole new message - just
+edit the previous message with the fix and Clinet happily responds to the updated message. Adding
+onto this, you can even edit a message that had a successful response - Clinet will happily edit its
+response message with the new response to the updated query. Lastly, if you delete your original query
+message, Clinet will help with the chat cleanup and delete its response message. These message
+management features work for both question queries and commands, and soon will be interwoven into
+music playback commands.
 
 ## Commands
 
-```
-cli$help - Lists available commands.
-cli$about - Displays information about Clinet and how to use it.
-cli$roll - Rolls a dice.
-cli$doubleroll - Rolls two die.
-cli$coinflip - Flips a coin.
-cli$xkcd (comic number|random|latest) - Displays an xkcd comic depending on the request type or comic number.
-cli$imgur (url) - Displays info about the specified Imgur image, album, gallery image, or gallery album.
-cli$play (url/YouTube search query) - Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.
-cli$stop - Stops the currently playing audio.
-cli$skip - Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.
-cli$queue - Lists all entries in the queue.
-cli$clear - Clears the current queue.
-cli$leave - Leaves the current voice channel.
-```
+The default configuration of Clinet uses `cli$` as the command prefix. This can be configured in
+the bot configuration for bot hosts, however remains a unique command prefix that should never
+interfere with another bot's default command prefix.
 
-~~Here's a [list of supported sites](https://rg3.github.io/youtube-dl/supportedsites.html) under YouTube-DL.~~
-**Note: Under the current setup, Clinet is only prepared to play audio from YouTube.**
+All of Clinet's commands respond using a rich embed with all fields inlined to save chat screen
+estate on desktop and web versions of Discord while maintaining a clean output everywhere.
+
+```
+cli$help
+ - Displays the help message
+cli$about
+ - Displays information about Clinet and how to use it
+cli$version
+ - Displays the current version of Clinet
+cli$credits
+ - Displays a list of credits for the creation and functionality of Clinet
+cli$roll
+ - Rolls a dice
+cli$doubleroll
+ - Rolls two die
+cli$coinflip
+ - Flips a coin
+cli$xkcd (comic number, random, latest)
+ - Displays either the specified XKCD comic number or fetches either the latest or a random one
+ - If no parameter is given, a random one is selected
+cli$imgur (url)
+ - Displays info about the following types of Imgur URLs:
+   | Image
+   | Album
+   | Gallery Image
+   | Gallery Album
+cli$github (user, user/repo)
+ - Provides information about the specified GitHub user or GitHub user/repo
+cli$play (YouTube search query, YouTube URL, SoundCloud URL, or direct audio/video URL (as supported by ffmpeg))
+ - Plays either the first result from a YouTube search query or the specified stream URL in the user's current voice channel
+ - If a source is already streaming, the queried source will be added to the end of the guild queue
+cli$pause
+ - If already playing, pauses the current audio stream
+cli$resume
+ - If previously paused, resumes the current audio stream
+cli$stop
+ - Stops and resets the current audio stream
+cli$repeat
+ - Switches the current repeat level between the following, the first being the default:
+   | No repeat
+   | Repeat the entire guild queue
+   | Repeat the current stream
+cli$shuffle
+ - Shuffles the current guild queue
+cli$queue help
+ - Displays the queue help message
+cli$queue clear
+ - Clears the current guild queue for voice channels
+cli$queue list
+ - Lists all entries in the current guild queue
+cli$queue remove (entry 1) (entry 2) (entry n)
+ - Removes the specified queue entries
+cli$leave
+ - If Clinet and the user are in the same voice channel, Clinet will leave it
+```
 
 ----
 
 ## Rolling your own locally
- 
-In order to run `Clinet` locally, you will need to create a JSON configuration
-file called `config.json` with the appropriate values.
 
-In the below configuration template, use the following keymap:
-```
-$BotToken$ - The bot token assigned to your bot application by Discord (string)
-$BotName$ - The name of your bot; used to detect queries (string)
-$BotPrefix$ - The prefix to use for various commands, ex. "cli$" for "cli$play" (string)
-$WolframAppID$ - The App ID for your Wolfram|Alpha account (string)
-$DuckDuckGoAppName$ - The app name to use for DuckDuckGo Instant Answer API queries (string)
-$YouTubeAPIKey$ - The API key to use for YouTube API v3 (string)
-$ImgurClientID$ - The Client ID to use for Imgur API info requests (string)
-$SoundCloudClientID$ - The Client ID to use for SoundCloud audio URL requests (string)
-$SoundCloudAppVersion$ - The App Version to use for SoundCloud audio URL requests (string)
-$DebugMode$ - Whether or not to enable debug mode (boolean, optional)
-```
+In order to run `Clinet` locally, you must have already installed a working Golang
+environment on your development system and installed the package dependencies that
+Clinet relies on to fully function. Clinet is currently built using Golang `1.10.2`.
 
-**Configuration template:**
+### Dependencies
+
+| Package Name |
+| ------------ |
+| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
+| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) |
+| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
+| [discordgo](https://github.com/bwmarrin/discordgo) |
+| [github](https://github.com/google/go-github/github) |
+| [dca](https://github.com/jonas747/dca) |
+| [go-imgur](https://github.com/koffeinsource/go-imgur) |
+| [go-klogger](https://github.com/koffeinsource/go-klogger) |
+| [go-xkcd](https://github.com/nishanths/go-xkcd) |
+| [go-configure](https://github.com/paked/configure) |
+| [cron](https://github.com/robfig/cron) |
+| [ytdl](https://github.com/rylio/ytdl) |
+| [transport](https://google.golang.org/api/googleapi/transport) |
+| [youtube](https://google.golang.org/api/youtube/v3) |
+
+### Building
+
+`Clinet` is built using a compiler wrapper known as `govvv`, and opts to use an
+altered version to support additional things. govvv acts as a git version injector
+for the output compiled binary, taking current statuses of the git repo Clinet is
+in and injecting them into uninitialized strings in the main source file to be used
+in the command `cli$version`. Simply follow the instructions on the [govvv](https://github.com/JoshuaDoes/govvv) repo page
+to learn how to install and use it, then run `govvv build` in the Clinet workspace
+directory.
+
+### Acquiring necessary API keys
+
+Clinet's functionality relies on a set of different API keys and access tokens, and without them sports less features to interact with and use. The official bot has all of these already, but if you're looking to roll your own instance of the bot you'll need to acquire these on your own (an exercise left up to you).
+
+| Services | Requirements |
+| -------- | ------------ |
+| Wolfram\|Alpha | App ID |
+| DuckDuckGo | App name (can be anything) |
+| YouTube | Search API key |
+| Imgur | Client ID |
+| SoundCloud | Client ID and app version |
+
+### Writing the configuration
+
+`Clinet` stores its configuration in a file named `config.json` using the JSON data
+structure. It has a number of configurable variables and will always globally
+override a server's settings if it disables a feature.
+
+The following is an example configuration file:
 ```JSON
 {
-	"botToken": "$BotToken$",
-	"botName": "$BotName$",
-	"botPrefix": "$BotPrefix$",
-	"wolframAppID": "$WolframAppID",
-	"ddgAppName": "$DuckDuckGoAppName$",
-	"youtubeAPIKey": "$YouTubeAPIKey$",
-	"imgurClientID": "$ImgurClientID$",
-	"soundcloudClientID": "$SoundCloudClientID$",
-	"soundcloudAppVersion": "$SoundCloudAppVersion$",
-	"debugMode": $DebugMode$
-}
-```
-
-In addition, you may use RegEx to add custom responses for `Clinet` to use.
-Custom responses are checked before `Clinet` attempts to query online sources
-for answers, so you may override answers or even add your own using custom
-responses.
-
-To add custom responses to `Clinet`, you must edit your `config.json` file
-to include them, like so:
-
-```JSON
-{
-	...
-	"debugMode": true,
+	"botToken": "[insert bot token here]",
+	"botName": "Clinet",
+	"cmdPrefix": "cli$",
+	"botKeys": {
+		"wolframAppID": "[insert Wolfram|Alpha app ID here]",
+		"ddgAppName": "Clinet",
+		"youtubeAPIKey": "[insert YouTube API key here]",
+		"imgurClientID": "[insert Imgur client ID here]",
+		"soundcloudClientID": "[insert SoundCloud client ID here]",
+		"soundcloudAppVersion": "[insert SoundCloud app version here]"
+	},
+	"botOptions": {
+		"sendTypingEvent": true,
+		"useDuckDuckGo": true,
+		"useGitHub": true,
+		"useImgur": true,
+		"useSoundCloud": true,
+		"useWolframAlpha": true,
+		"useXKCD": true,
+		"useYouTube": true,
+		"wolframDeniedPods": [
+			"Locations",
+			"Nearby locations",
+			"Local map",
+			"Inferred local map",
+			"Inferred nearest city center",
+			"IP address",
+			"IP address registrant",
+			"Clocks"
+		]
+	},
+	"debugMode": false,
 	"customResponses": [
 		{
-			"regex": "(.*)what's your name(.*)",
-			"response": "My name is Clinet."
-		},
-		{
-			"regex": "(.*)who created you(.*)",
-			"response": "I was created by JoshuaDoes."
+			"expression": "(.*)(?i)raining(.*)tacos(.*)",
+			"response": [
+				{
+					"text": "https://www.youtube.com/watch?v=npjF032TDDQ"
+				}
+			]
 		}
 	]
 }
 ```
 
-**Note: Before custom responses are checked, the query still runs through the
-usual sanitization methods. When creating your custom responses, craft the regex
-with the prefix `Clinet` and the suffix `?` in mind.**
+Most of the above configuration options should be self-explanatory, but here's some explanations for a few of the less guessable ones:
+
+| Variable | Description |
+| -------- | ----------- |
+| `botToken` | The token of the bot account Clinet should log into. Can be acquired by [creating an application and then declaring it as a bot user](https://discordapp.com/developers/applications/me/create) and/or [selecting a pre-existing bot user application and acquiring the bot token under the `APP BOT USER` section](https://discordapp.com/developers/applications/me). |
+| `botOptions` -> `sendTypingEvent` | Whether or not to send a typing notification in a channel containing a query or command for Clinet to respond to. Helpful for queries or commands that take a little longer than usual to respond to so users know the bot isn't broken. |
+| `botOptions` -> `wolframDeniedPods` | An array of pod titles to skip over when creating a list of responses to use in a rich embed response from a Wolfram\|Alpha query. The default list is highly recommended for bot hosters concerned with the privacy of the bot's host location. |
+| `debugMode` | Debug mode enables various console debugging features, such as chat output and other detailed information about what Clinet is up to. |
+| `customResponses` | Stored as objects in an array, custom responses are exactly what the name depicts. Each object contains an `expression` variable, which stores a valid regular expression, and a `response` array, which itself contains objects randomly selected by the main program for different `text` responses each time the custom response is queried. |
+
+The configuration file by default will never be included in git commits, as declared by `.gitignore`. This is to prevent accidental leakage of API keys and bot tokens.
+
+### Running `Clinet`
+
+Finally, to run Clinet, simply type `./clinet-discord` in your terminal/shell or `.\clinet-discord.exe` in your command prompt. If everything goes well, you can find your bot user application and generate an OAuth2 URL to invite the bot into various servers in which you have the `Administrator` permission of.
 
 ----
 
-## Dependencies
-
-| Package Name | Usage in Clinet |
-| ------------ | --------------- |
-| [configure](https://github.com/paked/configure) | Used to configure the bot with `config.json` |
-| [DiscordGo](https://github.com/bwmarrin/discordgo) | Used to allow the bot to operate on Discord |
-| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) | Used to allow the bot to query Wolfram\|Alpha with questions |
-| [dca](https://github.com/jonas747/dca) | Used to allow audio encoding/decoding to/from Discord voice channels |
-| [ytdl](https://github.com/rylio/ytdl) | Used to allow video fetching from YouTube URLs |
-| [transport](https://google.golang.org/api/googleapi/transport) | Used to make authenticated API requests to Google |
-| [youtube](https://google.golang.org/api/youtube/v3) | Used to allow metadata fetching from YouTube URLs |
-| [go-xkcd](https://github.com/nishanths/go-xkcd) | Used to allow fetching XKCD comics |
-| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) | Used to allow the bot to query DuckDuckGo with questions |
-| [go-imgur](https://github.com/koffeinsource/go-imgur) | Used to allow access to the Imgur API |
-| [cron](https://github.com/robfig/cron) | Used to allow for better management of running tasks at specific intervals |
-| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) | Used to allow metadata and audio fetching from SoundCloud URLs |
+## Support
+For help and support with Clinet, visit the [Clinet Discord server](https://discord.gg/qkbKEWT) and ask for an online developer.
 
 ## License
 The source code for Clinet is released under the MIT License. See LICENSE for more details.
 
 ## Donations
-All donations are appreciated and help pay for the costs of the server Clinet is officially hosted on. Even if it's not much, it helps a lot in the long run!
-You can find the donation link here: [Donation Link](https://paypal.me/JoshuaDoes)
+All donations are highly appreciated. They help me pay for the server costs to keep Clinet running and even help point my attention span to Clinet to fix issues and implement newer and better features!
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/JoshuaDoes)
