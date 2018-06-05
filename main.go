@@ -596,10 +596,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	var responseEmbed *discordgo.MessageEmbed
 
 	if strings.HasPrefix(content, botData.CommandPrefix) {
-		if !updatedMessageEvent {
-			typingEvent(session, message.ChannelID)
-		}
-
 		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
 		cmd := strings.Split(cmdMsg, " ")
 
@@ -1259,6 +1255,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	}
 
 	if responseEmbed != nil {
+		if !updatedMessageEvent {
+			typingEvent(session, message.ChannelID)
+		}
+
 		fixedEmbed := Embed{responseEmbed}
 		fixedEmbed.InlineAllFields().Truncate()
 		responseEmbed = fixedEmbed.MessageEmbed
