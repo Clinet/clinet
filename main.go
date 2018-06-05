@@ -803,11 +803,11 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						fields := []*discordgo.MessageEmbedField{}
 
 						//Gather repo info
-						if repo.Description != nil {
+						if repo.Description != nil && *repo.Description != "" {
 							fields = append(fields, &discordgo.MessageEmbedField{Name: "Description", Value: *repo.Description})
 						}
 						fields = append(fields, &discordgo.MessageEmbedField{Name: "Name", Value: *repo.FullName})
-						if repo.Homepage != nil {
+						if repo.Homepage != nil && *repo.Homepage != "" {
 							fields = append(fields, &discordgo.MessageEmbedField{Name: "Homepage", Value: *repo.Homepage})
 						}
 						if len(repo.Topics) > 0 {
