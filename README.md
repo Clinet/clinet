@@ -85,6 +85,8 @@ cli$github (user, user/repo)
 cli$play (YouTube search query, YouTube URL, SoundCloud URL, or direct audio/video URL (as supported by ffmpeg))
  - Plays either the first result from a YouTube search query or the specified stream URL in the user's current voice channel
  - If a source is already streaming, the queried source will be added to the end of the guild queue
+ - If no parameter is given, will either resume a paused audio stream or restart a stopped and reset audio stream
+ - If no parameter is given and an audio/video file is attached to the message, will either play the audio stream or add the source to the end of the guild queue
 cli$pause
  - If already playing, pauses the current audio stream
 cli$resume
