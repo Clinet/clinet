@@ -1788,7 +1788,7 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	if status == 0 {
 		status = rand.Intn(len(botData.CustomStatuses)) + 1
 	}
-	status -= 0
+	status -= 1
 
 	switch botData.CustomStatuses[status].Type {
 	case 0:
