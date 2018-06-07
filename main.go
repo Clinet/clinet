@@ -616,7 +616,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"github/gh username(/repo_name)", "Displays info about the specified GitHub user or repo.").
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
-				//AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
+				AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
 				AddField(botData.CommandPrefix+"repeat", "Switches the repeat level between the entire guild queue, the currently now playing audio, and not repeating at all.").
 				AddField(botData.CommandPrefix+"shuffle", "Shuffles the current guild queue.").
 				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
@@ -1499,6 +1499,7 @@ func voiceLeave(guildID, channelID string) error {
 	if guildFound {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
 			debugLog("> Found previous voice connection, leaving...", false)
+			voiceStop(guildID) //Stop any currently playing audio
 			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
 			guildData[guildID].VoiceData = VoiceData{}
 			return nil
@@ -1569,18 +1570,23 @@ func voicePlay(guildID, mediaURL string) error {
 	}
 
 	debugLog("-- Playback finished", false)
+	debugLog("-- Status: "+strconv.FormatBool(guildData[guildID].VoiceData.IsPlaybackRunning)+"|"+strconv.FormatBool(guildData[guildID].VoiceData.WasStoppedManually)+"|"+strconv.FormatBool(guildData[guildID].VoiceData.WasSkipped), false)
 
 	//Set speaking to false
 	guildData[guildID].VoiceData.VoiceConnection.Speaking(false)
 
+	//Check streaming session for why playback stopped
 	_, err = guildData[guildID].VoiceData.StreamingSession.Finished()
+
+	//Clean up streaming session
 	guildData[guildID].VoiceData.StreamingSession = nil
 
-	//Cleanup encoding session
+	//Clean up encoding session
 	guildData[guildID].VoiceData.EncodingSession.Stop()
 	guildData[guildID].VoiceData.EncodingSession.Cleanup()
 	guildData[guildID].VoiceData.EncodingSession = nil
 
+	//If playback stopped from an error, return that error
 	if err != nil {
 		debugLog("-- Playback error", false)
 		return err
@@ -1662,17 +1668,16 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 
 func voiceStop(guildID string) {
 	if guildData[guildID] != nil {
-		_, _ = voicePause(guildID)                             //Pause the audio, because *dca.StreamingSession has no stop function
 		guildData[guildID].VoiceData.WasStoppedManually = true //Make sure other threads know it was stopped manually
+		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
 	}
 }
 
 func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
-		_, _ = voicePause(guildID)                             //Pause the audio, because *dca.StreamingSession has no stop function
-		guildData[guildID].VoiceData.WasSkipped = true         //Let the voice play wrapper function continue to the next song if available
-		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play wrapper function clean up on its own
+		guildData[guildID].VoiceData.WasSkipped = true      //Let the voice play wrapper function continue to the next song if available
+		guildData[guildID].VoiceData.EncodingSession.Stop() //Stop the encoding session manually
 	}
 }
 
