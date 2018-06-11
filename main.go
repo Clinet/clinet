@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -15,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	//"time"
+	"time"
 
 	"github.com/JoshuaDoes/duckduckgolang"      //Allows the usage of the DuckDuckGo API
 	"github.com/JoshuaDoes/go-soundcloud"       //Allows usage of the SoundCloud API
@@ -138,6 +139,7 @@ type GuildData struct {
 	AudioNowPlaying AudioQueueEntry
 	VoiceData       VoiceData
 	Queries         map[string]*Query
+	YouTubeResults  map[string]*YouTubeResultNav
 }
 
 func (guild *GuildData) QueueAddData(author, imageURL, title, thumbnailURL, mediaURL, sourceType string, requester *discordgo.User) {
@@ -180,20 +182,110 @@ func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
 	}
 }
 
-/*
-{
-	"guilds": [
-		"guild ID here": {
-			"settingName": "settingValue"
-		}
-	],
-	"users": [
-		"user ID here": {
-			"settingName": "settingValue"
-		}
-	]
+//YouTube search results, interacted with via commands
+type YouTubeResultNav struct {
+	//Used by struct functions
+	Query         string                  //The search query used to retrieve the current results
+	TotalResults  int64                   //The total amount of results for the current search query
+	Results       []*youtube.SearchResult //The results of the current page
+	PrevPageToken string                  //The token of the previous page of results
+	NextPageToken string                  //The token of the next page of results
+	PageNumber    int                     //The numerical identifier of the current page
+
+	//Used by external functions for easy page management
+	ResponseID string //The message response ID used to display and update result listings
+	MaxResults int64  //The total amount of results per page
 }
-*/
+
+func (page *YouTubeResultNav) Prev() error {
+	if page.PageNumber == 0 {
+		return errors.New("No search pages found")
+	}
+	if page.PrevPageToken == "" {
+		return errors.New("No pages exist before current page")
+	}
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(page.Query).
+		PageToken(page.PrevPageToken)
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the previous page")
+	}
+
+	page.PageNumber -= 1
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
+}
+func (page *YouTubeResultNav) Next() error {
+	if page.PageNumber == 0 {
+		return errors.New("No search pages found")
+	}
+	if page.NextPageToken == "" {
+		return errors.New("No pages exist after current page")
+	}
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(page.Query).
+		PageToken(page.NextPageToken)
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the next page")
+	}
+
+	page.PageNumber += 1
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
+}
+func (page *YouTubeResultNav) GetResults() ([]*youtube.SearchResult, error) {
+	if len(page.Results) == 0 {
+		return nil, errors.New("No search results found")
+	}
+	return page.Results, nil
+}
+func (page *YouTubeResultNav) Search(query string) error {
+	if page.MaxResults == 0 {
+		page.MaxResults = 5
+	}
+
+	page.Query = ""
+	page.PageNumber = 0
+	page.TotalResults = 0
+	page.Results = nil
+	page.PrevPageToken = ""
+	page.NextPageToken = ""
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(query).
+		MaxResults(page.MaxResults).
+		Type("video")
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the specified query")
+	}
+
+	page.Query = query
+	page.PageNumber = 1
+	page.TotalResults = response.PageInfo.TotalResults
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
+}
+
 type DynamicSettings struct {
 	Guilds []GuildSettings `json:"guilds"` //An array of guild IDs with settings for each guild
 	Users  []UserSettings  `json:"users"`  //An array of user IDs with settings for each user
@@ -248,6 +340,36 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageE
 			SetTitle("Now Playing").
 			AddField("URL", audioQueueEntry.MediaURL).
 			AddField("Requester", audioQueueEntry.Requester.String()).
+			SetColor(0x1C1C1C).MessageEmbed
+	}
+}
+func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.StreamingSession) *discordgo.MessageEmbed {
+	//Get the current duration
+	currentDuration := secondsToHuman(stream.PlaybackPosition().Seconds())
+
+	switch audioQueueEntry.Type {
+	case "youtube":
+		return NewEmbed().
+			SetTitle("Now Playing from YouTube").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Duration", currentDuration).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF0000).MessageEmbed
+	case "soundcloud":
+		return NewEmbed().
+			SetTitle("Now Playing from SoundCloud").
+			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Duration", currentDuration).
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0xFF7700).MessageEmbed
+	default:
+		return NewEmbed().
+			SetTitle("Now Playing").
+			AddField("URL", audioQueueEntry.MediaURL).
+			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Duration", currentDuration).
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
@@ -615,11 +737,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
 				AddField(botData.CommandPrefix+"github/gh username(/repo_name)", "Displays info about the specified GitHub user or repo.").
 				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
+				AddField(botData.CommandPrefix+"youtube search (query)", "Displays paginated results of the specified YouTube search query with a command list for navigating and selecting a result.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
 				AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
 				AddField(botData.CommandPrefix+"repeat", "Switches the repeat level between the entire guild queue, the currently now playing audio, and not repeating at all.").
 				AddField(botData.CommandPrefix+"shuffle", "Shuffles the current guild queue.").
 				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
+				AddField(botData.CommandPrefix+"nowplaying/np", "Get info about the currently playing audio.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
 				SetColor(0xFAFAFA).MessageEmbed
 		case "about":
@@ -1108,6 +1232,191 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			if foundVoiceChannel == false {
 				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the shuffle command.")
 			}
+		case "youtube", "yt":
+			if len(cmd) > 1 {
+				switch cmd[1] {
+				case "search", "s":
+					if guildData[guild.ID] == nil {
+						guildData[guild.ID] = &GuildData{}
+						guildData[guild.ID].VoiceData = VoiceData{}
+					}
+					for guildData[guild.ID].VoiceData.IsPlaybackPreparing {
+						//Wait for the handling of a previous playback command to finish
+					}
+					foundVoiceChannel := false
+					for _, voiceState := range guild.VoiceStates {
+						if voiceState.UserID == message.Author.ID {
+							foundVoiceChannel = true
+							voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
+							break
+						}
+					}
+					if foundVoiceChannel {
+						query := strings.Join(cmd[2:], " ") //Get the full search query without the search command
+						if query == "" {
+							responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "You must enter a search query to view the results of.")
+						} else {
+							_, guildFound := guildData[guild.ID]
+							if !guildFound {
+								guildData[guild.ID] = &GuildData{}
+							}
+							if guildData[guild.ID].YouTubeResults == nil {
+								guildData[guild.ID].YouTubeResults = make(map[string]*YouTubeResultNav)
+							}
+
+							guildData[guild.ID].YouTubeResults[message.Author.ID] = &YouTubeResultNav{}
+							page := guildData[guild.ID].YouTubeResults[message.Author.ID]
+							err := page.Search(query)
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "There was an error finding search results for that query.")
+							} else {
+								commandList := "cli$yt select N - Selects result N"
+								if page.PrevPageToken != "" {
+									commandList += "\ncli$yt prev - Displays the results for the previous page"
+								}
+								if page.NextPageToken != "" {
+									commandList += "\ncli$yt next - Displays the results for the next page"
+								}
+								commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+								results, _ := page.GetResults()
+								responseEmbed = NewEmbed().
+									SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
+									SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
+									SetColor(0xFF0000).MessageEmbed
+
+								fields := []*discordgo.MessageEmbedField{}
+								for i := 0; i < len(results); i++ {
+									videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
+									if err == nil {
+										author := videoInfo.Author
+										title := videoInfo.Title
+
+										fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
+									}
+								}
+								fields = append(fields, commandListField)
+								responseEmbed.Fields = fields
+							}
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "You must join the voice channel to use before using the YouTube search command.")
+					}
+				case "next", "n", "+":
+					if guildData[guild.ID].YouTubeResults[message.Author.ID] != nil {
+						page := guildData[guild.ID].YouTubeResults[message.Author.ID]
+						err := page.Next()
+						if err != nil {
+							responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "There was an error finding the next page.")
+						} else {
+							commandList := "cli$yt select N - Selects result N"
+							if page.PrevPageToken != "" {
+								commandList += "\ncli$yt prev - Displays the results for the previous page"
+							}
+							if page.NextPageToken != "" {
+								commandList += "\ncli$yt next - Displays the results for the next page"
+							}
+							commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+							results, _ := page.GetResults()
+							responseEmbed = NewEmbed().
+								SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
+								SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
+								SetColor(0xFF0000).MessageEmbed
+
+							fields := []*discordgo.MessageEmbedField{}
+							for i := 0; i < len(results); i++ {
+								videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
+								if err == nil {
+									author := videoInfo.Author
+									title := videoInfo.Title
+
+									fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
+								}
+							}
+							fields = append(fields, commandListField)
+							responseEmbed.Fields = fields
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "No search is in progress.")
+					}
+				case "prev", "previous", "p", "-":
+					if guildData[guild.ID].YouTubeResults[message.Author.ID] != nil {
+						page := guildData[guild.ID].YouTubeResults[message.Author.ID]
+						err := page.Prev()
+						if err != nil {
+							responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "There was an error finding the previous page.")
+						} else {
+							commandList := "cli$yt select N - Selects result N"
+							if page.PrevPageToken != "" {
+								commandList += "\ncli$yt prev - Displays the results for the previous page"
+							}
+							if page.NextPageToken != "" {
+								commandList += "\ncli$yt next - Displays the results for the next page"
+							}
+							commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+							results, _ := page.GetResults()
+							responseEmbed = NewEmbed().
+								SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
+								SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
+								SetColor(0xFF0000).MessageEmbed
+
+							fields := []*discordgo.MessageEmbedField{}
+							for i := 0; i < len(results); i++ {
+								videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
+								if err == nil {
+									author := videoInfo.Author
+									title := videoInfo.Title
+
+									fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
+								}
+							}
+							fields = append(fields, commandListField)
+							responseEmbed.Fields = fields
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "No search is in progress.")
+					}
+				case "cancel", "c":
+					if guildData[guild.ID].YouTubeResults[message.Author.ID] != nil {
+						guildData[guild.ID].YouTubeResults[message.Author.ID] = nil
+						responseEmbed = NewGenericEmbed("Clinet YouTube Search", "Cancelled the search.")
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "No search is in progress.")
+					}
+				case "select":
+					if guildData[guild.ID].YouTubeResults[message.Author.ID] != nil {
+						page := guildData[guild.ID].YouTubeResults[message.Author.ID]
+						results, _ := page.GetResults()
+
+						selection, err := strconv.Atoi(cmd[2])
+						if err != nil { //Specified selection is not a valid integer
+							responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "``"+cmd[2]+"`` is not a valid number.")
+						} else {
+							if selection > len(results) || selection <= 0 {
+								responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "An invalid selection was specified.")
+							} else {
+								result := results[selection-1]
+								resultURL := "https://youtube.com/watch?v=" + result.Id.VideoId
+
+								queueData := AudioQueueEntry{MediaURL: resultURL, Requester: message.Author, Type: "youtube"}
+								queueData.FillMetadata()
+								if voiceIsStreaming(guild.ID) {
+									guildData[guild.ID].QueueAdd(queueData)
+									responseEmbed = queueData.GetQueueAddedEmbed()
+								} else {
+									guildData[guild.ID].AudioNowPlaying = queueData
+									responseEmbed = queueData.GetNowPlayingEmbed()
+									go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
+								}
+							}
+						}
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet YouTube Search Error", "No search is in progress.")
+					}
+				}
+			}
 		case "queue":
 			if len(cmd) > 1 {
 				switch cmd[1] {
@@ -1202,11 +1511,46 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					} else {
 						responseEmbed = NewErrorEmbed("Clinet Queue Error", "You must specify which entries to remove from the queue.")
 					}
-				default:
-
 				}
 			} else {
-				responseEmbed = NewErrorEmbed("Clinet Queue Error", "You must specify a queue command to use. For a list of queue commands, type ``"+botData.CommandPrefix+"queue help``.")
+				if guildData[guild.ID].AudioQueue == nil {
+					guildData[guild.ID].AudioQueue = make([]AudioQueueEntry, 0)
+				}
+				if len(guildData[guild.ID].AudioQueue) > 0 {
+					queueList := ""
+					for queueEntryNumber, queueEntry := range guildData[guild.ID].AudioQueue {
+						displayNumber := strconv.Itoa(queueEntryNumber + 1)
+						if queueList != "" {
+							queueList += "\n"
+						}
+						switch queueEntry.Type {
+						case "youtube", "soundcloud":
+							queueList += displayNumber + ". ``" + queueEntry.Title + "`` by ``" + queueEntry.Author + "``\n\tRequested by " + queueEntry.Requester.String()
+						default:
+							queueList += displayNumber + ". ``" + queueEntry.MediaURL + "``\n\tRequested by " + queueEntry.Requester.String()
+						}
+					}
+					responseEmbed = NewGenericEmbed("Queue for "+guild.Name, queueList)
+				} else {
+					responseEmbed = NewErrorEmbed("Clinet Queue Error", "There are no entries in the queue to list.")
+				}
+			}
+		case "nowplaying", "np":
+			foundVoiceChannel := false
+			for _, voiceState := range guild.VoiceStates {
+				if voiceState.UserID == message.Author.ID {
+					if voiceIsStreaming(guild.ID) {
+						//Create and display now playing embed
+						responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingDurationEmbed(guildData[guild.ID].VoiceData.StreamingSession)
+					} else {
+						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There is no audio currently playing.")
+					}
+					foundVoiceChannel = true
+					break
+				}
+			}
+			if foundVoiceChannel == false {
+				responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the now playing command.")
 			}
 		}
 	} else {
@@ -1499,9 +1843,8 @@ func voiceLeave(guildID, channelID string) error {
 	if guildFound {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
 			debugLog("> Found previous voice connection, leaving...", false)
-			voiceStop(guildID) //Stop any currently playing audio
 			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
-			guildData[guildID].VoiceData = VoiceData{}
+			//			guildData[guildID].VoiceData = VoiceData{}
 			return nil
 		} else {
 			return errors.New("Not connected to specified voice channel.")
@@ -1845,4 +2188,47 @@ func GitHubFetchRepo(owner string, repository string) (*github.Repository, error
 		return nil, err
 	}
 	return repo, nil
+}
+
+func zeroPad(str string) (result string) {
+	if len(str) < 2 {
+		result = "0" + str
+	} else {
+		result = str
+	}
+	return
+}
+
+func secondsToHuman(input float64) (result string) {
+	hours := math.Floor(float64(input) / 60 / 60)
+	seconds := int(input) % (60 * 60)
+	minutes := math.Floor(float64(seconds) / 60)
+	seconds = int(input) % 60
+
+	if hours > 0 {
+		result = strconv.Itoa(int(hours)) + ":" + zeroPad(strconv.Itoa(int(minutes))) + ":" + zeroPad(strconv.Itoa(int(seconds)))
+	} else {
+		result = zeroPad(strconv.Itoa(int(minutes))) + ":" + zeroPad(strconv.Itoa(int(seconds)))
+	}
+
+	return
+}
+
+func roundTime(d, r time.Duration) time.Duration {
+	if r <= 0 {
+		return d
+	}
+	neg := d < 0
+	if neg {
+		d = -d
+	}
+	if m := d % r; m+m < r {
+		d = d - m
+	} else {
+		d = d + r - m
+	}
+	if neg {
+		return -d
+	}
+	return d
 }
