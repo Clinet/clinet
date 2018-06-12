@@ -73,6 +73,7 @@ type BotOptions struct {
 	UseXKCD           bool     `json:"useXKCD"`
 	UseYouTube        bool     `json:"useYouTube"`
 	WolframDeniedPods []string `json:"wolframDeniedPods"`
+	YouTubeMaxResults int      `json:"youtubeMaxResults"`
 }
 type CustomResponseQuery struct {
 	Expression string `json:"expression"`
@@ -255,7 +256,7 @@ func (page *YouTubeResultNav) GetResults() ([]*youtube.SearchResult, error) {
 }
 func (page *YouTubeResultNav) Search(query string) error {
 	if page.MaxResults == 0 {
-		page.MaxResults = 5
+		page.MaxResults = int64(botData.BotOptions.YouTubeMaxResults)
 	}
 
 	page.Query = ""
@@ -736,14 +737,16 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				AddField(botData.CommandPrefix+"xkcd (comic number|random|latest)", "Displays an xkcd comic depending on the requested type or comic number.").
 				AddField(botData.CommandPrefix+"imgur (url)", "Displays info about the specified Imgur image, album, gallery image, or gallery album.").
 				AddField(botData.CommandPrefix+"github/gh username(/repo_name)", "Displays info about the specified GitHub user or repo.").
-				AddField(botData.CommandPrefix+"play (url/YouTube search query)", "Plays either the first result from the specified YouTube search query or the specified YouTube/direct audio URL in the user's current voice channel.").
+				AddField(botData.CommandPrefix+"play (YouTube search query, YouTube URL, SoundCloud URL, or direct audio/video URL (as supported by ffmpeg))", "Plays either the first result from a YouTube search query or the specified stream URL in the user's current voice channel.").
 				AddField(botData.CommandPrefix+"youtube search (query)", "Displays paginated results of the specified YouTube search query with a command list for navigating and selecting a result.").
+				AddField(botData.CommandPrefix+"pause", "If already playing, pauses the current audio stream.").
+				AddField(botData.CommandPrefix+"resume", "If previously paused, resumes the current audio stream.").
 				AddField(botData.CommandPrefix+"stop", "Stops the currently playing audio.").
 				AddField(botData.CommandPrefix+"skip", "Stops the currently playing audio, and, if available, attempts to play the next audio in the queue.").
 				AddField(botData.CommandPrefix+"repeat", "Switches the repeat level between the entire guild queue, the currently now playing audio, and not repeating at all.").
 				AddField(botData.CommandPrefix+"shuffle", "Shuffles the current guild queue.").
 				AddField(botData.CommandPrefix+"queue help", "Lists all available queue commands.").
-				AddField(botData.CommandPrefix+"nowplaying/np", "Get info about the currently playing audio.").
+				AddField(botData.CommandPrefix+"nowplaying/np", "Gets info about the currently playing audio.").
 				AddField(botData.CommandPrefix+"leave", "Leaves the current voice channel.").
 				SetColor(0xFAFAFA).MessageEmbed
 		case "about":
@@ -752,7 +755,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				SetDescription(botData.BotName+" is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
 				AddField("How can I use "+botData.BotName+" in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
 				AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
-				AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``"+botData.BotName+", what time is it?`` or ``"+botData.BotName+", what is DiscordApp?``.").
+				AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``@"+botData.BotName+"#1823, what time is it?`` or ``@"+botData.BotName+"#1823, what is DiscordApp?``.").
 				AddField("Where can I join the "+botData.BotName+" Discord server?", "If you would like to get help and support with "+botData.BotName+" or experiment with the latest and greatest of "+botData.BotName+", use the Discord Server Invite Link at the end of this message.").
 				AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 				AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").

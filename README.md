@@ -87,6 +87,9 @@ cli$play (YouTube search query, YouTube URL, SoundCloud URL, or direct audio/vid
  - If a source is already streaming, the queried source will be added to the end of the guild queue
  - If no parameter is given, will either resume a paused audio stream or restart a stopped and reset audio stream
  - If no parameter is given and an audio/video file is attached to the message, will either play the audio stream or add the source to the end of the guild queue
+cli$youtube search (YouTube search query)
+ - Searches YouTube for the specified search query and displays the first page of results
+ - Lists commands to use for navigating the pages and selecting a result
 cli$pause
  - If already playing, pauses the current audio stream
 cli$resume
@@ -101,10 +104,10 @@ cli$repeat
 cli$shuffle
  - Shuffles the current guild queue
 cli$queue help
- - Displays the queue help message
+ - Displays available queue commands
 cli$queue clear
  - Clears the current guild queue for voice channels
-cli$queue list
+cli$queue, cli$queue list
  - Lists all entries in the current guild queue
 cli$queue remove (entry 1) (entry 2) (entry n)
  - Removes the specified queue entries
@@ -199,7 +202,8 @@ The following is an example configuration file:
 			"IP address",
 			"IP address registrant",
 			"Clocks"
-		]
+		],
+		"youtubeMaxResults": 5
 	},
 	"debugMode": false,
 	"customResponses": [
@@ -249,6 +253,7 @@ Most of the above configuration options should be self-explanatory, but here's s
 | `botToken` | The token of the bot account Clinet should log into. Can be acquired by [creating an application and then declaring it as a bot user](https://discordapp.com/developers/applications/me/create) and/or [selecting a pre-existing bot user application and acquiring the bot token under the `APP BOT USER` section](https://discordapp.com/developers/applications/me). |
 | `botOptions` -> `sendTypingEvent` | Whether or not to send a typing notification in a channel containing a query or command for Clinet to respond to. Helpful for queries or commands that take a little longer than usual to respond to so users know the bot isn't broken. |
 | `botOptions` -> `wolframDeniedPods` | An array of pod titles to skip over when creating a list of responses to use in a rich embed response from a Wolfram\|Alpha query. The default list is highly recommended for bot hosters concerned with the privacy of the bot's host location. |
+| `botOptions` -> `youtubeMaxResults` | The total amount of results to display per page for YouTube searches via the `cli$youtube search` command. Maximum of 253. |
 | `debugMode` | Debug mode enables various console debugging features, such as chat output and other detailed information about what Clinet is up to. |
 | `customResponses` | Stored as objects in an array, custom responses are exactly what the name depicts. Each object contains an `expression` variable, which stores a valid regular expression, and a `response` array, which itself contains objects randomly selected by the main program for different `text` responses each time the custom response is queried. |
 | `customStatuses` | Stored as objects in an array, custom statuses are used to set the bot's presence. Each object contains a `type` variable, which stores integers 0, 1, and 2, which are "Playing", "Listening to", and "Streaming" respectively, and a `status` variable, which stores the status text to use. If the type is set to 2, you can also set a `url` variable to use as the stream URL. |
