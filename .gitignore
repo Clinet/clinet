@@ -1,6 +1,9 @@
 # Bot configuration
 config.json
 
+# Bot save states
+state/
+
 # Output executables (not accounting for Linux builds because fuck file extensions)
 *.exe
 *.app

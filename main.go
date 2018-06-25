@@ -26,8 +26,17 @@ import (
 )
 
 var (
-	botData   *BotData = &BotData{}
-	guildData          = make(map[string]*GuildData)
+	//Contains all bot configurations
+	botData *BotData = &BotData{}
+
+	//Contains guild-specific data in a string map, where key = guild ID
+	guildData = make(map[string]*GuildData)
+
+	//Contains guild-specific settings in a string map, where key = guild ID
+	guildSettings = make(map[string]*GuildSettings)
+
+	//Contains user-specific settings in a string map, where key = user ID
+	userSettings = make(map[string]*UserSettings)
 )
 
 var (
@@ -119,6 +128,9 @@ func main() {
 		discord.AddHandler(discordMessageUpdate)
 		discord.AddHandler(discordReady)
 
+		//If a state exists, restore it
+		stateRestore()
+
 		debugLog("> Connecting to Discord...", true)
 		err = discord.Open()
 		if err != nil {
@@ -132,6 +144,11 @@ func main() {
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 		<-sc
+
+		//Save the current state before shutting down
+		// Note: This is done before shutting down as the shutdown process may yield
+		//       some errors with goroutines like voice playback
+		stateSave()
 
 		for _, guildDataRow := range guildData {
 			if guildDataRow.VoiceData.VoiceConnection != nil {
@@ -197,6 +214,85 @@ func typingEvent(session *discordgo.Session, channelID string) {
 func debugLog(msg string, overrideConfig bool) {
 	if botData.DebugMode || overrideConfig {
 		fmt.Println(msg)
+	}
+}
+
+func stateSave() {
+	debugLog("> Saving guildData state...", true)
+	guildDataJSON, err := json.MarshalIndent(guildData, "", "\t")
+	if err != nil {
+		debugLog("> Error saving guildData state", true)
+		debugLog(err.Error(), true)
+	} else {
+		err = ioutil.WriteFile("state/guildData.json", guildDataJSON, 0644)
+		if err != nil {
+			debugLog("> Error saving guildData state", true)
+			debugLog(err.Error(), true)
+		}
+	}
+
+	debugLog("> Saving guildSettings state...", true)
+	guildSettingsJSON, err := json.MarshalIndent(guildSettings, "", "\t")
+	if err != nil {
+		debugLog("> Error saving guildSettings state", true)
+		debugLog(err.Error(), true)
+	} else {
+		err = ioutil.WriteFile("state/guildSettings.json", guildSettingsJSON, 0644)
+		if err != nil {
+			debugLog("> Error saving guildSettings state", true)
+			debugLog(err.Error(), true)
+		}
+	}
+
+	debugLog("> Saving userSettings state...", true)
+	userSettingsJSON, err := json.MarshalIndent(userSettings, "", "\t")
+	if err != nil {
+		debugLog("> Error saving userSettings state", true)
+		debugLog(err.Error(), true)
+	} else {
+		err = ioutil.WriteFile("state/userSettings.json", userSettingsJSON, 0644)
+		if err != nil {
+			debugLog("> Error saving userSettings state", true)
+			debugLog(err.Error(), true)
+		}
+	}
+}
+
+func stateRestore() {
+	guildDataJSON, err := ioutil.ReadFile("state/guildData.json")
+	if err == nil {
+		debugLog("> Restoring guildData state...", true)
+		err = json.Unmarshal(guildDataJSON, &guildData)
+		if err != nil {
+			debugLog("> Error restoring state", true)
+			debugLog(err.Error(), true)
+		}
+	} else {
+		debugLog("> No guildData state was found", true)
+	}
+
+	guildSettingsJSON, err := ioutil.ReadFile("state/guildSettings.json")
+	if err == nil {
+		debugLog("> Restoring guildSettings state...", true)
+		err = json.Unmarshal(guildSettingsJSON, &guildSettings)
+		if err != nil {
+			debugLog("> Error restoring state", true)
+			debugLog(err.Error(), true)
+		}
+	} else {
+		debugLog("> No guildSettings state was found", true)
+	}
+
+	userSettingsJSON, err := ioutil.ReadFile("state/userSettings.json")
+	if err == nil {
+		debugLog("> Restoring userSettings state...", true)
+		err = json.Unmarshal(userSettingsJSON, &userSettings)
+		if err != nil {
+			debugLog("> Error restoring state", true)
+			debugLog(err.Error(), true)
+		}
+	} else {
+		debugLog("> No userSettings state was found", true)
 	}
 }
 

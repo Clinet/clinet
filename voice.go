@@ -299,15 +299,15 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
 }
 
 type VoiceData struct {
-	VoiceConnection     *discordgo.VoiceConnection
-	EncodingSession     *dca.EncodeSession
-	StreamingSession    *dca.StreamingSession
+	VoiceConnection     *discordgo.VoiceConnection `json:"-"`
+	EncodingSession     *dca.EncodeSession         `json:"-"`
+	StreamingSession    *dca.StreamingSession      `json:"-"`
 	ChannelIDJoinedFrom string
 
-	IsPlaybackPreparing bool //Whether or not the playback is being prepared
-	IsPlaybackRunning   bool //Whether or not playback is currently running
-	WasStoppedManually  bool //Whether or not playback was stopped manually or automatically
-	WasSkipped          bool //Whether or not playback was skipped
+	IsPlaybackPreparing bool `json:"-"` //Whether or not the playback is being prepared
+	IsPlaybackRunning   bool `json:"-"` //Whether or not playback is currently running
+	WasStoppedManually  bool `json:"-"` //Whether or not playback was stopped manually or automatically
+	WasSkipped          bool `json:"-"` //Whether or not playback was skipped
 
 	//Configuration settings that can be set via commands
 	RepeatLevel int //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing

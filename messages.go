@@ -154,11 +154,53 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		guildData[guild.ID].VoiceData = VoiceData{}
 	}
 
+	if guildSettings[guild.ID] == nil {
+		guildSettings[guild.ID] = &GuildSettings{}
+	}
+
+	if userSettings[message.Author.ID] == nil {
+		userSettings[message.Author.ID] = &UserSettings{}
+	}
+
 	if strings.HasPrefix(content, botData.CommandPrefix) {
 		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
 		cmd := strings.Split(cmdMsg, " ")
 
 		switch cmd[0] {
+		/*		case "balance":
+					if len(cmd) > 1 {
+						newBalance, err := strconv.Atoi(cmd[1])
+						if err != nil {
+							responseEmbed = NewEmbed().
+								SetTitle("Balance Error").
+								SetDescription("Invalid number.").
+								SetColor(0x1C1C1C).MessageEmbed
+						} else {
+							userSettings[message.Author.ID].Balance = newBalance
+							responseEmbed = NewEmbed().
+								SetTitle("Balance Updated").
+								SetDescription("Your new balance is " + strconv.Itoa(newBalance) + " clies.").
+								SetColor(0x85BB65).MessageEmbed
+						}
+					} else {
+						responseEmbed = NewEmbed().
+							SetTitle("Balance Receipt").
+							SetDescription("Your current balance is " + strconv.Itoa(userSettings[message.Author.ID].Balance) + " clies.").
+							SetColor(0x85BB65).MessageEmbed
+					}
+				case "description", "desc", "aboutme":
+					if len(cmd) > 1 {
+						userSettings[message.Author.ID].Description = strings.Join(cmd[1:], " ")
+						responseEmbed = NewEmbed().
+							SetTitle("About - " + message.Author.Username + " - Updated").
+							SetDescription(userSettings[message.Author.ID].Description).
+							SetColor(0x1C1C1C).MessageEmbed
+					} else {
+						responseEmbed = NewEmbed().
+							SetTitle("About - " + message.Author.Username).
+							SetDescription(userSettings[message.Author.ID].Description).
+							SetColor(0x1C1C1C).MessageEmbed
+					} */
 		case "help":
 			responseEmbed = NewEmbed().
 				SetTitle(botData.BotName+" - Help").
@@ -481,13 +523,21 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 							}
 							responseEmbed = NewGenericEmbed("Clinet Voice", "Added the attached files to the guild queue. Use ``"+botData.CommandPrefix+"play`` to begin playback from the beginning of the queue.")
 						} else {
-							if len(guildData[guild.ID].AudioQueue) > 0 {
-								queueData := guildData[guild.ID].AudioQueue[0]
+							if guildData[guild.ID].AudioNowPlaying.MediaURL != "" {
+								queueData := guildData[guild.ID].AudioNowPlaying
 								queueData.FillMetadata()
-								guildData[guild.ID].QueueRemove(0)
+								responseEmbed = queueData.GetQueueAddedEmbed()
 								go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
 							} else {
-								responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must specify either a YouTube search query or a YouTube/SoundCloud/direct URL to play.")
+								if len(guildData[guild.ID].AudioQueue) > 0 {
+									queueData := guildData[guild.ID].AudioQueue[0]
+									queueData.FillMetadata()
+									guildData[guild.ID].QueueRemove(0)
+									responseEmbed = queueData.GetQueueAddedEmbed()
+									go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
+								} else {
+									responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must specify either a YouTube search query or a YouTube/SoundCloud/direct URL to play.")
+								}
 							}
 						}
 					}
