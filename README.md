@@ -175,6 +175,7 @@ The following is an example configuration file:
 {
 	"botToken": "[insert bot token here]",
 	"botName": "Clinet",
+	"botOwnerID": "[insert bot owner's user ID here]",
 	"cmdPrefix": "cli$",
 	"botKeys": {
 		"wolframAppID": "[insert Wolfram|Alpha app ID here]",
@@ -251,6 +252,7 @@ Most of the above configuration options should be self-explanatory, but here's s
 | Variable | Description |
 | -------- | ----------- |
 | `botToken` | The token of the bot account Clinet should log into. Can be acquired by [creating an application and then declaring it as a bot user](https://discordapp.com/developers/applications/me/create) and/or [selecting a pre-existing bot user application and acquiring the bot token under the `APP BOT USER` section](https://discordapp.com/developers/applications/me). |
+| `botOwnerID` | The user ID of the bot owner. Can be acquired by enabling developer mode on Discord, right clicking your user in a server's user list, and clicking `Copy ID`. If Clinet crashes and recovers from the crash, the error and a full stack trace will be directly messaged to whatever user this option is set to. |
 | `botOptions` -> `sendTypingEvent` | Whether or not to send a typing notification in a channel containing a query or command for Clinet to respond to. Helpful for queries or commands that take a little longer than usual to respond to so users know the bot isn't broken. |
 | `botOptions` -> `wolframDeniedPods` | An array of pod titles to skip over when creating a list of responses to use in a rich embed response from a Wolfram\|Alpha query. The default list is highly recommended for bot hosters concerned with the privacy of the bot's host location. |
 | `botOptions` -> `youtubeMaxResults` | The total amount of results to display per page for YouTube searches via the `cli$youtube search` command. Maximum of 253. |
@@ -263,6 +265,12 @@ The configuration file by default will never be included in git commits, as decl
 ### Running `Clinet`
 
 Finally, to run Clinet, simply type `./clinet-discord` in your terminal/shell or `.\clinet-discord.exe` in your command prompt. If everything goes well, you can find your bot user application and generate an OAuth2 URL to invite the bot into various servers in which you have the `Administrator` permission of.
+
+### Panic recovery
+
+If Clinet ever crashes from a panic, custom-made panic recovery will save the crash message to `crash.txt` and the stack trace to `stacktrace.txt` in the bot's working directory. When Clinet is next started up, it will send the crash message and the file of the stack trace to the user specified in the configuration option `botOwnerID` and proceed to delete the two files.
+
+Running Clinet by itself will spawn a "master" process with a few small jobs: Spawning a "bot" process, restarting the "bot" process if it exits for any reason, and closing the "bot" process if the "master" process ever exits for any reason. This is to ensure that, even if the "bot" process crashes, Clinet can continue running and instantly report the crash to the user specified in the configuration option `botOwnerID`.
 
 ----
 
