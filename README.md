@@ -136,7 +136,6 @@ Clinet relies on to fully function. Clinet is currently built using Golang `1.10
 | [go-imgur](https://github.com/koffeinsource/go-imgur) |
 | [go-klogger](https://github.com/koffeinsource/go-klogger) |
 | [go-xkcd](https://github.com/nishanths/go-xkcd) |
-| [go-configure](https://github.com/paked/configure) |
 | [cron](https://github.com/robfig/cron) |
 | [ytdl](https://github.com/rylio/ytdl) |
 | [transport](https://google.golang.org/api/googleapi/transport) |
