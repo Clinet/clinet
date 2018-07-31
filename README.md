@@ -56,64 +56,7 @@ interfere with another bot's default command prefix.
 All of Clinet's commands respond using a rich embed with all fields inlined to save chat screen
 estate on desktop and web versions of Discord while maintaining a clean output everywhere.
 
-```
-cli$help
- - Displays the help message
-cli$about
- - Displays information about Clinet and how to use it
-cli$version
- - Displays the current version of Clinet
-cli$credits
- - Displays a list of credits for the creation and functionality of Clinet
-cli$roll
- - Rolls a dice
-cli$doubleroll
- - Rolls two die
-cli$coinflip
- - Flips a coin
-cli$xkcd (comic number, random, latest)
- - Displays either the specified XKCD comic number or fetches either the latest or a random one
- - If no parameter is given, a random one is selected
-cli$imgur (url)
- - Displays info about the following types of Imgur URLs:
-   | Image
-   | Album
-   | Gallery Image
-   | Gallery Album
-cli$github (user, user/repo)
- - Provides information about the specified GitHub user or GitHub user/repo
-cli$play (YouTube search query, YouTube URL, SoundCloud URL, or direct audio/video URL (as supported by ffmpeg))
- - Plays either the first result from a YouTube search query or the specified stream URL in the user's current voice channel
- - If a source is already streaming, the queried source will be added to the end of the guild queue
- - If no parameter is given, will either resume a paused audio stream or restart a stopped and reset audio stream
- - If no parameter is given and an audio/video file is attached to the message, will either play the audio stream or add the source to the end of the guild queue
-cli$youtube search (YouTube search query)
- - Searches YouTube for the specified search query and displays the first page of results
- - Lists commands to use for navigating the pages and selecting a result
-cli$pause
- - If already playing, pauses the current audio stream
-cli$resume
- - If previously paused, resumes the current audio stream
-cli$stop
- - Stops and resets the current audio stream
-cli$repeat
- - Switches the current repeat level between the following, the first being the default:
-   | No repeat
-   | Repeat the entire guild queue
-   | Repeat the current stream
-cli$shuffle
- - Shuffles the current guild queue
-cli$queue help
- - Displays available queue commands
-cli$queue clear
- - Clears the current guild queue for voice channels
-cli$queue, cli$queue list
- - Lists all entries in the current guild queue
-cli$queue remove (entry 1) (entry 2) (entry n)
- - Removes the specified queue entries
-cli$leave
- - If Clinet and the user are in the same voice channel, Clinet will leave it
-```
+For a list of available commands, use the `cli$help` command in a server with Clinet.
 
 ----
 
@@ -121,7 +64,7 @@ cli$leave
 
 In order to run `Clinet` locally, you must have already installed a working Golang
 environment on your development system and installed the package dependencies that
-Clinet relies on to fully function. Clinet is currently built using Golang `1.10.2`.
+Clinet relies on to fully function. Clinet is currently built using Golang `1.10.3`.
 
 ### Dependencies
 
@@ -270,6 +213,10 @@ Finally, to run Clinet, simply type `./clinet-discord` in your terminal/shell or
 If Clinet ever crashes from a panic, custom-made panic recovery will save the crash message to `crash.txt` and the stack trace to `stacktrace.txt` in the bot's working directory. When Clinet is next started up, it will send the crash message and the file of the stack trace to the user specified in the configuration option `botOwnerID` and proceed to delete the two files.
 
 Running Clinet by itself will spawn a "master" process with a few small jobs: Spawning a "bot" process, restarting the "bot" process if it exits for any reason, and closing the "bot" process if the "master" process ever exits for any reason. This is to ensure that, even if the "bot" process crashes, Clinet can continue running and instantly report the crash to the user specified in the configuration option `botOwnerID`.
+
+### States
+
+If you close Clinet after running it long enough for it to merely exist on Discord, you'll notice a new folder called `state`. This folder contains "states" of various structs within Clinet's memory, stored in JSON format. Upon reopening Clinet, these state files are then loaded into memory so Clinet can (for the most part) return to its original "state" before it was closed. States were added as helpers to panic recovery so users can continue with what they were doing.
 
 ----
 
