@@ -39,6 +39,7 @@ type BotData struct {
 	//SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
 
 	DiscordSession *discordgo.Session
+	Commands       map[string]*Command
 }
 type BotKeys struct {
 	DuckDuckGoAppName    string `json:"ddgAppName"`

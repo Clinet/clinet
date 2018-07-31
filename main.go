@@ -40,8 +40,8 @@ var (
 )
 
 var (
-	configFile  string = ""
-	configIsBot string = ""
+	configFile  string
+	configIsBot string
 )
 
 func init() {
@@ -115,6 +115,9 @@ func main() {
 			botData.BotClients.GitHub = github.NewClient(nil)
 		}
 
+		debugLog("> Preparing command list...", true)
+		initCommands()
+
 		debugLog("> Creating a Discord session...", true)
 		discord, err := discordgo.New("Bot " + botData.BotToken)
 		if err != nil {
@@ -126,6 +129,8 @@ func main() {
 		discord.AddHandler(discordMessageDelete)
 		discord.AddHandler(discordMessageDeleteBulk)
 		discord.AddHandler(discordMessageUpdate)
+		discord.AddHandler(discordUserJoin)
+		discord.AddHandler(discordUserLeave)
 		discord.AddHandler(discordReady)
 
 		//If a state exists, restore it
@@ -193,7 +198,7 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	if status == 0 {
 		status = rand.Intn(len(botData.CustomStatuses)) + 1
 	}
-	status -= 1
+	status--
 
 	switch botData.CustomStatuses[status].Type {
 	case 0:

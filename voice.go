@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-//Guild data structs
+// GuildData holds data specific to a guild
 type GuildData struct {
 	AudioQueue      []AudioQueueEntry
 	AudioNowPlaying AudioQueueEntry
@@ -181,23 +182,21 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageE
 	switch audioQueueEntry.Type {
 	case "youtube":
 		return NewEmbed().
-			SetTitle("Now Playing from YouTube").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
-			SetTitle("Now Playing from SoundCloud").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
 	default:
 		return NewEmbed().
 			SetTitle("Now Playing").
 			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
@@ -208,17 +207,15 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.S
 	switch audioQueueEntry.Type {
 	case "youtube":
 		return NewEmbed().
-			SetTitle("Now Playing from YouTube").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			AddField("Elapsed Time", currentDuration).
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
-			SetTitle("Now Playing from SoundCloud").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			AddField("Elapsed Time", currentDuration).
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
@@ -226,7 +223,7 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.S
 		return NewEmbed().
 			SetTitle("Now Playing").
 			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			AddField("Elapsed Time", currentDuration).
 			SetColor(0x1C1C1C).MessageEmbed
 	}
@@ -245,23 +242,21 @@ func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageE
 	switch audioQueueEntry.Type {
 	case "youtube":
 		return NewEmbed().
-			SetTitle("Added to Queue from YouTube").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Added to Queue from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
-			SetTitle("Added to Queue from SoundCloud").
-			AddField(audioQueueEntry.Title, audioQueueEntry.Author).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Added to Queue from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
 	default:
 		return NewEmbed().
 			SetTitle("Added to Queue").
 			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Requester", audioQueueEntry.Requester.String()).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
@@ -311,6 +306,7 @@ type VoiceData struct {
 
 	//Configuration settings that can be set via commands
 	RepeatLevel int //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
+	Shuffle     bool
 }
 
 func voiceJoin(session *discordgo.Session, guildID, channelID, channelIDJoinedFrom string) error {
@@ -349,7 +345,7 @@ func voiceLeave(guildID, channelID string) error {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
 			debugLog("> Found previous voice connection, leaving...", false)
 			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
-			//			guildData[guildID].VoiceData = VoiceData{}
+			guildData[guildID].VoiceData = VoiceData{}
 			return nil
 		} else {
 			return errors.New("Not connected to specified voice channel.")
@@ -472,8 +468,15 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 			//When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 			for len(guildData[guildID].AudioQueue) > 0 {
 				//Move next guild queue entry into now playing slot
-				guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[0]
-				guildData[guildID].QueueRemove(0)
+				if guildData[guildID].VoiceData.Shuffle {
+					//Pseudo-shuffle™, replace with legitimate shuffle method later so user can return to non-shuffled playlist
+					randomEntry := rand.Intn(len(guildData[guildID].AudioQueue))
+					guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[randomEntry]
+					guildData[guildID].QueueRemove(randomEntry)
+				} else {
+					guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[0]
+					guildData[guildID].QueueRemove(0)
+				}
 
 				//Create and display now playing embed
 				nowPlayingEmbed := guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed()
