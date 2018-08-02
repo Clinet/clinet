@@ -14,6 +14,20 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+var encodeOptionsPresetHigh = &dca.EncodeOptions{
+	Volume:           256,
+	Channels:         2,
+	FrameRate:        48000,
+	FrameDuration:    20,
+	Bitrate:          96,
+	Application:      "lowdelay",
+	CompressionLevel: 10,
+	PacketLoss:       0,
+	BufferedFrames:   100,
+	VBR:              true,
+	RawOutput:        true,
+}
+
 // GuildData holds data specific to a guild
 type GuildData struct {
 	AudioQueue      []AudioQueueEntry
@@ -293,11 +307,14 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
 	}
 }
 
+// VoiceData contains data about the current voice session
 type VoiceData struct {
-	VoiceConnection     *discordgo.VoiceConnection `json:"-"`
-	EncodingSession     *dca.EncodeSession         `json:"-"`
-	StreamingSession    *dca.StreamingSession      `json:"-"`
-	ChannelIDJoinedFrom string
+	VoiceConnection  *discordgo.VoiceConnection `json:"-"` //Holds data regarding the current voice connection
+	EncodingSession  *dca.EncodeSession         `json:"-"` //Holds data regarding the current encoding session
+	EncodingOptions  *dca.EncodeOptions         //Holds data regarding the current encoding options
+	StreamingSession *dca.StreamingSession      `json:"-"` //Holds data regarding the current streaming session
+
+	ChannelIDJoinedFrom string //The text channel that was used to bring the bot into the voice channel
 
 	IsPlaybackPreparing bool `json:"-"` //Whether or not the playback is being prepared
 	IsPlaybackRunning   bool `json:"-"` //Whether or not playback is currently running
@@ -376,13 +393,15 @@ func voicePlay(guildID, mediaURL string) error {
 	//var streamingSession *dca.StreamingSession = guildData[guildID].VoiceData.StreamingSession
 
 	//Setup the audio encoding options
-	options := dca.StdEncodeOptions
-	options.RawOutput = true
-	options.Bitrate = 96
-	options.Application = "lowdelay"
+	if guildData[guildID].VoiceData.EncodingOptions == nil {
+		guildData[guildID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
+	}
+	guildData[guildID].VoiceData.EncodingOptions.RawOutput = true
+	guildData[guildID].VoiceData.EncodingOptions.Bitrate = 96
+	guildData[guildID].VoiceData.EncodingOptions.Application = "lowdelay"
 
 	//Create the encoding session to encode the audio to DCA in a stream
-	guildData[guildID].VoiceData.EncodingSession, err = dca.EncodeFile(mediaURL, options)
+	guildData[guildID].VoiceData.EncodingSession, err = dca.EncodeFile(mediaURL, guildData[guildID].VoiceData.EncodingOptions)
 	if err != nil {
 		debugLog("[Voice] Error encoding file ["+mediaURL+"]: "+fmt.Sprintf("%v", err), false)
 		return errors.New("Error encoding specified URL to DCA audio.")

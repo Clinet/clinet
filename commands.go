@@ -127,6 +127,8 @@ func initCommands() {
 			{Name: "username/repo", Description: "The GitHub repo to fetch info about", ArgType: "string"},
 		},
 	}
+
+	//Voice commands
 	botData.Commands["play"] = &Command{
 		Function:            commandPlay,
 		HelpText:            "Plays either the first result from a YouTube search query or the specified stream URL in the user's voice channel.",
@@ -146,7 +148,6 @@ func initCommands() {
 		HelpText:            "Skips to the next queue entry in the user's voice channel.",
 		RequiredPermissions: discordgo.PermissionVoiceConnect,
 	}
-	//Pause, resume, repeat, shuffle
 	botData.Commands["pause"] = &Command{
 		Function:            commandPause,
 		HelpText:            "Pauses the audio playback in the user's voice channel.",
@@ -156,6 +157,17 @@ func initCommands() {
 		Function:            commandResume,
 		HelpText:            "Resumes the audio playback in the user's voice channel.",
 		RequiredPermissions: discordgo.PermissionVoiceConnect,
+	}
+	botData.Commands["volume"] = &Command{
+		Function:            commandVolume,
+		HelpText:            "Sets the volume level for the next audio playback.",
+		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		RequiredArguments: []string{
+			"volume",
+		},
+		Arguments: []CommandArgument{
+			{Name: "volume", Description: "The volume level to use", ArgType: "number [0 - 512]"},
+		},
 	}
 	botData.Commands["repeat"] = &Command{
 		Function:            commandRepeat,
@@ -496,7 +508,7 @@ func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 			if err != nil {
 				return NewErrorEmbed("Image Error", "Unable to encode processed image.")
 			}
-			botData.DiscordSession.ChannelMessageSendComplex(env.Channel.ID, &discordgo.MessageSend{
+			_, err = botData.DiscordSession.ChannelMessageSendComplex(env.Channel.ID, &discordgo.MessageSend{
 				Content: "Processed image:",
 				File: &discordgo.File{
 					Name:   args[0] + ".png",
@@ -508,6 +520,9 @@ func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 					},
 				},
 			})
+			if err != nil {
+				return NewErrorEmbed("Image Error", "Unable to upload processed image.")
+			}
 		}
 	} else {
 		return NewErrorEmbed("Image Error", "You must upload an image to process.")
@@ -852,6 +867,23 @@ func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" to use before using the "+env.Command+" command.")
 }
 
+func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	volume, err := strconv.Atoi(args[0])
+	if err != nil {
+		return NewErrorEmbed("Volume Error", "``"+args[0]+"`` is not a valid number.")
+	}
+
+	if volume < 0 || volume > 512 {
+		return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 512, with 256 being normal volume.")
+	}
+
+	if guildData[env.Guild.ID].VoiceData.EncodingOptions == nil {
+		guildData[env.Guild.ID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
+	}
+	guildData[env.Guild.ID].VoiceData.EncodingOptions.Volume = volume
+	return NewErrorEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
+}
+
 func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	switch guildData[env.Guild.ID].VoiceData.RepeatLevel {
 	case 0: //No repeat
@@ -891,6 +923,8 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		return NewErrorEmbed("YouTube Error", "You must join the voice channel to use before using the "+env.Command+" command.")
 	}
 
+	page := &YouTubeResultNav{}
+
 	switch args[0] {
 	case "search", "s":
 		query := strings.Join(args[1:], " ")
@@ -904,121 +938,31 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 		guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] = &YouTubeResultNav{}
 
-		page := guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
+		page = guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
 		err := page.Search(query)
 		if err != nil {
 			return NewErrorEmbed("YouTube Error", "There was an error getting a result for the specified query.")
 		}
-
-		commandList := botData.CommandPrefix + env.Command + " select N - Selects result N"
-		if page.PrevPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n prev - Displays the results for the previous page"
-		}
-		if page.NextPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n next - Displays the results for the next page"
-		}
-		commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
-
-		results, _ := page.GetResults()
-		responseEmbed := NewEmbed().
-			SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
-			SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
-			SetColor(0xFF0000).MessageEmbed
-
-		fields := []*discordgo.MessageEmbedField{}
-		for i := 0; i < len(results); i++ {
-			videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
-			if err == nil {
-				author := videoInfo.Author
-				title := videoInfo.Title
-
-				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
-			}
-		}
-		fields = append(fields, commandListField)
-		responseEmbed.Fields = fields
-
-		return responseEmbed
 	case "next", "n", "forward", "+":
 		if guildData[env.Guild.ID].YouTubeResults == nil {
 			return NewErrorEmbed("YouTube Error", "No search session is in progress.")
 		}
 
-		page := guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
+		page = guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
 		err := page.Next()
 		if err != nil {
 			return NewErrorEmbed("YouTube Error", "There was an error finding the next page.")
 		}
-
-		commandList := botData.CommandPrefix + env.Command + " select N - Selects result N"
-		if page.PrevPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n prev - Displays the results for the previous page"
-		}
-		if page.NextPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n next - Displays the results for the next page"
-		}
-		commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
-
-		results, _ := page.GetResults()
-		responseEmbed := NewEmbed().
-			SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
-			SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
-			SetColor(0xFF0000).MessageEmbed
-
-		fields := []*discordgo.MessageEmbedField{}
-		for i := 0; i < len(results); i++ {
-			videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
-			if err == nil {
-				author := videoInfo.Author
-				title := videoInfo.Title
-
-				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
-			}
-		}
-		fields = append(fields, commandListField)
-		responseEmbed.Fields = fields
-
-		return responseEmbed
 	case "prev", "previous", "p", "back", "-":
 		if guildData[env.Guild.ID].YouTubeResults == nil {
 			return NewErrorEmbed("YouTube Error", "No search session is in progress.")
 		}
 
-		page := guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
+		page = guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
 		err := page.Prev()
 		if err != nil {
 			return NewErrorEmbed("YouTube Error", "There was an error finding the previous page.")
 		}
-
-		commandList := botData.CommandPrefix + env.Command + " select N - Selects result N"
-		if page.PrevPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n prev - Displays the results for the previous page"
-		}
-		if page.NextPageToken != "" {
-			commandList += botData.CommandPrefix + env.Command + "\n next - Displays the results for the next page"
-		}
-		commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
-
-		results, _ := page.GetResults()
-		responseEmbed := NewEmbed().
-			SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
-			SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
-			SetColor(0xFF0000).MessageEmbed
-
-		fields := []*discordgo.MessageEmbedField{}
-		for i := 0; i < len(results); i++ {
-			videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
-			if err == nil {
-				author := videoInfo.Author
-				title := videoInfo.Title
-
-				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "\"" + title + "\" by " + author})
-			}
-		}
-		fields = append(fields, commandListField)
-		responseEmbed.Fields = fields
-
-		return responseEmbed
 	case "cancel", "c":
 		if guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] != nil {
 			guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] = nil
@@ -1033,7 +977,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("YouTube Error", "You must specify which search result to select.")
 		}
 
-		page := guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
+		page = guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
 		results, _ := page.GetResults()
 
 		selection, err := strconv.Atoi(args[1])
@@ -1056,8 +1000,39 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		guildData[env.Guild.ID].AudioNowPlaying = queueData
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
 		return queueData.GetNowPlayingEmbed()
+	default:
+		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
 	}
-	return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
+
+	commandList := botData.CommandPrefix + env.Command + " select N - Selects result N"
+	if page.PrevPageToken != "" {
+		commandList += "\n" + botData.CommandPrefix + env.Command + " prev - Displays the results for the previous page"
+	}
+	if page.NextPageToken != "" {
+		commandList += "\n" + botData.CommandPrefix + env.Command + " next - Displays the results for the next page"
+	}
+	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+	results, _ := page.GetResults()
+	responseEmbed := NewEmbed().
+		SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
+		SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
+		SetColor(0xFF0000).MessageEmbed
+
+	fields := []*discordgo.MessageEmbedField{}
+	for i := 0; i < len(results); i++ {
+		videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
+		if err == nil {
+			author := videoInfo.Author
+			title := videoInfo.Title
+
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://youtube.com/watch?v=" + results[i].Id.VideoId + ") by **" + author + "**"})
+		}
+	}
+	fields = append(fields, commandListField)
+	responseEmbed.Fields = fields
+
+	return responseEmbed
 }
 
 func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
