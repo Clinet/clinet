@@ -155,8 +155,12 @@ func main() {
 		//       some errors with goroutines like voice playback
 		stateSave()
 
-		for _, guildDataRow := range guildData {
+		for guildID, guildDataRow := range guildData {
 			if guildDataRow.VoiceData.VoiceConnection != nil {
+				if voiceIsStreaming(guildID) {
+					debugLog("> Stopping stream in voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
+					voiceStop(guildID)
+				}
 				debugLog("> Closing connection to voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
 				guildDataRow.VoiceData.VoiceConnection.Close()
 			}

@@ -464,7 +464,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 			err = voicePlay(guildID, mediaURL)
 			if err != nil {
 				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-				errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+				errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 				session.ChannelMessageSendEmbed(channelID, errorEmbed)
 				return
 			}
@@ -475,7 +475,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 	}
 	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 	if err != nil {
-		errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+		errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 		session.ChannelMessageSendEmbed(channelID, errorEmbed)
 		return
 	} else {
@@ -508,7 +508,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
 						if err != nil {
 							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-							errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+							errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 							session.ChannelMessageSendEmbed(channelID, errorEmbed)
 							return
 						}
@@ -519,7 +519,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 				}
 				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 				if err != nil {
-					errorEmbed := NewErrorEmbed("Clinet Voice Error", "There was an error playing the specified audio.")
+					errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 					session.ChannelMessageSendEmbed(channelID, errorEmbed)
 					return //Prevent next guild queue entry from playing
 				} else {
@@ -537,7 +537,11 @@ func voiceStop(guildID string) {
 	if guildData[guildID] != nil {
 		guildData[guildID].VoiceData.WasStoppedManually = true //Make sure other threads know it was stopped manually
 		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
+		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
+		for guildData[guildID].VoiceData.EncodingSession.Running() {
+			//Wait for encoding session to stop
+		}
 	}
 }
 
@@ -545,7 +549,11 @@ func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
 		guildData[guildID].VoiceData.WasSkipped = true         //Let the voice play wrapper function continue to the next song if available
 		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
+		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
+		for guildData[guildID].VoiceData.EncodingSession.Running() {
+			//Wait for encoding session to stop
+		}
 	}
 }
 
