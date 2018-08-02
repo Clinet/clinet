@@ -52,13 +52,13 @@ func init() {
 func main() {
 	defer recoverPanic()
 	debugLog("Clinet-Discord © JoshuaDoes: 2018.", true)
-	debugLog("Build ID: "+BuildID+"\n", true)
+	debugLog("Build ID: "+BuildID, true)
 
 	flag.Parse()
 	if configIsBot == "true" {
-		debugLog("Process mode: BOT", true)
+		debugLog("Process mode: BOT\n", true)
 	} else {
-		debugLog("Process mode: MASTER", true)
+		debugLog("Process mode: MASTER\n", true)
 	}
 
 	if configIsBot == "true" {
