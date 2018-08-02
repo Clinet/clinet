@@ -54,24 +54,30 @@ func main() {
 	debugLog("Clinet-Discord © JoshuaDoes: 2018.", true)
 	debugLog("Build ID: "+BuildID+"\n", true)
 
-	debugLog("> Loading settings...", true)
 	flag.Parse()
-	configFileHandle, err := os.Open(configFile)
-	if err != nil {
-		panic("Error loading configuration file `" + configFile + "`")
+	if configIsBot == "true" {
+		debugLog("Process mode: BOT", true)
 	} else {
-		configParser := json.NewDecoder(configFileHandle)
-		if err = configParser.Decode(&botData); err != nil {
-			panic(err)
-		} else {
-			configErr := botData.PrepConfig() //Check the configuration for any errors or inconsistencies, then prepare it for usage
-			if configErr != nil {
-				panic(configErr)
-			}
-		}
+		debugLog("Process mode: MASTER", true)
 	}
 
 	if configIsBot == "true" {
+		debugLog("> Loading settings...", true)
+		configFileHandle, err := os.Open(configFile)
+		if err != nil {
+			panic("Error loading configuration file `" + configFile + "`")
+		} else {
+			configParser := json.NewDecoder(configFileHandle)
+			if err = configParser.Decode(&botData); err != nil {
+				panic(err)
+			} else {
+				configErr := botData.PrepConfig() //Check the configuration for any errors or inconsistencies, then prepare it for usage
+				if configErr != nil {
+					panic(configErr)
+				}
+			}
+		}
+
 		debugLog("> Initializing clients for external services...", true)
 		if botData.BotOptions.UseDuckDuckGo {
 			debugLog("> Initializing DuckDuckGo...", false)
