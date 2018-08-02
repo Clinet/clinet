@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net/url"
 	"regexp"
-	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
@@ -432,9 +431,6 @@ func voicePlay(guildID, mediaURL string) error {
 		}
 	}
 
-	debugLog("-- Playback finished", false)
-	debugLog("-- Status: "+strconv.FormatBool(guildData[guildID].VoiceData.IsPlaybackRunning)+"|"+strconv.FormatBool(guildData[guildID].VoiceData.WasStoppedManually)+"|"+strconv.FormatBool(guildData[guildID].VoiceData.WasSkipped), false)
-
 	//Set speaking to false
 	guildData[guildID].VoiceData.VoiceConnection.Speaking(false)
 
@@ -529,6 +525,10 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 					}
 				}
 			}
+
+			voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
+			leaveEmbed := NewGenericEmbed("Voice", "Finished playing the queue.")
+			session.ChannelMessageSendEmbed(channelID, leaveEmbed)
 		}
 	}
 }
@@ -539,9 +539,6 @@ func voiceStop(guildID string) {
 		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
 		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
-		for guildData[guildID].VoiceData.EncodingSession.Running() {
-			//Wait for encoding session to stop
-		}
 	}
 }
 
@@ -551,9 +548,6 @@ func voiceSkip(guildID string) {
 		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
 		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
-		for guildData[guildID].VoiceData.EncodingSession.Running() {
-			//Wait for encoding session to stop
-		}
 	}
 }
 

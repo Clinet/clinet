@@ -693,7 +693,7 @@ func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.Messag
 			}
 			err := voiceLeave(env.Guild.ID, voiceState.ChannelID)
 			if err != nil {
-				return NewErrorEmbed("Vocie Error", "There was an error leaving the voice channel.")
+				return NewErrorEmbed("Voice Error", "There was an error leaving the voice channel.")
 			}
 			return NewGenericEmbed("Voice", "Left the voice channel.")
 		}
