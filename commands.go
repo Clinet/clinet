@@ -696,7 +696,7 @@ func commandUrbanDictionary(args []string, env *CommandEnvironment) *discordgo.M
 		return NewErrorEmbed("Urban Dictionary Error", "There was an error getting a result for that term.")
 	}
 
-	linkExp := regexp.MustCompile(`\[([a-zA-Z\w\d\s]*)\]`)
+	linkExp := regexp.MustCompile(`\[([^\]]*)\]`)
 	linkExpFunc := func(s string) string {
 		ss := linkExp.FindStringSubmatch(s)
 		if len(ss) == 0 {
