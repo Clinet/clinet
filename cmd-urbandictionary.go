@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/JoshuaDoes/urbandictionary"
 	//prettyTime "github.com/andanhm/go-prettytime"
@@ -12,7 +13,7 @@ import (
 )
 
 func commandUrbanDictionary(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	results, err := urbandictionary.Query(args[0])
+	results, err := urbandictionary.Query(strings.Join(args, " "))
 	if err != nil {
 		return NewErrorEmbed("Urban Dictionary Error", "There was an error getting a result for that term.")
 	}
