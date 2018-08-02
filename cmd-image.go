@@ -10,7 +10,6 @@ import (
 	"github.com/disintegration/gift"
 )
 
-
 func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	if len(env.Message.Attachments) > 0 {
 		for _, attachment := range env.Message.Attachments {

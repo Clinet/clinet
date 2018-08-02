@@ -3,7 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
-	
+
 	"github.com/bwmarrin/discordgo"
 )
 

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"net/url"
 	"strconv"
 	"strings"
-	"net/url"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/rylio/ytdl"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"sort"
-	
+
 	"github.com/bwmarrin/discordgo"
 )
 

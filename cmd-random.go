@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 )
+
 func commandRoll(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	random := rand.Intn(6) + 1
 	return NewGenericEmbed("Roll", "You rolled a "+strconv.Itoa(random)+"!")
