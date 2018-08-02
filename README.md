@@ -83,6 +83,7 @@ Clinet relies on to fully function. Clinet is currently built using Golang `1.10
 | [ytdl](https://github.com/rylio/ytdl) |
 | [transport](https://google.golang.org/api/googleapi/transport) |
 | [youtube](https://google.golang.org/api/youtube/v3) |
+| [urbandictionary](https://github.com/JoshuaDoes/urbandictionary) |
 
 ### Building
 

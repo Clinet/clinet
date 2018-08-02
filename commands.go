@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/JoshuaDoes/go-cve"
+	"github.com/JoshuaDoes/urbandictionary"
+	//prettyTime "github.com/andanhm/go-prettytime"
 	"github.com/bwmarrin/discordgo"
 	"github.com/disintegration/gift"
 	"github.com/rylio/ytdl"
@@ -125,6 +127,16 @@ func initCommands() {
 		Arguments: []CommandArgument{
 			{Name: "username", Description: "The GitHub user to fetch info about", ArgType: "string"},
 			{Name: "username/repo", Description: "The GitHub repo to fetch info about", ArgType: "string"},
+		},
+	}
+	botData.Commands["urbandictionary"] = &Command{
+		Function: commandUrbanDictionary,
+		HelpText: "Displays the definition of a term according to the Urban Dictionary.",
+		RequiredArguments: []string{
+			"term",
+		},
+		Arguments: []CommandArgument{
+			{Name: "term", Description: "The term to fetch a definition for", ArgType: "string"},
 		},
 	}
 
@@ -288,6 +300,7 @@ func initCommands() {
 	botData.Commands["gh"] = &Command{IsAlternateOf: "github"}
 	botData.Commands["yt"] = &Command{IsAlternateOf: "youtube"}
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
+	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 
 	//Testing commands, only available if debug mode is enabled
 	if botData.DebugMode {
@@ -673,6 +686,32 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	}
 
 	return NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")
+}
+
+func commandUrbanDictionary(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	results, err := urbandictionary.Query(args[0])
+	if err != nil {
+		return NewErrorEmbed("Urban Dictionary Error", "There was an error getting a result for that term.")
+	}
+
+	result := results.Results[0]
+	resultEmbed := NewEmbed().
+		SetTitle("Urban Dictionary - "+result.Word).
+		SetDescription(result.Definition).
+		AddField("Example", result.Example).
+		AddField("Author", result.Author).
+		AddField("Stats", "\U0001f44d "+strconv.Itoa(result.ThumbsUp)+" \U0001f44e "+strconv.Itoa(result.ThumbsDown)).
+		SetFooter("Results from Urban Dictionary.", "https://res.cloudinary.com/hrscywv4p/image/upload/c_limit,fl_lossy,h_300,w_300,f_auto,q_auto/v1/1194347/vo5ge6mdw4creyrgaq2m.png").
+		SetURL(result.Permalink).
+		SetColor(0xDC2A26).MessageEmbed
+
+	//Oddly enough, this isn't wanting to return anything for the moment so it's staying commented
+	//	date := prettyTime.Format(result.Date)
+	//	if date != "" {
+	//		resultEmbed.Fields = append(resultEmbed.Fields, &discordgo.MessageEmbedField{Name: "Date Written", Value: date})
+	//	}
+
+	return resultEmbed
 }
 
 func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
