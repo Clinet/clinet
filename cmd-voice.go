@@ -22,9 +22,7 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
-			if voiceIsStreaming(env.Guild.ID) {
-				voiceStop(env.Guild.ID)
-			}
+			voiceStop(env.Guild.ID)
 			err := voiceLeave(env.Guild.ID, voiceState.ChannelID)
 			if err != nil {
 				return NewErrorEmbed("Voice Error", "There was an error leaving the voice channel.")
@@ -70,7 +68,11 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 				return NewErrorEmbed("Voice Error", "There was an error getting a result for the specified query.")
 			}
 			queueData := AudioQueueEntry{MediaURL: queryURL, Requester: env.Message.Author, Type: "youtube"}
-			queueData.FillMetadata()
+			errEmbed := queueData.FillMetadata()
+			if errEmbed != nil {
+				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+				return errEmbed
+			}
 			if voiceIsStreaming(env.Guild.ID) {
 				guildData[env.Guild.ID].QueueAdd(queueData)
 				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
@@ -84,7 +86,11 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 
 		//First parameter is a URL
 		queueData := AudioQueueEntry{MediaURL: args[0], Requester: env.Message.Author}
-		queueData.FillMetadata()
+		errEmbed := queueData.FillMetadata()
+		if errEmbed != nil {
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+			return errEmbed
+		}
 		if voiceIsStreaming(env.Guild.ID) {
 			guildData[env.Guild.ID].QueueAdd(queueData)
 			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
@@ -100,7 +106,11 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		if len(env.Message.Attachments) > 0 {
 			for _, attachment := range env.Message.Attachments {
 				queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: env.Message.Author}
-				queueData.FillMetadata()
+				errEmbed := queueData.FillMetadata()
+				if errEmbed != nil {
+					guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+					return errEmbed
+				}
 				guildData[env.Guild.ID].QueueAdd(queueData)
 			}
 			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
@@ -118,29 +128,42 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	if len(env.Message.Attachments) > 0 {
 		for _, attachment := range env.Message.Attachments {
 			queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: env.Message.Author}
-			queueData.FillMetadata()
+			errEmbed := queueData.FillMetadata()
+			if errEmbed != nil {
+				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
+				return errEmbed
+			}
 			guildData[env.Guild.ID].QueueAdd(queueData)
 		}
+		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
 		return NewGenericEmbed("Voice", "Added the attached files to the guild queue. Use ``"+botData.CommandPrefix+"play`` to begin playback from the beginning of the queue.")
 	}
 	if guildData[env.Guild.ID].AudioNowPlaying.MediaURL != "" {
 		queueData := guildData[env.Guild.ID].AudioNowPlaying
-		queueData.FillMetadata()
+		errEmbed := queueData.FillMetadata()
+		if errEmbed != nil {
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+			return errEmbed
+		}
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueData.MediaURL)
 		return queueData.GetQueueAddedEmbed()
 	}
 	if len(guildData[env.Guild.ID].AudioQueue) > 0 {
 		queueData := guildData[env.Guild.ID].AudioQueue[0]
-		queueData.FillMetadata()
+		errEmbed := queueData.FillMetadata()
+		if errEmbed != nil {
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+			return errEmbed
+		}
 		guildData[env.Guild.ID].QueueRemove(0)
-		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueData.MediaURL)
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
+		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueData.MediaURL)
 		return queueData.GetQueueAddedEmbed()
 	}
 
 	guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-	return NewGenericEmbed("Voice Error", "Some kind of strange logic flow occurred. Consider sending this to a developer.")
+	return NewErrorEmbed("Voice Error", "Could not find any audio to play.")
 }
 
 func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -326,7 +349,11 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		resultURL := "https://youtube.com/watch?v=" + result.Id.VideoId
 
 		queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "youtube"}
-		queueData.FillMetadata()
+		errEmbed := queueData.FillMetadata()
+		if errEmbed != nil {
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+			return errEmbed
+		}
 		if voiceIsStreaming(env.Guild.ID) {
 			guildData[env.Guild.ID].QueueAdd(queueData)
 			return queueData.GetQueueAddedEmbed()
@@ -429,12 +456,13 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		if queueList != "" {
 			queueList += "\n"
 		}
-		switch queueEntry.Type {
-		case "youtube", "soundcloud":
-			queueList += displayNumber + ". [" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "** | Requested by <@" + queueEntry.Requester.ID + ">"
-		default:
-			queueList += displayNumber + ". " + queueEntry.MediaURL + " | Requested by <@" + queueEntry.Requester.ID + ">"
+		queueList += displayNumber + ". ``" + secondsToHuman(queueEntry.Duration) + "`` "
+		if queueEntry.Title != "" && queueEntry.Author != "" {
+			queueList += "[" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+		} else {
+			queueList += queueEntry.MediaURL
 		}
+		queueList += " | Requested by <@" + queueEntry.Requester.ID + ">"
 	}
 	return NewGenericEmbed("Queue for "+env.Guild.Name, queueList)
 }

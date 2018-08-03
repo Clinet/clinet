@@ -6,7 +6,9 @@ import (
 	"math/rand"
 	"net/url"
 	"regexp"
+	"strconv"
 
+	"github.com/JoshuaDoes/goprobe"
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
 	"github.com/rylio/ytdl"
@@ -189,6 +191,7 @@ type AudioQueueEntry struct {
 	ThumbnailURL     string
 	Title            string
 	Type             string
+	Duration         float64
 }
 
 func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageEmbed {
@@ -196,48 +199,66 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageE
 	case "youtube":
 		return NewEmbed().
 			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
 			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
 	default:
+		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
+			return NewEmbed().
+				AddField("Now Playing", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+				AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
+				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+				SetColor(0x1C1C1C).MessageEmbed
+		}
 		return NewEmbed().
 			SetTitle("Now Playing").
 			AddField("URL", audioQueueEntry.MediaURL).
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
 func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.StreamingSession) *discordgo.MessageEmbed {
 	//Get the current duration
-	currentDuration := secondsToHuman(stream.PlaybackPosition().Seconds())
+	playbackPosition := secondsToHuman(stream.PlaybackPosition().Seconds())
+	fullDuration := secondsToHuman(audioQueueEntry.Duration)
 
 	switch audioQueueEntry.Type {
 	case "youtube":
 		return NewEmbed().
 			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Time", playbackPosition+" / "+fullDuration).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			AddField("Elapsed Time", currentDuration).
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
 			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Time", playbackPosition+" / "+fullDuration).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			AddField("Elapsed Time", currentDuration).
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
 	default:
+		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
+			return NewEmbed().
+				AddField("Now Playing", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+				AddField("Time", playbackPosition+" / "+fullDuration).
+				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+				SetColor(0x1C1C1C).MessageEmbed
+		}
 		return NewEmbed().
 			SetTitle("Now Playing").
 			AddField("URL", audioQueueEntry.MediaURL).
+			AddField("Time", playbackPosition+" / "+fullDuration).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			AddField("Elapsed Time", currentDuration).
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
@@ -256,24 +277,34 @@ func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageE
 	case "youtube":
 		return NewEmbed().
 			AddField("Added to Queue from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF0000).MessageEmbed
 	case "soundcloud":
 		return NewEmbed().
 			AddField("Added to Queue from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
 	default:
+		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
+			return NewEmbed().
+				AddField("Added to Queue", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+				AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
+				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+				SetColor(0x1C1C1C).MessageEmbed
+		}
 		return NewEmbed().
 			SetTitle("Added to Queue").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
 			AddField("URL", audioQueueEntry.MediaURL).
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetColor(0x1C1C1C).MessageEmbed
 	}
 }
-func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
+func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 	if audioQueueEntry.Type == "" {
 		if isYouTubeURL(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "youtube"
@@ -284,11 +315,37 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
 		}
 	}
 
+	probeURL, err := getMediaURL(audioQueueEntry.MediaURL)
+	if err != nil {
+		return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL.")
+	}
+
+	probe, err := goprobe.ProbeMedia(probeURL)
+	if err != nil {
+		return NewErrorEmbed("Voice Error", "Error probing the media for audio.")
+	}
+	if len(probe.Streams) == 0 {
+		return NewErrorEmbed("Voice Error", "Error probing the media for audio: No streams were found.")
+	}
+
+	hasAudio := false
+	audioStream := 0
+	for i, stream := range probe.Streams {
+		if stream.CodecType == "audio" {
+			hasAudio = true
+			audioStream = i
+			break
+		}
+	}
+	if !hasAudio {
+		return NewErrorEmbed("Voice Error", "Error probing the media for audio: Media does not have audio.")
+	}
+
 	switch audioQueueEntry.Type {
 	case "youtube":
 		videoInfo, err := ytdl.GetVideoInfo(audioQueueEntry.MediaURL)
 		if err != nil {
-			return
+			return NewErrorEmbed("Voice Error", "Error getting info about the YouTube video.")
 		}
 		audioQueueEntry.Author = videoInfo.Author
 		audioQueueEntry.ImageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
@@ -297,13 +354,22 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() {
 	case "soundcloud":
 		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(audioQueueEntry.MediaURL)
 		if err != nil {
-			return
+			return NewErrorEmbed("Voice Error", "Error getting info about the SoundCloud track.")
 		}
 		audioQueueEntry.Author = audioInfo.Artist
 		audioQueueEntry.ImageURL = audioInfo.ArtURL
 		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
 		audioQueueEntry.Title = audioInfo.Title
+	default:
+		audioQueueEntry.Author = probe.Format.Tags.Artist
+		audioQueueEntry.Title = probe.Format.Tags.Title
 	}
+	audioQueueEntry.Duration, err = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
+	if err != nil {
+		return NewErrorEmbed("Voice Error", "Error getting the duration of the audio.")
+	}
+
+	return nil
 }
 
 // VoiceData contains data about the current voice session
@@ -435,19 +501,22 @@ func voicePlay(guildID, mediaURL string) error {
 	guildData[guildID].VoiceData.VoiceConnection.Speaking(false)
 
 	//Check streaming session for why playback stopped
-	_, err = guildData[guildID].VoiceData.StreamingSession.Finished()
+	if guildData[guildID].VoiceData.StreamingSession != nil {
+		_, err = guildData[guildID].VoiceData.StreamingSession.Finished()
+	}
 
 	//Clean up streaming session
 	guildData[guildID].VoiceData.StreamingSession = nil
 
 	//Clean up encoding session
-	guildData[guildID].VoiceData.EncodingSession.Stop()
-	guildData[guildID].VoiceData.EncodingSession.Cleanup()
-	guildData[guildID].VoiceData.EncodingSession = nil
+	if guildData[guildID].VoiceData.EncodingSession != nil {
+		guildData[guildID].VoiceData.EncodingSession.Stop()
+		guildData[guildID].VoiceData.EncodingSession.Cleanup()
+		guildData[guildID].VoiceData.EncodingSession = nil
+	}
 
 	//If playback stopped from an error, return that error
 	if err != nil {
-		debugLog("-- Playback error", false)
 		return err
 	}
 	return nil
@@ -482,6 +551,11 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 
 			//When the song finishes playing, we should run on a loop to make sure the next songs continue playing
 			for len(guildData[guildID].AudioQueue) > 0 {
+				if guildData[guildID].VoiceData.WasStoppedManually {
+					guildData[guildID].VoiceData.WasStoppedManually = false
+					return //Prevent next guild queue entry from playing
+				}
+
 				//Move next guild queue entry into now playing slot
 				if guildData[guildID].VoiceData.Shuffle {
 					//Pseudo-shuffle™, replace with legitimate shuffle method later so user can return to non-shuffled playlist
@@ -526,9 +600,11 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 				}
 			}
 
-			voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
-			leaveEmbed := NewGenericEmbed("Voice", "Finished playing the queue.")
-			session.ChannelMessageSendEmbed(channelID, leaveEmbed)
+			if guildData[guildID].VoiceData.WasStoppedManually == false {
+				voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
+				leaveEmbed := NewGenericEmbed("Voice", "Finished playing the queue.")
+				session.ChannelMessageSendEmbed(channelID, leaveEmbed)
+			}
 		}
 	}
 }
