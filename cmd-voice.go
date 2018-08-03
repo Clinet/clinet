@@ -462,8 +462,10 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 						if guild.AudioNowPlaying.MediaURL != "" {
 							guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioNowPlaying)
 						}
-						for i := 0; i < len(guild.AudioQueue); i++ {
-							guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioQueue[i])
+						if len(guild.AudioQueue) > 0 {
+							for i := 0; i < len(guild.AudioQueue); i++ {
+								guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioQueue[i])
+							}
 						}
 
 						guildState, _ := botData.DiscordSession.State.Guild(guildID)
