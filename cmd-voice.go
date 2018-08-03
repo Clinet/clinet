@@ -444,6 +444,38 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				return NewGenericEmbed("Queue", "Successfully removed the specified queue entries.")
 			}
 			return NewGenericEmbed("Queue", "Successfully removed the specified queue entry.")
+		case "copy":
+			if len(args) == 1 {
+				return NewErrorEmbed("Queue Error", "You must specify which guild queue(s) to copy.")
+			}
+
+			for _, guildID := range args[1:] {
+				if _, exists := guildData[guildID]; exists == false {
+					return NewErrorEmbed("Queue Error", "The guild ID ``"+guildID+"`` does not point to a known guild.")
+				}
+			}
+
+			copiedGuilds := make([]string, 0)
+			for _, guildID := range args[1:] {
+				if guild, exists := guildData[guildID]; exists { //Just in case it doesn't exist anymore when we reach this point, we all know how edge cases go
+					if guild.AudioNowPlaying.MediaURL != "" || len(guild.AudioQueue) > 0 {
+						if guild.AudioNowPlaying.MediaURL != "" {
+							guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioNowPlaying)
+						}
+						for i := 0; i < len(guild.AudioQueue); i++ {
+							guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioQueue[i])
+						}
+
+						guildState, _ := botData.DiscordSession.State.Guild(guildID)
+						copiedGuilds = append(copiedGuilds, "**"+guildState.Name+"**")
+					}
+				}
+			}
+
+			if len(copiedGuilds) == 1 {
+				return NewGenericEmbed("Queue", "Successfully copied the queue from "+copiedGuilds[0]+".")
+			}
+			return NewGenericEmbed("Queue", "Successfully copied the queue from the following guilds:\n"+strings.Join(copiedGuilds, "\n"))
 		}
 	}
 
