@@ -315,7 +315,7 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 		}
 		return NewErrorEmbed("Command Error - No Permissions (NP)", "You do not have the necessary permissions to use this command.")
 	}
-	return botData.Commands[commandName].Function(args, env)
+	return nil
 }
 
 func getCommandUsage(commandName, title string) *discordgo.MessageEmbed {
