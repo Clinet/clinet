@@ -50,16 +50,17 @@ type BotKeys struct {
 	YouTubeAPIKey        string `json:"youtubeAPIKey"`
 }
 type BotOptions struct {
-	SendTypingEvent   bool     `json:"sendTypingEvent"`
-	UseDuckDuckGo     bool     `json:"useDuckDuckGo"`
-	UseGitHub         bool     `json:"useGitHub"`
-	UseImgur          bool     `json:"useImgur"`
-	UseSoundCloud     bool     `json:"useSoundCloud"`
-	UseWolframAlpha   bool     `json:"useWolframAlpha"`
-	UseXKCD           bool     `json:"useXKCD"`
-	UseYouTube        bool     `json:"useYouTube"`
-	WolframDeniedPods []string `json:"wolframDeniedPods"`
-	YouTubeMaxResults int      `json:"youtubeMaxResults"`
+	SendTypingEvent    bool     `json:"sendTypingEvent"`
+	UseCustomResponses bool     `json:"useCustomResponses"`
+	UseDuckDuckGo      bool     `json:"useDuckDuckGo"`
+	UseGitHub          bool     `json:"useGitHub"`
+	UseImgur           bool     `json:"useImgur"`
+	UseSoundCloud      bool     `json:"useSoundCloud"`
+	UseWolframAlpha    bool     `json:"useWolframAlpha"`
+	UseXKCD            bool     `json:"useXKCD"`
+	UseYouTube         bool     `json:"useYouTube"`
+	WolframDeniedPods  []string `json:"wolframDeniedPods"`
+	YouTubeMaxResults  int      `json:"youtubeMaxResults"`
 }
 type CustomResponseQuery struct {
 	Expression string `json:"expression"`

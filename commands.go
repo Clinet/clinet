@@ -83,38 +83,45 @@ func initCommands() {
 			{Name: "cve", Description: "The CVE ID to fetch information about", ArgType: "string"},
 		},
 	}
-	botData.Commands["xkcd"] = &Command{
-		Function: commandXKCD,
-		HelpText: "Displays an XKCD comic depending on the requested type or comic number.",
-		RequiredArguments: []string{
-			"(comic number|latest|random)",
-		},
-		Arguments: []CommandArgument{
-			{Name: "comic number", Description: "The number of an existing XKCD comic", ArgType: "number"},
-			{Name: "latest", Description: "Fetches the latest XKCD comic", ArgType: "this"},
-			{Name: "random", Description: "Fetches a random XKCD comic", ArgType: "this"},
-		},
+	if botData.BotOptions.UseXKCD {
+		botData.Commands["xkcd"] = &Command{
+			Function: commandXKCD,
+			HelpText: "Displays an XKCD comic depending on the requested type or comic number.",
+			RequiredArguments: []string{
+				"(comic number|latest|random)",
+			},
+			Arguments: []CommandArgument{
+				{Name: "comic number", Description: "The number of an existing XKCD comic", ArgType: "number"},
+				{Name: "latest", Description: "Fetches the latest XKCD comic", ArgType: "this"},
+				{Name: "random", Description: "Fetches a random XKCD comic", ArgType: "this"},
+			},
+		}
 	}
-	botData.Commands["imgur"] = &Command{
-		Function: commandImgur,
-		HelpText: "Displays info about the specified Imgur image or album URL.",
-		RequiredArguments: []string{
-			"url",
-		},
-		Arguments: []CommandArgument{
-			{Name: "url", Description: "The Imgur image or album URL", ArgType: "string"},
-		},
+
+	if botData.BotOptions.UseImgur {
+		botData.Commands["imgur"] = &Command{
+			Function: commandImgur,
+			HelpText: "Displays info about the specified Imgur image or album URL.",
+			RequiredArguments: []string{
+				"url",
+			},
+			Arguments: []CommandArgument{
+				{Name: "url", Description: "The Imgur image or album URL", ArgType: "string"},
+			},
+		}
 	}
-	botData.Commands["github"] = &Command{
-		Function: commandGitHub,
-		HelpText: "Displays info about the specified GitHub user or repo.",
-		RequiredArguments: []string{
-			"username(/repo)",
-		},
-		Arguments: []CommandArgument{
-			{Name: "username", Description: "The GitHub user to fetch info about", ArgType: "string"},
-			{Name: "username/repo", Description: "The GitHub repo to fetch info about", ArgType: "string"},
-		},
+	if botData.BotOptions.UseGitHub {
+		botData.Commands["github"] = &Command{
+			Function: commandGitHub,
+			HelpText: "Displays info about the specified GitHub user or repo.",
+			RequiredArguments: []string{
+				"username(/repo)",
+			},
+			Arguments: []CommandArgument{
+				{Name: "username", Description: "The GitHub user to fetch info about", ArgType: "string"},
+				{Name: "username/repo", Description: "The GitHub repo to fetch info about", ArgType: "string"},
+			},
+		}
 	}
 	botData.Commands["urbandictionary"] = &Command{
 		Function: commandUrbanDictionary,

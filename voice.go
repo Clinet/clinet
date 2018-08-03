@@ -612,17 +612,21 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 func voiceStop(guildID string) {
 	if guildData[guildID] != nil {
 		guildData[guildID].VoiceData.WasStoppedManually = true //Make sure other threads know it was stopped manually
-		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
-		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
+		if guildData[guildID].VoiceData.EncodingSession != nil {
+			guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
+			guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
+		}
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
 	}
 }
 
 func voiceSkip(guildID string) {
 	if guildData[guildID] != nil {
-		guildData[guildID].VoiceData.WasSkipped = true         //Let the voice play wrapper function continue to the next song if available
-		guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
-		guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
+		guildData[guildID].VoiceData.WasSkipped = true //Let the voice play wrapper function continue to the next song if available
+		if guildData[guildID].VoiceData.EncodingSession != nil {
+			guildData[guildID].VoiceData.EncodingSession.Stop()    //Stop the encoding session manually
+			guildData[guildID].VoiceData.EncodingSession.Cleanup() //Cleanup the encoding session
+		}
 		guildData[guildID].VoiceData.IsPlaybackRunning = false //Let the voice play function clean up on its own
 	}
 }

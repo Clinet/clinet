@@ -176,83 +176,78 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 		responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 	} else {
-		//regexpBotName, _ := regexp.MatchString("<(@|@\\!)"+session.State.User.ID+">(.*?)", content)
-		regexpBotName, _ := regexp.MatchString("^<(@|@\\!)"+session.State.User.ID+">(.*?)$", content) //Ensure prefix is bot tag
-		//if regexpBotName && strings.HasSuffix(content, "?") {
-		if regexpBotName { //Experiment with not requiring question mark suffix
-			if !updatedMessageEvent {
-				typingEvent(session, message.ChannelID)
-			}
-			query := content
-
-			query = strings.Replace(query, "<@!"+session.State.User.ID+">", "", -1)
-			query = strings.Replace(query, "<@"+session.State.User.ID+">", "", -1)
-			for {
-				if strings.HasPrefix(query, " ") {
-					query = strings.Replace(query, " ", "", 1)
-				} else if strings.HasPrefix(query, ",") {
-					query = strings.Replace(query, ",", "", 1)
-				} else if strings.HasPrefix(query, ":") {
-					query = strings.Replace(query, ":", "", 1)
-				} else {
-					break
+		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
+			//regexpBotName, _ := regexp.MatchString("<(@|@\\!)"+session.State.User.ID+">(.*?)", content)
+			regexpBotName, _ := regexp.MatchString("^<(@|@\\!)"+session.State.User.ID+">(.*?)$", content) //Ensure prefix is bot tag
+			//if regexpBotName && strings.HasSuffix(content, "?") {
+			if regexpBotName { //Experiment with not requiring question mark suffix
+				if !updatedMessageEvent {
+					typingEvent(session, message.ChannelID)
 				}
-			}
+				query := content
 
-			usedCustomResponse := false
-			if len(botData.CustomResponses) > 0 {
-				for _, response := range botData.CustomResponses {
-					regexpMatched, _ := regexp.MatchString(response.Expression, query)
-					if regexpMatched {
-						random := rand.Intn(len(response.Responses))
-						responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random].Response)
-						usedCustomResponse = true
+				query = strings.Replace(query, "<@!"+session.State.User.ID+">", "", -1)
+				query = strings.Replace(query, "<@"+session.State.User.ID+">", "", -1)
+				for {
+					if strings.HasPrefix(query, " ") {
+						query = strings.Replace(query, " ", "", 1)
+					} else if strings.HasPrefix(query, ",") {
+						query = strings.Replace(query, ",", "", 1)
+					} else if strings.HasPrefix(query, ":") {
+						query = strings.Replace(query, ":", "", 1)
+					} else {
+						break
 					}
 				}
-			}
-			if usedCustomResponse == false {
 
-				//Experimental - Use regex for natural language-based commands
-				regexCmdPlayComp, err := regexp.Compile(regexCmdPlay)
-				if err != nil {
-					panic(err)
-				}
-				match := regexCmdPlayComp.FindAllString(query, 1) //Get a slice of the results
-				if len(match) > 0 {
-					queryURL, err := voiceGetQuery(match[0])
-					if err != nil {
-						responseEmbed = NewErrorEmbed("Clinet Voice Error", "There was an error getting a result for the specified query.")
-					} else {
-						foundVoiceChannel := false
-						for _, voiceState := range guild.VoiceStates {
-							if voiceState.UserID == message.Author.ID {
-								foundVoiceChannel = true
-								voiceJoin(session, guild.ID, voiceState.ChannelID, message.ChannelID)
-								break
+				usedCustomResponse := false
+				if botData.BotOptions.UseCustomResponses {
+					if len(botData.CustomResponses) > 0 {
+						for _, response := range botData.CustomResponses {
+							regexpMatched, _ := regexp.MatchString(response.Expression, query)
+							if regexpMatched {
+								random := rand.Intn(len(response.Responses))
+								responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random].Response)
+								usedCustomResponse = true
 							}
 						}
-						if foundVoiceChannel {
-							queueData := AudioQueueEntry{MediaURL: queryURL, Requester: message.Author, Type: "youtube"}
-							queueData.FillMetadata()
-							if voiceIsStreaming(guild.ID) {
-								guildData[guild.ID].QueueAdd(queueData)
-								responseEmbed = queueData.GetQueueAddedEmbed()
-							} else {
-								guildData[guild.ID].AudioNowPlaying = queueData
-								responseEmbed = guildData[guild.ID].AudioNowPlaying.GetNowPlayingEmbed()
-								go voicePlayWrapper(session, guild.ID, message.ChannelID, queueData.MediaURL)
+					}
+				}
+				if usedCustomResponse == false {
+					//Experimental - Use regex for natural language-based commands
+					regexCmdPlayComp, err := regexp.Compile(regexCmdPlay)
+					if err != nil {
+						panic(err)
+					}
+
+					matches := regexCmdPlayComp.FindAllString(query, 1) //Get a slice of the results
+					if len(matches) > 0 {
+						//Remove "Play" from the beginning
+						matchSplit := strings.Split(matches[0], " ")
+						match := matchSplit[1:]
+
+						commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "play", UpdatedMessageEvent: updatedMessageEvent}
+						responseEmbed = commandPlay(match, commandEnvironment)
+					} else { //End experimental
+						if botData.BotOptions.UseDuckDuckGo {
+							responseEmbed, err = queryDuckDuckGo(query)
+							if err != nil {
+								if botData.BotOptions.UseWolframAlpha {
+									responseEmbed, err = queryWolframAlpha(query)
+									if err != nil {
+										responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+									}
+								} else {
+									responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+								}
+							}
+						} else if botData.BotOptions.UseWolframAlpha {
+							responseEmbed, err = queryWolframAlpha(query)
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
 							}
 						} else {
-							responseEmbed = NewErrorEmbed("Clinet Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the play command.")
-						}
-					}
-				} else { //End experimental
-
-					responseEmbed, err = queryDuckDuckGo(query)
-					if err != nil {
-						responseEmbed, err = queryWolframAlpha(query)
-						if err != nil {
-							responseEmbed = NewErrorEmbed("Query Error", "There was an error finding the data you requested.")
+							responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
 						}
 					}
 				}

@@ -131,6 +131,7 @@ The following is an example configuration file:
 	},
 	"botOptions": {
 		"sendTypingEvent": true,
+		"useCustomResponses": true,
 		"useDuckDuckGo": true,
 		"useGitHub": true,
 		"useImgur": true,
