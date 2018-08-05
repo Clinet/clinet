@@ -150,7 +150,11 @@ func main() {
 		debugLog("> Connection successful", true)
 		botData.DiscordSession = discord
 
-		checkPanicRecovery()
+		if botData.SendOwnerStackTraces {
+			checkPanicRecovery()
+		}
+
+		checkRestart()
 
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -315,15 +319,17 @@ func recoverPanic() {
 	if panicReason := recover(); panicReason != nil {
 		fmt.Println("Clinet has encountered an unrecoverable error and has crashed.")
 		fmt.Println("Some information describing this crash: " + panicReason.(error).Error())
-		stack := make([]byte, 65536)
-		l := runtime.Stack(stack, true)
-		err := ioutil.WriteFile("stacktrace.txt", stack[:l], 0644)
-		if err != nil {
-			fmt.Println("Failed to write stack trace.")
-		}
-		err = ioutil.WriteFile("crash.txt", []byte(panicReason.(error).Error()), 0644)
-		if err != nil {
-			fmt.Println("Failed to write crash error.")
+		if botData.SendOwnerStackTraces {
+			stack := make([]byte, 65536)
+			l := runtime.Stack(stack, true)
+			err := ioutil.WriteFile("stacktrace.txt", stack[:l], 0644)
+			if err != nil {
+				fmt.Println("Failed to write stack trace.")
+			}
+			err = ioutil.WriteFile("crash.txt", []byte(panicReason.(error).Error()), 0644)
+			if err != nil {
+				fmt.Println("Failed to write crash error.")
+			}
 		}
 		os.Exit(1)
 	}
@@ -349,6 +355,16 @@ func checkPanicRecovery() {
 		stack.Close()
 		os.Remove("crash.txt")
 		os.Remove("stacktrace.txt")
+	}
+}
+
+func checkRestart() {
+	restartChannelID, err := ioutil.ReadFile(".restart")
+	if err == nil && len(restartChannelID) > 0 {
+		restartEmbed := NewGenericEmbed("Restart", "Successfully restarted "+botData.BotName+"!")
+		botData.DiscordSession.ChannelMessageSendEmbed(string(restartChannelID), restartEmbed)
+
+		os.Remove(".restart")
 	}
 }
 

@@ -2,12 +2,27 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	//Tell the user we're restarting
+	botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewGenericEmbed("Restart", "Restarting "+botData.BotName+"..."))
+
+	//Write the current channel ID to a restart file for the bot to read after the restart
+	ioutil.WriteFile(".restart", []byte(env.Channel.ID), 0644)
+
+	//Close the bot process, as the MASTER process will open it again
+	os.Exit(0)
+
+	return nil
+}
 
 func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	return NewEmbed().

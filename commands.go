@@ -8,13 +8,15 @@ import (
 
 // Command holds data related to a command executable by any message system
 type Command struct {
-	Function          func([]string, *CommandEnvironment) *discordgo.MessageEmbed //The function value of what to execute when the command is ran
-	HelpText          string                                                      //The text that will display in the help message
-	Arguments         []CommandArgument                                           //The arguments required for this command
-	RequiredArguments []string                                                    //The minimum required arguments by name that must exist for the function to execute; default = 0
+	Function            func([]string, *CommandEnvironment) *discordgo.MessageEmbed //The function value of what to execute when the command is ran
+	HelpText            string                                                      //The text that will display in the help message
+	Arguments           []CommandArgument                                           //The arguments required for this command
+	RequiredArguments   []string                                                    //The minimum required arguments by name that must exist for the function to execute; default = 0
+	RequiredPermissions int                                                         //The permission(s) a user must have for the command to be executed by them
 
-	IsAlternateOf       string //If this is an alternate command, point to the original command
-	RequiredPermissions int    //The permission(s) a user must have for the command to be executed by them
+	IsAlternateOf string //If this is an alternate command, point to the original command
+
+	IsAdministrative bool //Whether or not this command requires the user to be a bot admin
 }
 
 // CommandArgument holds data related to an argument available or required by a command
@@ -304,6 +306,9 @@ func initCommands() {
 			HelpText: "Displays info about the bot's current state.",
 		}
 	}
+
+	//Administrative commands for bot owners
+	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
 }
 
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -314,6 +319,9 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 			} else {
 				return nil
 			}
+		}
+		if command.IsAdministrative && env.User.ID != botData.BotOwnerID {
+			return NewErrorEmbed("Command Error - Not Authorized (NA)", "You are not authorized to use this command.")
 		}
 		if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
 			if len(args) >= len(command.RequiredArguments) {

@@ -36,7 +36,7 @@ type BotData struct {
 	CustomStatuses  []CustomStatus        `json:"customStatuses"`
 	DebugMode       bool                  `json:"debugMode"`
 	//RecoverCrashes       bool                  `json:"recoverCrashes"`
-	//SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
+	SendOwnerStackTraces bool `json:"sendOwnerStackTraces"`
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
