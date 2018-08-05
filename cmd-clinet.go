@@ -70,7 +70,7 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	for _, commandName := range commandMapKeys {
 		command := botData.Commands[commandName]
 		if command.IsAlternateOf == "" {
-			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
+			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
 				commandField := &discordgo.MessageEmbedField{Name: botData.CommandPrefix + commandName, Value: command.HelpText, Inline: true}
 				commandFields = append(commandFields, commandField)
 			}

@@ -19,8 +19,9 @@ import (
 //     s          :  discordgo session
 //     guildID    :  guildID of the member you wish to check the roles of
 //     userID     :  userID of the member you wish to retrieve
+//     channelID  :  channelID of the member who sent the message
 //     permission :  the permission you wish to check for
-func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int) (bool, error) {
+func MemberHasPermission(s *discordgo.Session, guildID string, userID string, channelID string, permission int) (bool, error) {
 	member, err := s.State.Member(guildID, userID)
 	if err != nil {
 		if member, err = s.GuildMember(guildID, userID); err != nil {
@@ -28,8 +29,13 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, pe
 		}
 	}
 
-	// Iterate through the role IDs stored in member.Roles
-	// to check permissions
+	channel, err := s.State.Channel(channelID)
+	if err != nil {
+		if channel, err = s.Channel(channelID); err != nil {
+			return false, err
+		}
+	}
+
 	for _, roleID := range member.Roles {
 		role, err := s.State.Role(guildID, roleID)
 		if err != nil {
@@ -37,6 +43,28 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, pe
 		}
 		if role.Permissions&permission != 0 {
 			return true, nil
+		}
+
+		for _, permissionOverwrite := range channel.PermissionOverwrites {
+			if permissionOverwrite.Type == "role" || permissionOverwrite.ID == roleID {
+				if permissionOverwrite.Allow&permission != 0 {
+					return true, nil
+				}
+				if permissionOverwrite.Deny&permission == 0 {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	for _, permissionOverwrite := range channel.PermissionOverwrites {
+		if permissionOverwrite.Type == "member" || permissionOverwrite.ID == userID {
+			if permissionOverwrite.Allow&permission != 0 {
+				return true, nil
+			}
+			if permissionOverwrite.Deny&permission == 0 {
+				return true, nil
+			}
 		}
 	}
 
