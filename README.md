@@ -38,7 +38,7 @@ using commands. Commands are prefixed by default using `cli$` and sometimes take
 control the output and action of the command.
 
 Finally, `Clinet` has some very useful message management features proven to be successful in the
-servers it resides in. If you send a query and make a mistake, for example you misspell a word,
+servers it resides in. If you send a query and make a mistake, for example if you misspell a word,
 forget to tag the bot, or forget a question mark, you don't have to send a whole new message - just
 edit the previous message with the fix and Clinet happily responds to the updated message. Adding
 onto this, you can even edit a message that had a successful response - Clinet will happily edit its
@@ -112,7 +112,8 @@ Clinet's functionality relies on a set of different API keys and access tokens, 
 
 `Clinet` stores its configuration in a file named `config.json` using the JSON data
 structure. It has a number of configurable variables and will always globally
-override a server's settings if it disables a feature.
+override a server's settings if it disables a feature. Passing the command line
+argument `-config test.json` will instead load the bot configuration from `test.json`.
 
 The following is an example configuration file:
 ```JSON
@@ -121,6 +122,7 @@ The following is an example configuration file:
 	"botName": "Clinet",
 	"botOwnerID": "[insert bot owner's user ID here]",
 	"cmdPrefix": "cli$",
+	"sendOwnerStackTraces": true,
 	"botKeys": {
 		"wolframAppID": "[insert Wolfram|Alpha app ID here]",
 		"ddgAppName": "Clinet",
@@ -130,6 +132,7 @@ The following is an example configuration file:
 		"soundcloudAppVersion": "[insert SoundCloud app version here]"
 	},
 	"botOptions": {
+		"maxPingCount": 4,
 		"sendTypingEvent": true,
 		"useCustomResponses": true,
 		"useDuckDuckGo": true,
@@ -155,9 +158,24 @@ The following is an example configuration file:
 	"customResponses": [
 		{
 			"expression": "(.*)(?i)raining(.*)tacos(.*)",
-			"response": [
+			"cmdResponses": [
 				{
-					"text": "https://www.youtube.com/watch?v=npjF032TDDQ"
+					"commandName": "play",
+					"args": [
+						"https://youtube.com/watch?v=npjF032TDDQ"
+					]
+				}
+			]
+		},
+		{
+			"expression": "(.*)(?i)who(.*)JoshuaDoes(.*)",
+			"responses": [
+				{
+					"responseEmbed": {
+						"title": "Who is JoshuaDoes?",
+						"description": "JoshuaDoes is a human being.",
+						"color": 1842204
+					}
 				}
 			]
 		}
@@ -198,11 +216,13 @@ Most of the above configuration options should be self-explanatory, but here's s
 | -------- | ----------- |
 | `botToken` | The token of the bot account Clinet should log into. Can be acquired by [creating an application and then declaring it as a bot user](https://discordapp.com/developers/applications/me/create) and/or [selecting a pre-existing bot user application and acquiring the bot token under the `APP BOT USER` section](https://discordapp.com/developers/applications/me). |
 | `botOwnerID` | The user ID of the bot owner. Can be acquired by enabling developer mode on Discord, right clicking your user in a server's user list, and clicking `Copy ID`. If Clinet crashes and recovers from the crash, the error and a full stack trace will be directly messaged to whatever user this option is set to. |
+| `sendOwnerStackTraces` | If this is set to true, the bot owner specified in `botOwnerID` will receive crash reports when Clinet recovers from a crash. |
+| `botOptions` -> `maxPingCount` | The amount of ping messages to send to Discord to test the ping average when using the `ping` command. This has a maximum of 5 to prevent inconsistent results due to Discord's API ratelimits, whereas the example configuration sets this to 4 so the results embed isn't stuck because of the API rate limit and can send immediately.
 | `botOptions` -> `sendTypingEvent` | Whether or not to send a typing notification in a channel containing a query or command for Clinet to respond to. Helpful for queries or commands that take a little longer than usual to respond to so users know the bot isn't broken. |
 | `botOptions` -> `wolframDeniedPods` | An array of pod titles to skip over when creating a list of responses to use in a rich embed response from a Wolfram\|Alpha query. The default list is highly recommended for bot hosters concerned with the privacy of the bot's host location. |
 | `botOptions` -> `youtubeMaxResults` | The total amount of results to display per page for YouTube searches via the `cli$youtube search` command. Maximum of 253. |
 | `debugMode` | Debug mode enables various console debugging features, such as chat output and other detailed information about what Clinet is up to. |
-| `customResponses` | Stored as objects in an array, custom responses are exactly what the name depicts. Each object contains an `expression` variable, which stores a valid regular expression, and a `response` array, which itself contains objects randomly selected by the main program for different `text` responses each time the custom response is queried. |
+| `customResponses` | Stored as objects in an array, custom responses are exactly what the name depicts. Each object contains an `expression` variable, which stores a valid regular expression, and a `responses` array, which itself contains objects randomly selected by the main program for different `responseEmbed` responses each time the custom response is queried. Alternatively, you can specify a `cmdResponses` array, which also contains objects randomly selected by the main program for different `commandName` commands to execute with the arguments in `args`. Command responses are direct executions of available commands in Clinet with any given parameters. |
 | `customStatuses` | Stored as objects in an array, custom statuses are used to set the bot's presence. Each object contains a `type` variable, which stores integers 0, 1, and 2, which are "Playing", "Listening to", and "Streaming" respectively, and a `status` variable, which stores the status text to use. If the type is set to 2, you can also set a `url` variable to use as the stream URL. |
 
 The configuration file by default will never be included in git commits, as declared by `.gitignore`. This is to prevent accidental leakage of API keys and bot tokens.

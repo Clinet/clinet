@@ -173,7 +173,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		cmd := strings.Split(cmdMsg, " ")
 
 		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
-
 		responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 	} else {
 		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
@@ -206,9 +205,22 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						for _, response := range botData.CustomResponses {
 							regexpMatched, _ := regexp.MatchString(response.Expression, query)
 							if regexpMatched {
-								random := rand.Intn(len(response.Responses))
-								responseEmbed = NewGenericEmbed("Clinet Response", response.Responses[random].Response)
-								usedCustomResponse = true
+								if len(response.CmdResponses) > 0 {
+									randomCmd := rand.Intn(len(response.CmdResponses))
+
+									commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: updatedMessageEvent}
+									responseEmbed = callCommand(response.CmdResponses[randomCmd].CommandName, response.CmdResponses[randomCmd].Arguments, commandEnvironment)
+
+									usedCustomResponse = true
+									break
+								} else if len(response.Responses) > 0 {
+									random := rand.Intn(len(response.Responses))
+
+									responseEmbed = response.Responses[random].ResponseEmbed
+
+									usedCustomResponse = true
+									break
+								}
 							}
 						}
 					}

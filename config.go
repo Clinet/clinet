@@ -64,13 +64,17 @@ type BotOptions struct {
 	YouTubeMaxResults  int      `json:"youtubeMaxResults"`
 }
 type CustomResponseQuery struct {
-	Expression string `json:"expression"`
-	Regexp     *regexp.Regexp
-	Responses  []CustomResponseReply `json:"response"`
+	Expression   string `json:"expression"`
+	Regexp       *regexp.Regexp
+	Responses    []CustomResponseReply    `json:"responses"`
+	CmdResponses []CustomResponseReplyCmd `json:"cmdResponses"`
 }
 type CustomResponseReply struct {
-	Response string `json:"text"`
-	ImageURL string `json:"imageURL"`
+	ResponseEmbed *discordgo.MessageEmbed `json:"responseEmbed"`
+}
+type CustomResponseReplyCmd struct {
+	CommandName string   `json:"commandName"`
+	Arguments   []string `json:"args"`
 }
 type CustomStatus struct {
 	Type   int    `json:"type"`

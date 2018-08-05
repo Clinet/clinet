@@ -18,6 +18,9 @@ func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	//Write the current channel ID to a restart file for the bot to read after the restart
 	ioutil.WriteFile(".restart", []byte(env.Channel.ID), 0644)
 
+	//Save the state so it's not lost
+	stateSave()
+
 	//Close the bot process, as the MASTER process will open it again
 	os.Exit(0)
 
