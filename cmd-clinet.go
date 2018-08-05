@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -98,5 +101,78 @@ func commandCredits(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			"- https://google.golang.org/api/youtube/v3").
 		AddField("Icon Design", "- thejsa").
 		AddField("Source Code", "- https://github.com/JoshuaDoes/clinet-discord").
+		SetColor(0x1C1C1C).MessageEmbed
+}
+
+func commandPing(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	//Create a list of ping test results
+	pingResults := make([]int, botData.BotOptions.MaxPingCount)
+	pingResultsStr := make([]string, botData.BotOptions.MaxPingCount)
+
+	//Create ping embed
+	pingEmbed := NewGenericEmbed("Ping!", "Waiting for ping...")
+
+	//Loop through each slice entry of pingResults to store our results
+	for i := 0; i < len(pingResults); i++ {
+		//Get current time in milliseconds
+		timeCurrent := int(time.Now().UnixNano() / 1000000)
+
+		//Send ping embed
+		pingMessage, err := botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, pingEmbed)
+		if err != nil {
+			pingResults[i] = -1
+			continue
+		}
+
+		//Get new current time in milliseconds
+		timeNew := int(time.Now().UnixNano() / 1000000)
+
+		//Delete pingMessage to prevent spam
+		botData.DiscordSession.ChannelMessageDelete(env.Channel.ID, pingMessage.ID)
+
+		//Subtract new time from old time to get the ping
+		timeDiff := timeNew - timeCurrent
+
+		//Store the time difference in the ping results
+		pingResults[i] = timeDiff
+		pingResultsStr[i] = fmt.Sprintf("%dms", timeDiff)
+	}
+
+	//Determine the average ping
+	pingSum := 0
+	jitterCount := 0
+	for i := 0; i < len(pingResults); i++ {
+		if pingResults[i] == -1 {
+			jitterCount++
+		} else {
+			pingSum += pingResults[i]
+		}
+	}
+	pingAverage := int(pingSum / len(pingResults))
+
+	//Create an addon message
+	var addonMessage string
+
+	//Give the addon message a random message based on the ping
+	if pingAverage < 10 {
+		addonMessage = "~~This bot might be running on steroids.~~"
+	} else if pingAverage < 50 {
+		addonMessage = "Someone take my coffee away!"
+	} else if pingAverage < 100 {
+		addonMessage = "Give me my coffee back. :c"
+	} else if pingAverage < 150 {
+		addonMessage = "Need... coffee..."
+	} else if pingAverage < 200 {
+		addonMessage = "I could really use some help here."
+	} else {
+		addonMessage = "Why am I walking again?"
+	}
+
+	//Return ping results
+	return NewEmbed().
+		SetTitle("Pong!").
+		SetDescription(fmt.Sprintf("Average ping is ``%dms``. A total of ``%d/%d`` ping tests failed.\n*%s*", pingAverage, jitterCount, botData.BotOptions.MaxPingCount, addonMessage)).
+		AddField("Ping Results", strings.Join(pingResultsStr, ", ")).
+		SetFooter(fmt.Sprintf("Ping results are determined by sending %d messages and determining how long it takes for each message to send successfully and return a success code. The average ping is determined by taking the sum of all of the ping results and dividing it by %d.", botData.BotOptions.MaxPingCount, botData.BotOptions.MaxPingCount)).
 		SetColor(0x1C1C1C).MessageEmbed
 }

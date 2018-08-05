@@ -50,6 +50,7 @@ type BotKeys struct {
 	YouTubeAPIKey        string `json:"youtubeAPIKey"`
 }
 type BotOptions struct {
+	MaxPingCount       int      `json:"maxPingCount"` //How many pings to test to determine the average ping
 	SendTypingEvent    bool     `json:"sendTypingEvent"`
 	UseCustomResponses bool     `json:"useCustomResponses"`
 	UseDuckDuckGo      bool     `json:"useDuckDuckGo"`
@@ -87,6 +88,11 @@ func (configData *BotData) PrepConfig() error {
 	}
 	if configData.CommandPrefix == "" {
 		return errors.New("config:{cmdPrefix: \"\"}")
+	}
+
+	//Value checks
+	if configData.BotOptions.MaxPingCount > 5 || configData.BotOptions.MaxPingCount <= 0 {
+		return errors.New("config:{botOptions:{maxPingCount}} must be 1, 2, 3, 4, or 5")
 	}
 
 	//Bot key checks

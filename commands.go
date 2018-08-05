@@ -50,6 +50,7 @@ func initCommands() {
 	botData.Commands["coinflip"] = &Command{Function: commandCoinFlip, HelpText: "Flips a coin."}
 	botData.Commands["join"] = &Command{Function: commandVoiceJoin, HelpText: "Joins the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
 	botData.Commands["leave"] = &Command{Function: commandVoiceLeave, HelpText: "Leaves the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
+	botData.Commands["ping"] = &Command{Function: commandPing, HelpText: "Returns the ping average to Discord."}
 
 	//All user-accessible commands with parameters
 	botData.Commands["image"] = &Command{
