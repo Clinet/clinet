@@ -45,7 +45,7 @@ func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
 			for _, subPod := range subPods {
 				plaintext := subPod.Plaintext
 				if plaintext != "" {
-					fields = append(fields, &discordgo.MessageEmbedField{Name: podTitle, Value: plaintext})
+					fields = append(fields, &discordgo.MessageEmbedField{Name: podTitle, Value: plaintext, Inline: true})
 				}
 			}
 		}
