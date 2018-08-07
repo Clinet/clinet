@@ -201,25 +201,29 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 				usedCustomResponse := false
 				if botData.BotOptions.UseCustomResponses {
+					debugLog("---- USING CUSTOM RESPONSES", true)
 					if len(botData.CustomResponses) > 0 {
+						debugLog("---- CUSTOM RESPONSES FOUND", true)
 						for _, response := range botData.CustomResponses {
+							debugLog("---- TESTING CUSTOM RESPONSE", true)
 							regexpMatched, _ := regexp.MatchString(response.Expression, query)
 							if regexpMatched {
+								debugLog("---- REGEX MATCHED", true)
 								if len(response.CmdResponses) > 0 {
+									debugLog("---- FOUND CMD RESPONSES", true)
 									randomCmd := rand.Intn(len(response.CmdResponses))
 
 									commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: updatedMessageEvent}
 									responseEmbed = callCommand(response.CmdResponses[randomCmd].CommandName, response.CmdResponses[randomCmd].Arguments, commandEnvironment)
 
 									usedCustomResponse = true
-									break
 								} else if len(response.Responses) > 0 {
+									debugLog("---- FOUND EMBED RESPONSES", true)
 									random := rand.Intn(len(response.Responses))
 
 									responseEmbed = response.Responses[random].ResponseEmbed
 
 									usedCustomResponse = true
-									break
 								}
 							}
 						}

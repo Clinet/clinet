@@ -309,6 +309,7 @@ func initCommands() {
 
 	//Administrative commands for bot owners
 	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
+	botData.Commands["update"] = &Command{Function: commandUpdate, HelpText: "Updates the bot to the latest git repo commit.", IsAdministrative: true}
 }
 
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

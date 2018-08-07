@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -22,6 +24,43 @@ func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	stateSave()
 
 	//Close the bot process, as the MASTER process will open it again
+	os.Exit(0)
+
+	return nil
+}
+
+func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	//Check if an update is available
+	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL:   "https://github.com/JoshuaDoes/clinet-discord",
+		Depth: 1,
+	})
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Error finding the git repo.")
+	}
+	ref, err := repo.Head()
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Error finding the HEAD of the git repo.")
+	}
+	commit, err := repo.CommitObject(ref.Hash())
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Error fetching the HEAD commit of the git repo.")
+	}
+	commitHash := commit.Hash.String()
+	if commitHash == GitCommitFull {
+		return NewGenericEmbed("Update", botData.BotName+" is already up to date!")
+	}
+
+	//Tell the user we're updating
+	botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewGenericEmbed("Update", "Updating "+botData.BotName+" to commit ``"+commitHash+"`` from commit ``"+GitCommitFull+"``..."))
+
+	//Write the current channel ID to an update file for the bot to read after restarting
+	ioutil.WriteFile(".update", []byte(env.Channel.ID), 0644)
+
+	//Save the state so it's not lost
+	stateSave()
+
+	//Close the bot process, as the MASTER process will perform the update and open it again
 	os.Exit(0)
 
 	return nil
