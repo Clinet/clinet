@@ -149,6 +149,9 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 		guildSettings[env.Guild.ID].UserLeaveMessage = strings.Join(args[1:], " ")
 		guildSettings[env.Guild.ID].UserLeaveMessageChannel = env.Channel.ID
 		return NewGenericEmbed("Server Settings - Leave Message", "Successfully set the leave message to this channel.")
+	case "log":
+		guildSettings[env.Guild.ID].LogChannel = env.Channel.ID
+		return NewGenericEmbed("Server Settings - Log", "Successfully set the log channel to this channel.")
 	case "reset":
 		switch args[1] {
 		case "joinmsg":

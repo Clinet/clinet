@@ -364,10 +364,11 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 		audioQueueEntry.Author = probe.Format.Tags.Artist
 		audioQueueEntry.Title = probe.Format.Tags.Title
 	}
-	audioQueueEntry.Duration, err = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
+	/* audioQueueEntry.Duration, err = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 	if err != nil {
 		return NewErrorEmbed("Voice Error", "Error getting the duration of the audio.")
-	}
+	} */
+	audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 
 	return nil
 }

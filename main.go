@@ -135,8 +135,8 @@ func main() {
 		discord.AddHandler(discordMessageDelete)
 		discord.AddHandler(discordMessageDeleteBulk)
 		discord.AddHandler(discordMessageUpdate)
-		discord.AddHandler(discordUserJoin)
-		discord.AddHandler(discordUserLeave)
+		discord.AddHandler(discordGuildMemberAdd)
+		discord.AddHandler(discordGuildMemberRemove)
 		discord.AddHandler(discordReady)
 
 		//If a state exists, restore it
