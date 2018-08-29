@@ -1,10 +1,10 @@
-# clinet-discord
+# clinet
 
-### A Discord bot intended for conversation and fact-based queries
+### A Discord bot intended for assistance and control within your guilds
 
 ----
 
-## Using the official development version of Clinet (based on this repo)
+## Using the official development version of Clinet
 
 1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server.
     1. The `Administrator` permission is not required. The invite link above
@@ -93,7 +93,7 @@ altered version to support additional things. govvv acts as a git version inject
 for the output compiled binary, taking current statuses of the git repo Clinet is
 in and injecting them into uninitialized strings in the main source file to be used
 in the command `cli$version`. Simply follow the instructions on the [govvv](https://github.com/JoshuaDoes/govvv) repo page
-to learn how to install and use it, then run `govvv build` in the Clinet workspace
+to learn how to install and use it, then run `govvv build` in the Clinet repo
 directory.
 
 ### Acquiring necessary API keys
