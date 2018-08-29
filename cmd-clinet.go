@@ -32,7 +32,7 @@ func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEm
 func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	//Check if an update is available
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:   "https://github.com/JoshuaDoes/clinet-discord",
+		URL:   "https://github.com/JoshuaDoes/clinet",
 		Depth: 1,
 	})
 	if err != nil {
@@ -74,9 +74,9 @@ func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
 		AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``cli$help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``@"+botData.BotName+"#1823, what time is it?`` or ``@"+botData.BotName+"#1823, what is DiscordApp?``.").
 		AddField("Where can I join the "+botData.BotName+" Discord server?", "If you would like to get help and support with "+botData.BotName+" or experiment with the latest and greatest of "+botData.BotName+", use the Discord Server Invite Link at the end of this message.").
-		AddField("Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
+		AddField("Bot Invite Link", "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot").
 		AddField("Donation Link", "https://www.paypal.me/JoshuaDoes").
-		AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet-discord/").
+		AddField("Source Code Link", "https://github.com/JoshuaDoes/clinet/").
 		AddField("Discord Server Invite Link", "https://discord.gg/qkbKEWT").
 		SetColor(0x1C1C1C).MessageEmbed
 }
@@ -157,7 +157,7 @@ func commandCredits(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			"- https://google.golang.org/api/googleapi/transport\n"+
 			"- https://google.golang.org/api/youtube/v3").
 		AddField("Icon Design", "- thejsa").
-		AddField("Source Code", "- https://github.com/JoshuaDoes/clinet-discord").
+		AddField("Source Code", "- https://github.com/JoshuaDoes/clinet").
 		SetColor(0x1C1C1C).MessageEmbed
 }
 

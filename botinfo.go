@@ -14,10 +14,10 @@ var (
 	BuildDate     string
 
 	//A unique build ID inspired by the Android Open Source Project
-	BuildID string = "clinet_discord-" + GitState + " " + GitBranch + "-" + GitCommit
+	BuildID string = "clinet-" + GitState + " " + GitBranch + "-" + GitCommit
 
 	//The URL to the current commit
-	GitHubCommitURL string = "https://github.com/JoshuaDoes/clinet-discord/commit/" + GitCommitFull
+	GitHubCommitURL string = "https://github.com/JoshuaDoes/clinet/commit/" + GitCommitFull
 
 	//The version of Go used to build this release
 	GolangVersion string = runtime.Version()
