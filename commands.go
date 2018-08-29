@@ -55,6 +55,26 @@ func initCommands() {
 	botData.Commands["ping"] = &Command{Function: commandPing, HelpText: "Returns the ping average to Discord."}
 
 	//All user-accessible commands with parameters
+	botData.Commands["hewwo"] = &Command{
+		Function: commandHewwo,
+		HelpText: "Hewwo!!! (´・ω・｀)",
+		RequiredArguments: []string{
+			"message",
+		},
+		Arguments: []CommandArgument{
+			{Name: "message", Description: "The text to translate to Hewwo", ArgType: "string"},
+		},
+	}
+	botData.Commands["nlp"] = &Command{
+		Function: commandNLP,
+		HelpText: "Raw natural language processing in Discord. Powered by Prose:tm:.",
+		RequiredArguments: []string{
+			"message",
+		},
+		Arguments: []CommandArgument{
+			{Name: "message", Description: "The message to parse", ArgType: "string"},
+		},
+	}
 	botData.Commands["image"] = &Command{
 		Function:            commandImage,
 		HelpText:            "Allows you to manipulate images with various filters and encodings.",
@@ -86,6 +106,16 @@ func initCommands() {
 			{Name: "cve", Description: "The CVE ID to fetch information about", ArgType: "string"},
 		},
 	}
+	botData.Commands["geoip"] = &Command{
+		Function: commandGeoIP,
+		HelpText: "Performs a GeoIP lookup on the specified IP/hostname.",
+		RequiredArguments: []string{
+			"IP/hostname",
+		},
+		Arguments: []CommandArgument{
+			{Name: "IP/hostname", Description: "The IP or hostname to perform a GeoIP lookup on", ArgType: "IP address/hostname"},
+		},
+	}
 	if botData.BotOptions.UseXKCD {
 		botData.Commands["xkcd"] = &Command{
 			Function: commandXKCD,
@@ -100,7 +130,6 @@ func initCommands() {
 			},
 		}
 	}
-
 	if botData.BotOptions.UseImgur {
 		botData.Commands["imgur"] = &Command{
 			Function: commandImgur,
@@ -262,13 +291,32 @@ func initCommands() {
 		HelpText:            "Changes the specified settings for the server.",
 		RequiredPermissions: discordgo.PermissionAdministrator,
 		RequiredArguments: []string{
-			"setting",
-			"(value)",
+			"setting (value)",
 		},
 		Arguments: []CommandArgument{
 			{Name: "joinmsg", Description: "Sets the join message for this channel", ArgType: "string"},
 			{Name: "leavemsg", Description: "Sets the leave message for this channel", ArgType: "string"},
+			{Name: "log", Description: "Sets the logging capabilities for this server", ArgType: "this"},
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
+		},
+	}
+
+	botData.Commands["starboard"] = &Command{
+		Function:            commandStarboard,
+		HelpText:            "Manages the guild's starboard.",
+		RequiredPermissions: discordgo.PermissionAdministrator,
+		RequiredArguments: []string{
+			"setting (value)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "enable", Description: "Enables the starboard", ArgType: "this"},
+			{Name: "disable", Description: "Disables the starboard", ArgType: "this"},
+			{Name: "channel (set/remove)", Description: "Either returns the current starboard channel or optionally sets it to the current channel or removes the current channel in place", ArgType: "this"},
+			{Name: "nsfwchannel (set/remove)", Description: "Either returns the current NSFW channel or optionally sets it to the current channel (if marked as NSFW) or removes the current channel in place", ArgType: "this"},
+			{Name: "emoji (emoji)", Description: "Either returns the current emoji or optionally sets it to the specified emoji", ArgType: "emoji"},
+			{Name: "nsfwemoji (emoji)", Description: "Either returns the current NSFW emoji or optionally sets it to the specified emoji", ArgType: "emoji"},
+			{Name: "selfstar", Description: "Sets whether or not selfstars are permitted", ArgType: "boolean"},
+			{Name: "minimum", Description: "Either returns the current minimum reaction requirement or sets it to the specified amount", ArgType: "number"},
 		},
 	}
 
@@ -298,6 +346,8 @@ func initCommands() {
 	botData.Commands["yt"] = &Command{IsAlternateOf: "youtube"}
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
+	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
+	botData.Commands["uwu"] = &Command{IsAlternateOf: "uwu"}
 
 	//Testing commands, only available if debug mode is enabled
 	if botData.DebugMode {
@@ -341,6 +391,22 @@ func getCommandUsage(commandName, title string) *discordgo.MessageEmbed {
 		command = botData.Commands[command.IsAlternateOf]
 	}
 
+	parameterFields := []*discordgo.MessageEmbedField{}
+	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: botData.CommandPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
+	for i := 0; i < len(command.Arguments); i++ {
+		parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: command.Arguments[i].Name + " (" + command.Arguments[i].ArgType + ")", Value: command.Arguments[i].Description, Inline: true})
+	}
+
+	usageEmbed := NewEmbed().
+		SetTitle(title).
+		SetDescription("**" + commandName + "**: " + command.HelpText).
+		SetColor(0xFF0000).MessageEmbed
+	usageEmbed.Fields = parameterFields
+
+	return usageEmbed
+}
+
+func getCustomCommandUsage(command *Command, commandName, title string) *discordgo.MessageEmbed {
 	parameterFields := []*discordgo.MessageEmbedField{}
 	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: botData.CommandPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
 	for i := 0; i < len(command.Arguments); i++ {

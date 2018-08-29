@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/github"
 )
 
 func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -46,6 +48,7 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		responseEmbed := NewEmbed().
 			SetTitle("GitHub User: " + *user.Login).
 			SetImage(*user.AvatarURL).
+			InlineAllFields().
 			SetColor(0x24292D).MessageEmbed
 		responseEmbed.Fields = fields
 
@@ -84,6 +87,7 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		//Build embed about repo
 		responseEmbed := NewEmbed().
 			SetTitle("GitHub Repo: " + *repo.FullName).
+			InlineAllFields().
 			SetColor(0x24292D).MessageEmbed
 		responseEmbed.Fields = fields
 
@@ -91,4 +95,19 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	}
 
 	return NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")
+}
+
+func GitHubFetchUser(username string) (*github.User, error) {
+	user, _, err := botData.BotClients.GitHub.Users.Get(context.Background(), username)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+func GitHubFetchRepo(owner string, repository string) (*github.Repository, error) {
+	repo, _, err := botData.BotClients.GitHub.Repositories.Get(context.Background(), owner, repository)
+	if err != nil {
+		return nil, err
+	}
+	return repo, nil
 }

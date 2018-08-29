@@ -29,15 +29,6 @@ var encodeOptionsPresetHigh = &dca.EncodeOptions{
 	RawOutput:        true,
 }
 
-// GuildData holds data specific to a guild
-type GuildData struct {
-	AudioQueue      []AudioQueueEntry
-	AudioNowPlaying AudioQueueEntry
-	VoiceData       VoiceData
-	Queries         map[string]*Query
-	YouTubeResults  map[string]*YouTubeResultNav
-}
-
 func (guild *GuildData) QueueAddData(author, imageURL, title, thumbnailURL, mediaURL, sourceType string, requester *discordgo.User) {
 	var queueData AudioQueueEntry
 	queueData.Author = author
@@ -317,7 +308,7 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 
 	probeURL, err := getMediaURL(audioQueueEntry.MediaURL)
 	if err != nil {
-		return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL.")
+		return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL. Err: "+fmt.Sprintf("%v", err))
 	}
 
 	probe, err := goprobe.ProbeMedia(probeURL)
@@ -698,7 +689,8 @@ func voiceGetQuery(query string) (string, error) {
 
 func getMediaURL(url string) (string, error) {
 	if isYouTubeURL(url) {
-		videoInfo, err := ytdl.GetVideoInfo(url)
+		//Pass url with verified flag to bypass age gate
+		videoInfo, err := ytdl.GetVideoInfo(url + "&has_verified=1")
 		if err != nil {
 			return url, err
 		}

@@ -16,12 +16,12 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 			return NewGenericEmbed("Voice", "Joined the voice channel.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel to use before using the join command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the join command.")
 }
 
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			voiceStop(env.Guild.ID)
 			err := voiceLeave(env.Guild.ID, voiceState.ChannelID)
 			if err != nil {
@@ -30,7 +30,7 @@ func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.Messag
 			return NewGenericEmbed("Voice", "Left the voice channel.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel to use before using the leave command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the leave command.")
 }
 
 func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -168,7 +168,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 
 func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			if voiceIsStreaming(env.Guild.ID) {
 				voiceStop(env.Guild.ID)
 				return NewGenericEmbed("Voice", "Stopped the audio playback.")
@@ -176,12 +176,12 @@ func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			return NewErrorEmbed("Voice Error", "There is no audio currently playing.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" to use before using the "+env.Command+" command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the "+env.Command+" command.")
 }
 
 func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			if voiceIsStreaming(env.Guild.ID) {
 				voiceSkip(env.Guild.ID)
 				return nil
@@ -189,12 +189,12 @@ func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			return NewErrorEmbed("Voice Error", "There is no audio currently playing.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" to use before using the "+env.Command+" command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the "+env.Command+" command.")
 }
 
 func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			isPaused, err := voicePause(env.Guild.ID)
 			if err != nil {
 				if isPaused {
@@ -205,12 +205,12 @@ func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 			return NewGenericEmbed("Voice", "Paused the audio playback.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" to use before using the "+env.Command+" command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the "+env.Command+" command.")
 }
 
 func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			isPaused, err := voiceResume(env.Guild.ID)
 			if err != nil {
 				if isPaused {
@@ -225,20 +225,27 @@ func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 }
 
 func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	volume, err := strconv.Atoi(args[0])
-	if err != nil {
-		return NewErrorEmbed("Volume Error", "``"+args[0]+"`` is not a valid number.")
-	}
+	//Disabled until further notice, real-time volume control using hrabin/opus and manually adjusting samples results in static noise distortion with the correct volume
+	/*
+		volume, err := strconv.Atoi(args[0])
+		if err != nil {
+			return NewErrorEmbed("Volume Error", "``"+args[0]+"`` is not a valid number.")
+		}
 
-	if volume < 0 || volume > 512 {
-		return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 512, with 256 being normal volume.")
-	}
+		if volume < 0 || volume > 100 {
+			return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 100, with 100 being normal volume.")
+		}
 
-	if guildData[env.Guild.ID].VoiceData.EncodingOptions == nil {
-		guildData[env.Guild.ID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
-	}
-	guildData[env.Guild.ID].VoiceData.EncodingOptions.Volume = volume
-	return NewErrorEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
+		if guildData[env.Guild.ID].VoiceData.EncodingOptions == nil {
+			guildData[env.Guild.ID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
+		}
+		guildData[env.Guild.ID].VoiceData.EncodingOptions.Volume = float64(volume) * 0.01
+		return NewErrorEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
+	*/
+
+	return NewGenericEmbed("Volume", "Volume adjustment in real time via this command is disabled at this time. While attempts proved to successfully change the volume, it was accompanied by static noise distortion and thus is not ready for production.\n"+
+		"If you wish to change your perceived volume of Clinet, consider using Discord's per-user volume control (right click Clinet on desktop/web or tap on Clinet in the user list on mobile to find it). Not only does it do what you want, but it doesn't have to ruin everyone else's high quality audio experience!\n"+
+		"If you would like to help with attempts to change the volume in real time, make sure to join the [Clinet Discord server](https://discord.gg/qkbKEWT).")
 }
 
 func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

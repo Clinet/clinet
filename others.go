@@ -36,6 +36,18 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 		}
 	}
 
+	guild, err := s.State.Guild(guildID)
+	if err != nil {
+		if guild, err = s.Guild(guildID); err != nil {
+			return false, err
+		}
+	}
+
+	//Server owners get every permission
+	if guild.OwnerID == userID {
+		return true, nil
+	}
+
 	for _, roleID := range member.Roles {
 		role, err := s.State.Role(guildID, roleID)
 		if err != nil {

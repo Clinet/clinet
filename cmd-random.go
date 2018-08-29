@@ -3,6 +3,7 @@ package main
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -26,4 +27,15 @@ func commandCoinFlip(args []string, env *CommandEnvironment) *discordgo.MessageE
 		return NewGenericEmbed("Coin Flip", "The coin landed on tails!")
 	}
 	return nil
+}
+
+func commandHewwo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	message := strings.Join(args, " ")
+
+	message = strings.Replace(message, "L", "W", -1)
+	message = strings.Replace(message, "l", "w", -1)
+	message = strings.Replace(message, "R", "W", -1)
+	message = strings.Replace(message, "r", "w", -1)
+
+	return NewGenericEmbed("Hewwo", message)
 }

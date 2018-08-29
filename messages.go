@@ -1,21 +1,22 @@
 package main
 
 import (
-	//	"bytes"
 	"fmt"
-	//	"image"
-	//	"image/png"
 	"math/rand"
-	//	"net/http"
-	//	"net/url"
 	"regexp"
-	//	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	//	"github.com/disintegration/gift"
-	//	"github.com/rylio/ytdl"
 )
+
+// GuildData holds data specific to a guild
+type GuildData struct {
+	AudioQueue      []AudioQueueEntry
+	AudioNowPlaying AudioQueueEntry
+	VoiceData       VoiceData
+	Queries         map[string]*Query
+	YouTubeResults  map[string]*YouTubeResultNav
+}
 
 // Query holds data about a query's response message
 type Query struct {
@@ -155,21 +156,33 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 	var responseEmbed *discordgo.MessageEmbed
 
-	if guildData[guild.ID] == nil {
+	_, guildDataExists := guildData[guild.ID]
+	if !guildDataExists {
 		guildData[guild.ID] = &GuildData{}
 		guildData[guild.ID].VoiceData = VoiceData{}
 	}
 
-	if guildSettings[guild.ID] == nil {
+	_, guildSettingsExists := guildSettings[guild.ID]
+	if !guildSettingsExists {
 		guildSettings[guild.ID] = &GuildSettings{}
 	}
 
-	if userSettings[message.Author.ID] == nil {
+	_, userSettingsExists := userSettings[message.Author.ID]
+	if !userSettingsExists {
 		userSettings[message.Author.ID] = &UserSettings{}
 	}
 
+	_, starboardExists := starboards[guild.ID]
+	if !starboardExists {
+		starboards[guild.ID] = &Starboard{}
+		starboards[guild.ID].Emoji = "⭐"
+		starboards[guild.ID].NSFWEmoji = "💦"
+		starboards[guild.ID].AllowSelfStar = true
+		starboards[guild.ID].MinimumStars = 1 //1 for now with testing, default to 2 or 3 later on
+	}
+
 	if strings.HasPrefix(content, botData.CommandPrefix) {
-		cmdMsg := strings.Replace(content, botData.CommandPrefix, "", 1)
+		cmdMsg := strings.TrimPrefix(content, botData.CommandPrefix)
 		cmd := strings.Split(cmdMsg, " ")
 
 		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
@@ -251,19 +264,19 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 								if botData.BotOptions.UseWolframAlpha {
 									responseEmbed, err = queryWolframAlpha(query)
 									if err != nil {
-										responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+										responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 									}
 								} else {
-									responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 								}
 							}
 						} else if botData.BotOptions.UseWolframAlpha {
 							responseEmbed, err = queryWolframAlpha(query)
 							if err != nil {
-								responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 							}
 						} else {
-							responseEmbed = NewErrorEmbed("Query Error", "No response was found.")
+							responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 						}
 					}
 				}
@@ -322,5 +335,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID
 			}
 		}
+
+		stateSave() //Save the state after every interaction
 	}
 }

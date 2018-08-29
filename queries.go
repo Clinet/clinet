@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/go-github/github"
 )
 
 var (
@@ -170,19 +168,4 @@ func queryImgur(url string) (*discordgo.MessageEmbed, error) {
 		return nil, errors.New("Error detecting Imgur URL type.")
 	}
 	return nil, errors.New("Error detecting Imgur URL type.")
-}
-
-func GitHubFetchUser(username string) (*github.User, error) {
-	user, _, err := botData.BotClients.GitHub.Users.Get(context.Background(), username)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
-}
-func GitHubFetchRepo(owner string, repository string) (*github.Repository, error) {
-	repo, _, err := botData.BotClients.GitHub.Repositories.Get(context.Background(), owner, repository)
-	if err != nil {
-		return nil, err
-	}
-	return repo, nil
 }

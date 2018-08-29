@@ -138,29 +138,3 @@ func commandBan(args []string, env *CommandEnvironment) *discordgo.MessageEmbed 
 	}
 	return NewGenericEmbed("Ban", "Successfully banned the selected user(s) for the following reason:\n**"+reasonMessage+"**")
 }
-
-func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	switch args[0] {
-	case "joinmsg":
-		guildSettings[env.Guild.ID].UserJoinMessage = strings.Join(args[1:], " ")
-		guildSettings[env.Guild.ID].UserJoinMessageChannel = env.Channel.ID
-		return NewGenericEmbed("Server Settings - Join Message", "Successfully set the join message to this channel.")
-	case "leavemsg":
-		guildSettings[env.Guild.ID].UserLeaveMessage = strings.Join(args[1:], " ")
-		guildSettings[env.Guild.ID].UserLeaveMessageChannel = env.Channel.ID
-		return NewGenericEmbed("Server Settings - Leave Message", "Successfully set the leave message to this channel.")
-	case "log":
-		guildSettings[env.Guild.ID].LogChannel = env.Channel.ID
-		return NewGenericEmbed("Server Settings - Log", "Successfully set the log channel to this channel.")
-	case "reset":
-		switch args[1] {
-		case "joinmsg":
-			guildSettings[env.Guild.ID].UserJoinMessage = ""
-			guildSettings[env.Guild.ID].UserJoinMessageChannel = ""
-		case "leavemsg":
-			guildSettings[env.Guild.ID].UserLeaveMessage = ""
-			guildSettings[env.Guild.ID].UserLeaveMessageChannel = ""
-		}
-	}
-	return NewErrorEmbed("Server Settings Error", "Error finding the setting "+args[0]+".")
-}

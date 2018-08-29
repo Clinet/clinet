@@ -37,6 +37,9 @@ var (
 
 	//Contains user-specific settings in a string map, where key = user ID
 	userSettings = make(map[string]*UserSettings)
+
+	//Contains guild-specific starboard data in a string map, where key = guild ID
+	starboards = make(map[string]*Starboard)
 )
 
 var (
@@ -131,12 +134,27 @@ func main() {
 		}
 
 		debugLog("> Registering Discord event handlers...", false)
+		discord.AddHandler(discordChannelCreate)
+		discord.AddHandler(discordChannelUpdate)
+		discord.AddHandler(discordChannelDelete)
+		discord.AddHandler(discordGuildUpdate)
+		discord.AddHandler(discordGuildBanAdd)
+		discord.AddHandler(discordGuildBanRemove)
+		discord.AddHandler(discordGuildMemberAdd)
+		discord.AddHandler(discordGuildMemberRemove)
+		discord.AddHandler(discordGuildRoleCreate)
+		discord.AddHandler(discordGuildRoleUpdate)
+		discord.AddHandler(discordGuildRoleDelete)
+		discord.AddHandler(discordGuildEmojisUpdate)
+		discord.AddHandler(discordUserUpdate)
+		discord.AddHandler(discordVoiceStateUpdate)
 		discord.AddHandler(discordMessageCreate)
 		discord.AddHandler(discordMessageDelete)
 		discord.AddHandler(discordMessageDeleteBulk)
 		discord.AddHandler(discordMessageUpdate)
-		discord.AddHandler(discordGuildMemberAdd)
-		discord.AddHandler(discordGuildMemberRemove)
+		discord.AddHandler(discordMessageReactionAdd)
+		discord.AddHandler(discordMessageReactionRemove)
+		discord.AddHandler(discordMessageReactionRemoveAll)
 		discord.AddHandler(discordReady)
 
 		//If a state exists, restore it
@@ -275,6 +293,19 @@ func stateSave() {
 			debugLog(err.Error(), true)
 		}
 	}
+
+	debugLog("> Saving starboard state...", true)
+	starboardsJSON, err := json.MarshalIndent(starboards, "", "\t")
+	if err != nil {
+		debugLog("> Error saving starboards state", true)
+		debugLog(err.Error(), true)
+	} else {
+		err = ioutil.WriteFile("state/starboards.json", starboardsJSON, 0644)
+		if err != nil {
+			debugLog("> Error saving starboards state", true)
+			debugLog(err.Error(), true)
+		}
+	}
 }
 
 func stateRestore() {
@@ -312,6 +343,18 @@ func stateRestore() {
 		}
 	} else {
 		debugLog("> No userSettings state was found", true)
+	}
+
+	starboardsJSON, err := ioutil.ReadFile("state/starboards.json")
+	if err == nil {
+		debugLog("> Restoring starboards state...", true)
+		err = json.Unmarshal(starboardsJSON, &starboards)
+		if err != nil {
+			debugLog("> Error restoring state", true)
+			debugLog(err.Error(), true)
+		}
+	} else {
+		debugLog("> No starboards state was found", true)
 	}
 }
 
