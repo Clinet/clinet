@@ -141,21 +141,25 @@ func commandCredits(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		SetTitle(botData.BotName+" - Credits").
 		AddField("Bot Development", "- JoshuaDoes (2018)").
 		AddField("Programming Language", "- Golang").
-		AddField("Golang Libraries", "- https://github.com/bwmarrin/discordgo\n"+
-			"- https://github.com/disintegration/gift\n"+
-			"- https://github.com/JoshuaDoes/duckduckgolang\n"+
-			"- https://github.com/google/go-github/github\n"+
-			"- https://github.com/jonas747/dca\n"+
-			"- https://github.com/JoshuaDoes/go-soundcloud\n"+
-			"- https://github.com/JoshuaDoes/go-wolfram\n"+
-			"- https://github.com/koffeinsource/go-imgur\n"+
-			"- https://github.com/koffeinsource/go-klogger\n"+
-			"- https://github.com/nishanths/go-xkcd\n"+
-			"- https://github.com/paked/configure\n"+
-			"- https://github.com/robfig/cron\n"+
-			"- https://github.com/rylio/ytdl\n"+
-			"- https://google.golang.org/api/googleapi/transport\n"+
-			"- https://google.golang.org/api/youtube/v3").
+		AddField("Golang Libraries", "[duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang), "+
+			"[go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud), "+
+			"[go-wolfram](https://github.com/JoshuaDoes/go-wolfram), "+
+			"[discordgo](https://github.com/bwmarrin/discordgo), "+
+			"[github](https://github.com/google/go-github/github), "+
+			"[dca](https://github.com/jonas747/dca), "+
+			"[go-imgur](https://github.com/koffeinsource/go-imgur), "+
+			"[go-klogger](https://github.com/koffeinsource/go-klogger), "+
+			"[go-xkcd](https://github.com/nishanths/go-xkcd), "+
+			"[cron](https://github.com/robfig/cron), "+
+			"[ytdl](https://github.com/rylio/ytdl), "+
+			"[transport](https://google.golang.org/api/googleapi/transport), "+
+			"[youtube](https://google.golang.org/api/youtube/v3), "+
+			"[urbandictionary](https://github.com/JoshuaDoes/urbandictionary), "+
+			"[goprobe](https://github.com/JoshuaDoes/goprobe), "+
+			"[go-cve](https://github.com/JoshuaDoes/go-cve), "+
+			"[goeip](https://github.com/JoshuaDoes/goeip), "+
+			"[prose](https://gopkg.in/jdkato/prose.v2), "+
+			"[structs](https://github.com/fatih/structs)").
 		AddField("Icon Design", "- thejsa").
 		AddField("Source Code", "- https://github.com/JoshuaDoes/clinet").
 		SetColor(0x1C1C1C).MessageEmbed

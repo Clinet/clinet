@@ -68,12 +68,16 @@ Clinet relies on to fully function. Clinet is currently built using Golang `1.10
 
 ### Dependencies
 
-| Package Name |
-| ------------ |
+In order to build Clinet, you must satisfy the dependency requirements. This can either
+be done by go-getting Clinet directly with `go get github.com/JoshuaDoes/clinet` or by
+following the instructions for each dependency below manually.
+
+| Package Name | Notes |
+| ------------ | ----- |
 | [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
 | [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) |
 | [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
-| [discordgo](https://github.com/bwmarrin/discordgo) |
+| [discordgo](https://github.com/bwmarrin/discordgo) | Make sure to switch to the `develop` branch |
 | [github](https://github.com/google/go-github/github) |
 | [dca](https://github.com/jonas747/dca) |
 | [go-imgur](https://github.com/koffeinsource/go-imgur) |
@@ -85,6 +89,10 @@ Clinet relies on to fully function. Clinet is currently built using Golang `1.10
 | [youtube](https://google.golang.org/api/youtube/v3) |
 | [urbandictionary](https://github.com/JoshuaDoes/urbandictionary) |
 | [goprobe](https://github.com/JoshuaDoes/goprobe) |
+| [go-cve](https://github.com/JoshuaDoes/go-cve) |
+| [goeip](https://github.com/JoshuaDoes/goeip) |
+| [prose](https://gopkg.in/jdkato/prose.v2) |
+| [structs](https://github.com/fatih/structs) |
 
 ### Building
 
