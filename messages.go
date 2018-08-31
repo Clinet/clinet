@@ -5,12 +5,15 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 // GuildData holds data specific to a guild
 type GuildData struct {
+	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
+
 	AudioQueue      []AudioQueueEntry
 	AudioNowPlaying AudioQueueEntry
 	VoiceData       VoiceData
@@ -66,6 +69,9 @@ func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDe
 
 		_, guildFound := guildData[guildID]
 		if guildFound {
+			guildData[guildID].Lock()
+			defer guildData[guildID].Unlock()
+
 			_, messageFound := guildData[guildID].Queries[message.ID]
 			if messageFound {
 				debugLog("> Deleting message...", false)
@@ -93,6 +99,9 @@ func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.Messa
 
 		_, guildFound := guildData[guildID]
 		if guildFound {
+			guildData[guildID].Lock()
+			defer guildData[guildID].Unlock()
+
 			for i := 0; i > len(messages); i++ {
 				debugLog("[D] ID: "+messages[i], false)
 				_, messageFound := guildData[guildID].Queries[messages[i]]
@@ -161,6 +170,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		guildData[guild.ID] = &GuildData{}
 		guildData[guild.ID].VoiceData = VoiceData{}
 	}
+	guildData[guild.ID].Lock()
+	defer guildData[guild.ID].Unlock()
 
 	_, guildSettingsExists := guildSettings[guild.ID]
 	if !guildSettingsExists {
