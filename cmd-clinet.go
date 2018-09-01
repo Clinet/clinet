@@ -1,17 +1,74 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/JoshuaDoes/duckduckgolang"
+	"github.com/JoshuaDoes/go-soundcloud"
+	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/github"
+	"github.com/koffeinsource/go-klogger"
+	"github.com/nishanths/go-xkcd"
+	"google.golang.org/api/googleapi/transport"
+	"google.golang.org/api/youtube/v3"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
+
+func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	configFileHandle, err := os.Open(configFile)
+	defer configFileHandle.Close()
+	if err != nil {
+		return NewErrorEmbed("Reload Error", "There was an error loading the bot configuration file.")
+	}
+
+	configParser := json.NewDecoder(configFileHandle)
+	if err = configParser.Decode(&botData); err != nil {
+		return NewErrorEmbed("Reload Error", "There was an error applying the bot configuration to memory. State and/or configuration may be corrupted, consider checking the configuration and restarting the bot process.")
+	}
+
+	err = botData.PrepConfig()
+	if err != nil {
+		return NewErrorEmbed("Reload Error", "There were some inconsistencies with the bot configuration. State and/or configuration may be corrupted, consider checking the configuration and restarting the bot process.")
+	}
+
+	if botData.BotOptions.UseDuckDuckGo {
+		botData.BotClients.DuckDuckGo = &duckduckgo.Client{AppName: botData.BotKeys.DuckDuckGoAppName}
+	}
+	if botData.BotOptions.UseImgur {
+		botData.BotClients.Imgur.HTTPClient = &http.Client{}
+		botData.BotClients.Imgur.Log = &klogger.CLILogger{}
+		botData.BotClients.Imgur.ImgurClientID = botData.BotKeys.ImgurClientID
+	}
+	if botData.BotOptions.UseSoundCloud {
+		botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
+	}
+	if botData.BotOptions.UseWolframAlpha {
+		botData.BotClients.Wolfram = &wolfram.Client{AppID: botData.BotKeys.WolframAppID}
+	}
+	if botData.BotOptions.UseXKCD {
+		botData.BotClients.XKCD = xkcd.NewClient()
+	}
+	if botData.BotOptions.UseYouTube {
+		httpClient := &http.Client{
+			Transport: &transport.APIKey{Key: botData.BotKeys.YouTubeAPIKey},
+		}
+		botData.BotClients.YouTube, _ = youtube.New(httpClient)
+	}
+	if botData.BotOptions.UseGitHub {
+		botData.BotClients.GitHub = github.NewClient(nil)
+	}
+
+	return NewGenericEmbed("Reload", "Successfully reloaded the bot configuration.")
+}
 
 func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	//Tell the user we're restarting

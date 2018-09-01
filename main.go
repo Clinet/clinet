@@ -67,6 +67,7 @@ func main() {
 	if configIsBot == "true" {
 		debugLog("> Loading settings...", true)
 		configFileHandle, err := os.Open(configFile)
+		defer configFileHandle.Close()
 		if err != nil {
 			panic("Error loading configuration file `" + configFile + "`")
 		} else {

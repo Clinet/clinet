@@ -56,7 +56,7 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	case 2: //Repo was specified
 		repo, err := GitHubFetchRepo(request[0], request[1])
 		if err != nil {
-			return NewErrorEmbed("GitHub Error", "There was an error fetchign information about the specified repo.")
+			return NewErrorEmbed("GitHub Error", "There was an error fetching information about the specified repo.")
 		}
 
 		fields := []*discordgo.MessageEmbedField{}

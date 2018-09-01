@@ -358,6 +358,7 @@ func initCommands() {
 	}
 
 	//Administrative commands for bot owners
+	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
 	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
 	botData.Commands["update"] = &Command{Function: commandUpdate, HelpText: "Updates the bot to the latest git repo commit.", IsAdministrative: true}
 }
