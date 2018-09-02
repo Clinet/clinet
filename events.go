@@ -1,11 +1,103 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
+	defer recoverPanic()
+
+	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
+	if err != nil {
+		debugLog("> Error fnding message: "+fmt.Sprintf("%v", err), false)
+		return //Error finding message
+	}
+	if message.Author.ID == session.State.User.ID {
+		debugLog("> Message author ID matched bot ID, ignoring message", false)
+		return //The bot should never reply to itself
+	}
+
+	go handleMessage(session, message, false)
+}
+func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
+	defer recoverPanic()
+
+	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
+	if err != nil {
+		debugLog("> Error fnding message: "+fmt.Sprintf("%v", err), false)
+		return //Error finding message
+	}
+	if message.Author.ID == session.State.User.ID {
+		debugLog("> Message author ID matched bot ID, ignoring message", false)
+		return //The bot should never reply to itself
+	}
+
+	go handleMessage(session, message, true)
+}
+func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
+	defer recoverPanic()
+
+	message := event //Make it easier to keep track of what's happening
+
+	debugLog("[D] ID: "+message.ID, false)
+
+	guildChannel, err := session.Channel(message.ChannelID)
+	if err == nil {
+		guildID := guildChannel.GuildID
+
+		_, guildFound := guildData[guildID]
+		if guildFound {
+			guildData[guildID].Lock()
+			defer guildData[guildID].Unlock()
+
+			_, messageFound := guildData[guildID].Queries[message.ID]
+			if messageFound {
+				debugLog("> Deleting message...", false)
+				session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
+				guildData[guildID].Queries[message.ID] = nil                                                              //Remove the message from the query list
+			} else {
+				debugLog("> Error finding deleted message in queries list", false)
+			}
+		} else {
+			debugLog("> Error finding guild for deleted message", false)
+		}
+	} else {
+		debugLog("> Error finding channel for deleted message", false)
+	}
+}
+func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.MessageDeleteBulk) {
+	defer recoverPanic()
+
+	messages := event.Messages
+	channelID := event.ChannelID
+
+	guildChannel, err := session.Channel(channelID)
+	if err == nil {
+		guildID := guildChannel.GuildID
+
+		_, guildFound := guildData[guildID]
+		if guildFound {
+			guildData[guildID].Lock()
+			defer guildData[guildID].Unlock()
+
+			for i := 0; i > len(messages); i++ {
+				debugLog("[D] ID: "+messages[i], false)
+				_, messageFound := guildData[guildID].Queries[messages[i]]
+				if messageFound {
+					debugLog("> Deleting message...", false)
+					session.ChannelMessageDelete(channelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
+					guildData[guildID].Queries[messages[i]] = nil                                                      //Remove the message from the query list
+				} else {
+					debugLog("> Error finding deleted message in queries list", false)
+				}
+			}
+		}
+	}
+}
 
 func discordChannelCreate(session *discordgo.Session, channel *discordgo.ChannelCreate) {
 	settings, guildFound := guildSettings[channel.GuildID]

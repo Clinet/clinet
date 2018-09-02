@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -26,97 +27,6 @@ type Query struct {
 	ResponseMessageID string
 }
 
-func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
-	defer recoverPanic()
-
-	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
-	if err != nil {
-		debugLog("> Error fnding message: "+fmt.Sprintf("%v", err), false)
-		return //Error finding message
-	}
-	if message.Author.ID == session.State.User.ID {
-		debugLog("> Message author ID matched bot ID, ignoring message", false)
-		return //The bot should never reply to itself
-	}
-
-	go handleMessage(session, message, false)
-}
-func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
-	defer recoverPanic()
-
-	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
-	if err != nil {
-		debugLog("> Error fnding message: "+fmt.Sprintf("%v", err), false)
-		return //Error finding message
-	}
-	if message.Author.ID == session.State.User.ID {
-		debugLog("> Message author ID matched bot ID, ignoring message", false)
-		return //The bot should never reply to itself
-	}
-
-	go handleMessage(session, message, true)
-}
-func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
-	defer recoverPanic()
-
-	message := event //Make it easier to keep track of what's happening
-
-	debugLog("[D] ID: "+message.ID, false)
-
-	guildChannel, err := session.Channel(message.ChannelID)
-	if err == nil {
-		guildID := guildChannel.GuildID
-
-		_, guildFound := guildData[guildID]
-		if guildFound {
-			guildData[guildID].Lock()
-			defer guildData[guildID].Unlock()
-
-			_, messageFound := guildData[guildID].Queries[message.ID]
-			if messageFound {
-				debugLog("> Deleting message...", false)
-				session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
-				guildData[guildID].Queries[message.ID] = nil                                                              //Remove the message from the query list
-			} else {
-				debugLog("> Error finding deleted message in queries list", false)
-			}
-		} else {
-			debugLog("> Error finding guild for deleted message", false)
-		}
-	} else {
-		debugLog("> Error finding channel for deleted message", false)
-	}
-}
-func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.MessageDeleteBulk) {
-	defer recoverPanic()
-
-	messages := event.Messages
-	channelID := event.ChannelID
-
-	guildChannel, err := session.Channel(channelID)
-	if err == nil {
-		guildID := guildChannel.GuildID
-
-		_, guildFound := guildData[guildID]
-		if guildFound {
-			guildData[guildID].Lock()
-			defer guildData[guildID].Unlock()
-
-			for i := 0; i > len(messages); i++ {
-				debugLog("[D] ID: "+messages[i], false)
-				_, messageFound := guildData[guildID].Queries[messages[i]]
-				if messageFound {
-					debugLog("> Deleting message...", false)
-					session.ChannelMessageDelete(channelID, guildData[guildID].Queries[messages[i]].ResponseMessageID) //Delete the query response message
-					guildData[guildID].Queries[messages[i]] = nil                                                      //Remove the message from the query list
-				} else {
-					debugLog("> Error finding deleted message in queries list", false)
-				}
-			}
-		}
-	}
-}
-
 func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
 	defer recoverPanic()
 
@@ -134,21 +44,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	if content == "" {
 		return //The message was empty
 	}
+
 	contentReplaced, _ := message.ContentWithMoreMentionsReplaced(session)
-
-	/*
-		//If message is single-lined
-			[New][District JD - #main] @JoshuaDoes#0001: Hello, world!
-
-		//If message is multi-lined
-			[New][District JD - #main] @JoshuaDoes#0001:
-			Hello, world!
-			My name is Joshua.
-			This is a lot of fun!
-
-		//If user is bot
-			[New][District JD - #main] *Clinet#1823: Hello, world!
-	*/
 	eventType := "[New]"
 	if updatedMessageEvent {
 		eventType = "[Updated]"
@@ -162,8 +59,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	} else {
 		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+contentReplaced, false)
 	}
-
-	var responseEmbed *discordgo.MessageEmbed
 
 	_, guildDataExists := guildData[guild.ID]
 	if !guildDataExists {
@@ -192,23 +87,69 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		starboards[guild.ID].MinimumStars = 1 //1 for now with testing, default to 2 or 3 later on
 	}
 
+	var responseEmbed *discordgo.MessageEmbed
+
 	if strings.HasPrefix(content, botData.CommandPrefix) {
+		typingEvent(session, message.ChannelID)
+
 		cmdMsg := strings.TrimPrefix(content, botData.CommandPrefix)
 		cmd := strings.Split(cmdMsg, " ")
 
 		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
 		responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 	} else {
-		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
-			//regexpBotName, _ := regexp.MatchString("<(@|@\\!)"+session.State.User.ID+">(.*?)", content)
-			regexpBotName, _ := regexp.MatchString("^<(@|@\\!)"+session.State.User.ID+">(.*?)$", content) //Ensure prefix is bot tag
-			//if regexpBotName && strings.HasSuffix(content, "?") {
-			if regexpBotName { //Experiment with not requiring question mark suffix
-				if !updatedMessageEvent {
-					typingEvent(session, message.ChannelID)
+		//Swear filter check
+		if guildSettings[guild.ID].SwearFilter.Enabled {
+			swearFound, swears, err := guildSettings[guild.ID].SwearFilter.Check(content)
+			if err != nil {
+				//Report error to developer
+				ownerPrivChannel, chanErr := session.UserChannelCreate(botData.BotOwnerID)
+				if chanErr != nil {
+					debugLog("An error occurred creating a private channel with the bot owner.", false)
+				} else {
+					session.ChannelMessageSend(ownerPrivChannel.ID, "An error occurred with the swear filter: ``"+fmt.Sprintf("%v", err)+"``")
 				}
-				query := content
+			}
+			if swearFound {
+				//Log swear event to log channel with list of swears found
+				settings, guildFound := guildSettings[guild.ID]
+				if guildFound && settings.LogSettings.LoggingEnabled && settings.LogSettings.LoggingEvents.SwearDetect {
+					swearDetectEmbed := NewEmbed().
+						SetTitle("Logging Event - Swear Detect").
+						SetDescription("One or more swears were detected in a message.").
+						AddField("Offending User", "<@"+message.Author.ID+">").
+						AddField("Source Channel", "<#"+message.ChannelID+">").
+						AddField("Swears Detected", strings.Join(swears, ", ")).
+						AddField("Offending Message", message.Content).
+						InlineAllFields().
+						SetColor(0x1C1C1C).MessageEmbed
 
+					session.ChannelMessageSendEmbed(settings.LogSettings.LoggingChannel, swearDetectEmbed)
+				}
+
+				//Delete source message
+				session.ChannelMessageDelete(message.ChannelID, message.ID)
+
+				//Reply with warning
+				msgWarning, _ := session.ChannelMessageSend(message.ChannelID, ":warning: <@"+message.Author.ID+">, please watch your language!")
+
+				//Delete warning after x seconds if x > 0
+				if guildSettings[guild.ID].SwearFilter.WarningDeleteTimeout > 0 {
+					timer := time.NewTimer(guildSettings[guild.ID].SwearFilter.WarningDeleteTimeout * time.Second)
+					<-timer.C
+					session.ChannelMessageDelete(msgWarning.ChannelID, msgWarning.ID)
+				}
+
+				return
+			}
+		}
+
+		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
+			regexpBotName, _ := regexp.MatchString("^<(@|@\\!)"+session.State.User.ID+">(.*?)$", content) //Ensure prefix is bot tag
+			if regexpBotName {
+				typingEvent(session, message.ChannelID)
+
+				query := content
 				query = strings.Replace(query, "<@!"+session.State.User.ID+">", "", -1)
 				query = strings.Replace(query, "<@"+session.State.User.ID+">", "", -1)
 				for {
@@ -225,16 +166,11 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 				usedCustomResponse := false
 				if botData.BotOptions.UseCustomResponses {
-					debugLog("---- USING CUSTOM RESPONSES", true)
 					if len(botData.CustomResponses) > 0 {
-						debugLog("---- CUSTOM RESPONSES FOUND", true)
 						for _, response := range botData.CustomResponses {
-							debugLog("---- TESTING CUSTOM RESPONSE", true)
 							regexpMatched, _ := regexp.MatchString(response.Expression, query)
 							if regexpMatched {
-								debugLog("---- REGEX MATCHED", true)
 								if len(response.CmdResponses) > 0 {
-									debugLog("---- FOUND CMD RESPONSES", true)
 									randomCmd := rand.Intn(len(response.CmdResponses))
 
 									commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: updatedMessageEvent}
@@ -242,7 +178,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 									usedCustomResponse = true
 								} else if len(response.Responses) > 0 {
-									debugLog("---- FOUND EMBED RESPONSES", true)
 									random := rand.Intn(len(response.Responses))
 
 									responseEmbed = response.Responses[random].ResponseEmbed
@@ -254,6 +189,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					}
 				}
 				if usedCustomResponse == false {
+					typingEvent(session, message.ChannelID)
+
 					//Experimental - Use regex for natural language-based commands
 					regexCmdPlayComp, err := regexp.Compile(regexCmdPlay)
 					if err != nil {
@@ -296,10 +233,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	}
 
 	if responseEmbed != nil {
-		if !updatedMessageEvent {
-			typingEvent(session, message.ChannelID)
-		}
-
 		fixedEmbed := Embed{responseEmbed}
 		fixedEmbed.Truncate()
 		responseEmbed = fixedEmbed.MessageEmbed
@@ -332,6 +265,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			debugLog("> Previous response not found, initializing...", false)
 			guildData[guild.ID].Queries[message.ID] = &Query{}
 		}
+
+		typingEvent(session, message.ChannelID)
 
 		if canUpdateMessage {
 			debugLog("> Editing response...", false)

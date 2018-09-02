@@ -9,6 +9,7 @@ type LogSettings struct {
 
 // LogEvents holds logging events and whether or not they're enabled
 type LogEvents struct {
+	//Events received from Discord
 	ChannelCreate     bool `json:"channelCreate"`
 	ChannelUpdate     bool `json:"channelUpdate"`
 	ChannelDelete     bool `json:"channelDelete"`
@@ -23,6 +24,10 @@ type LogEvents struct {
 	GuildEmojisUpdate bool `json:"guildEmojisUpdate"`
 	UserUpdate        bool `json:"userUpdate"`
 	VoiceStateUpdate  bool `json:"voiceStateUpdate"`
+
+	//Custom events
+	SwearDetect bool `json:"swearDetect"` //Triggered if a user uses a blacklisted (swear) word
+	UserModlog  bool `json:"userModlog"`  //Triggered if a user's modlog is updated globally
 }
 
 var (
@@ -39,5 +44,7 @@ var (
 		GuildRoleUpdate:   true,
 		GuildRoleDelete:   true,
 		VoiceStateUpdate:  true,
+		SwearDetect:       true,
+		UserModlog:        true,
 	}
 )

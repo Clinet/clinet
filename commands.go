@@ -229,7 +229,7 @@ func initCommands() {
 			{Name: "next", Description: "Navigates forward in a search result's pages", ArgType: "this"},
 			{Name: "previous", Description: "Navigates backward in a search result's pages", ArgType: "this"},
 			{Name: "cancel", Description: "Cancels the search result", ArgType: "this"},
-			{Name: "select", Description: "Selects the chosen search result from the current page", ArgType: "number"},
+			{Name: "play", Description: "Plays the chosen search result from the current page", ArgType: "number"},
 		},
 	}
 	botData.Commands["queue"] = &Command{
@@ -294,6 +294,7 @@ func initCommands() {
 			"setting (value)",
 		},
 		Arguments: []CommandArgument{
+			{Name: "filter", Description: "Manages the swear filter for this server", ArgType: "this"},
 			{Name: "joinmsg", Description: "Sets the join message for this channel", ArgType: "string"},
 			{Name: "leavemsg", Description: "Sets the leave message for this channel", ArgType: "string"},
 			{Name: "log", Description: "Sets the logging capabilities for this server", ArgType: "this"},

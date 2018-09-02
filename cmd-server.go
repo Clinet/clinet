@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/fatih/structs"
@@ -18,6 +19,72 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 		guildSettings[env.Guild.ID].UserLeaveMessage = strings.Join(args[1:], " ")
 		guildSettings[env.Guild.ID].UserLeaveMessageChannel = env.Channel.ID
 		return NewGenericEmbed("Server Settings - Leave Message", "Successfully set the leave message to this channel.")
+	case "filter":
+		if len(args) < 2 {
+			filterHelpCmd := &Command{
+				HelpText: "Manages the swear filter for this server.",
+				RequiredArguments: []string{
+					"setting (value(s))",
+				},
+				Arguments: []CommandArgument{
+					{Name: "enable", Description: "Enables the swear filter for this server", ArgType: "this"},
+					{Name: "disable", Description: "Disables the swear filter for this server", ArgType: "this"},
+					{Name: "timeout", Description: "Displays or sets the timeout for deleting warning messages", ArgType: "this/number"},
+					{Name: "words", Description: "Lists filtered words, or adds/removes specified words/clears all words", ArgType: "this/(add word1)/(remove word2)/clear"},
+				},
+			}
+			return getCustomCommandUsage(filterHelpCmd, "server filter", "Server Settings - Swear Filter Help")
+		}
+
+		switch args[1] {
+		case "enable":
+			guildSettings[env.Guild.ID].SwearFilter.Enabled = true
+			return NewGenericEmbed("Server Settings - Swear Filter", "Successfully enabled the swear filter.")
+		case "disable":
+			guildSettings[env.Guild.ID].SwearFilter.Enabled = false
+			return NewGenericEmbed("Server Settings - Swear Filter", "Successfully disabled the swear filter.")
+		case "words":
+			if len(args) < 3 {
+				wordListEmbed := NewEmbed().
+					SetTitle("Server Settings - Swear Filter").
+					AddField("Filtered Words", strings.Join(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords, ", ")).
+					SetColor(0x1C1C1C).MessageEmbed
+				return wordListEmbed
+			}
+			switch args[2] {
+			case "add":
+				if len(args) < 4 {
+					return NewErrorEmbed("Server Settings - Swear Filter Error", "You must specify one or more words to add to the filter.")
+				}
+				guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords = append(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords, args[3:]...)
+				return NewGenericEmbed("Server Settings - Swear Filter", "Successfully added the provided words to the filter.")
+			case "remove":
+				if len(args) < 4 {
+					return NewErrorEmbed("Server Settings - Swear Filter Error", "You must specify one or more words to remove from the filter.")
+				}
+				for _, word := range guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords {
+					guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords = remove(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords, word)
+				}
+				return NewGenericEmbed("Server Settings - Swear Filter", "Successfully removed the provided words from the filter.")
+			case "clear":
+				guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords = make([]string, 0)
+				return NewGenericEmbed("Server Settings - Swear Filter", "Successfully cleared all words from the filter.")
+			}
+		}
+	case "timeout":
+		if len(args) < 3 {
+			if guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout == 0 {
+				return NewGenericEmbed("Server Settings - Swear Filter", "The timeout for deleting warning messages is disabled.")
+			}
+			timeout := strconv.Itoa(int(guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout))
+			return NewGenericEmbed("Server Settings - Swear Filter", "The current timeout for deleting warning messages is set to "+timeout+" seconds.")
+		}
+		timeout, err := strconv.Atoi(args[2])
+		if err != nil {
+			return NewErrorEmbed("Server Settings - Swear Filter Error", "``"+args[2]+"`` is not a valid number.")
+		}
+		guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout = time.Duration(timeout)
+		return NewGenericEmbed("Server Settings - Swear Filter", "Successfully set he timeout for deleting warning messages to "+args[2]+" seconds.")
 	case "log":
 		if len(args) < 2 {
 			logHelpCmd := &Command{
@@ -36,21 +103,7 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			return getCustomCommandUsage(logHelpCmd, "server log", "Server Settings - Log Help")
 		}
 
-		LoggingEventsTmp := &guildSettings[env.Guild.ID].LogSettings.LoggingEvents /*
-			LoggingEventsTmp.ChannelCreate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.ChannelCreate
-			LoggingEventsTmp.ChannelUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.ChannelUpdate
-			LoggingEventsTmp.ChannelDelete = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.ChannelDelete
-			LoggingEventsTmp.GuildUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildUpdate
-			LoggingEventsTmp.GuildBanAdd = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildBanAdd
-			LoggingEventsTmp.GuildBanRemove = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildBanRemove
-			LoggingEventsTmp.GuildMemberAdd = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildMemberAdd
-			LoggingEventsTmp.GuildMemberRemove = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildMemberRemove
-			LoggingEventsTmp.GuildRoleCreate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildRoleCreate
-			LoggingEventsTmp.GuildRoleUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildRoleUpdate
-			LoggingEventsTmp.GuildRoleDelete = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildRoleDelete
-			LoggingEventsTmp.GuildEmojisUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.GuildEmojisUpdate
-			LoggingEventsTmp.UserUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.UserUpdate
-			LoggingEventsTmp.VoiceStateUpdate = guildSettings[env.Guild.ID].LogSettings.LoggingEvents.VoiceStateUpdate */
+		LoggingEventsTmp := &guildSettings[env.Guild.ID].LogSettings.LoggingEvents
 
 		switch args[1] {
 		case "set":

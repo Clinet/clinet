@@ -48,11 +48,11 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		responseEmbed := NewEmbed().
 			SetTitle("GitHub User: " + *user.Login).
 			SetImage(*user.AvatarURL).
-			InlineAllFields().
-			SetColor(0x24292D).MessageEmbed
+			SetColor(0x24292D)
 		responseEmbed.Fields = fields
+		responseEmbed.InlineAllFields()
 
-		return responseEmbed
+		return responseEmbed.MessageEmbed
 	case 2: //Repo was specified
 		repo, err := GitHubFetchRepo(request[0], request[1])
 		if err != nil {
@@ -87,11 +87,11 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		//Build embed about repo
 		responseEmbed := NewEmbed().
 			SetTitle("GitHub Repo: " + *repo.FullName).
-			InlineAllFields().
-			SetColor(0x24292D).MessageEmbed
+			SetColor(0x24292D)
 		responseEmbed.Fields = fields
+		responseEmbed.InlineAllFields()
 
-		return responseEmbed
+		return responseEmbed.MessageEmbed
 	}
 
 	return NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")

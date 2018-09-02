@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"regexp"
+	"strconv"
 
 	"github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
@@ -51,6 +52,7 @@ type BotKeys struct {
 }
 type BotOptions struct {
 	MaxPingCount       int      `json:"maxPingCount"` //How many pings to test to determine the average ping
+	HelpMaxResults     int      `json:"helpMaxResults"`
 	SendTypingEvent    bool     `json:"sendTypingEvent"`
 	UseCustomResponses bool     `json:"useCustomResponses"`
 	UseDuckDuckGo      bool     `json:"useDuckDuckGo"`
@@ -98,6 +100,12 @@ func (configData *BotData) PrepConfig() error {
 	if configData.BotOptions.MaxPingCount > 5 || configData.BotOptions.MaxPingCount <= 0 {
 		return errors.New("config:{botOptions:{maxPingCount}} must be 1, 2, 3, 4, or 5")
 	}
+	if configData.BotOptions.HelpMaxResults > EmbedLimitField || configData.BotOptions.HelpMaxResults <= 0 {
+		return errors.New("config:{botOptions:{helpMaxResults}} must be between 1 to " + strconv.Itoa(EmbedLimitField))
+	}
+	if configData.BotOptions.YouTubeMaxResults > EmbedLimitField || configData.BotOptions.YouTubeMaxResults <= 0 {
+		return errors.New("config:{botOptions:{youtubeMaxResults}} must be between 1 to " + strconv.Itoa(EmbedLimitField))
+	}
 
 	//Bot key checks
 	if configData.BotOptions.UseDuckDuckGo && configData.BotKeys.DuckDuckGoAppName == "" {
@@ -124,9 +132,8 @@ func (configData *BotData) PrepConfig() error {
 		regexp, err := regexp.Compile(customResponse.Expression)
 		if err != nil {
 			return err
-		} else {
-			configData.CustomResponses[i].Regexp = regexp
 		}
+		configData.CustomResponses[i].Regexp = regexp
 	}
 	return nil
 }

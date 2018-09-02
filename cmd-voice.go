@@ -272,21 +272,6 @@ func commandShuffle(args []string, env *CommandEnvironment) *discordgo.MessageEm
 }
 
 func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-		//Wait for the handling of a previous playback command to finish
-	}
-	foundVoiceChannel := false
-	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID {
-			foundVoiceChannel = true
-			voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
-			break
-		}
-	}
-	if !foundVoiceChannel {
-		return NewErrorEmbed("YouTube Error", "You must join the voice channel to use before using the "+env.Command+" command.")
-	}
-
 	page := &YouTubeResultNav{}
 
 	switch args[0] {
@@ -333,7 +318,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewGenericEmbed("YouTube", "Cancelled the search session.")
 		}
 		return NewErrorEmbed("YouTube Error", "No search session is in progress.")
-	case "select", "choose":
+	case "select", "choose", "play":
 		if guildData[env.Guild.ID].YouTubeResults == nil {
 			return NewErrorEmbed("YouTube Error", "No search session is in progress.")
 		}
@@ -350,6 +335,21 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 		if selection > len(results) || selection <= 0 {
 			return NewErrorEmbed("YouTube Error", "An invalid selection was specified.")
+		}
+
+		for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+			//Wait for the handling of a previous playback command to finish
+		}
+		foundVoiceChannel := false
+		for _, voiceState := range env.Guild.VoiceStates {
+			if voiceState.UserID == env.Message.Author.ID {
+				foundVoiceChannel = true
+				voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+				break
+			}
+		}
+		if !foundVoiceChannel {
+			return NewErrorEmbed("YouTube Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 		}
 
 		result := results[selection-1]
@@ -372,13 +372,14 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
 	}
 
-	commandList := botData.CommandPrefix + env.Command + " select N - Selects result N"
+	commandList := botData.CommandPrefix + env.Command + " play N - Plays result N"
 	if page.PrevPageToken != "" {
 		commandList += "\n" + botData.CommandPrefix + env.Command + " prev - Displays the results for the previous page"
 	}
 	if page.NextPageToken != "" {
 		commandList += "\n" + botData.CommandPrefix + env.Command + " next - Displays the results for the next page"
 	}
+	commandList += "\n" + botData.CommandPrefix + env.Command + " cancel - Cancels the search session"
 	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
 
 	results, _ := page.GetResults()
@@ -390,7 +391,9 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	fields := []*discordgo.MessageEmbedField{}
 	for i := 0; i < len(results); i++ {
 		videoInfo, err := ytdl.GetVideoInfo("https://youtube.com/watch?v=" + results[i].Id.VideoId)
-		if err == nil {
+		if err != nil {
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this video](https://youtube.com/watch?v=" + results[i].Id.VideoId + ")"})
+		} else {
 			author := videoInfo.Author
 			title := videoInfo.Title
 
