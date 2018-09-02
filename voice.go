@@ -10,6 +10,7 @@ import (
 
 	"github.com/JoshuaDoes/goprobe"
 	"github.com/bwmarrin/discordgo"
+	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/jonas747/dca"
 	"github.com/rylio/ytdl"
 	"google.golang.org/api/youtube/v3"
@@ -342,6 +343,21 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 		audioQueueEntry.ImageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
 		audioQueueEntry.ThumbnailURL = videoInfo.GetThumbnailURL("default").String()
 		audioQueueEntry.Title = videoInfo.Title
+
+		call := youtube.NewVideosService(botData.BotClients.YouTube).
+			List("contentDetails").
+			Id(videoInfo.ID)
+
+		response, err := call.Do()
+		if err != nil {
+			return nil
+		}
+
+		duration, err := isoduration.FromString(response.Items[0].ContentDetails.Duration)
+		if err != nil {
+			return nil
+		}
+		audioQueueEntry.Duration = duration.ToDuration().Seconds()
 	case "soundcloud":
 		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(audioQueueEntry.MediaURL)
 		if err != nil {
@@ -351,15 +367,12 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 		audioQueueEntry.ImageURL = audioInfo.ArtURL
 		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
 		audioQueueEntry.Title = audioInfo.Title
+		audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 	default:
 		audioQueueEntry.Author = probe.Format.Tags.Artist
 		audioQueueEntry.Title = probe.Format.Tags.Title
+		audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 	}
-	/* audioQueueEntry.Duration, err = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
-	if err != nil {
-		return NewErrorEmbed("Voice Error", "Error getting the duration of the audio.")
-	} */
-	audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 
 	return nil
 }
@@ -689,8 +702,7 @@ func voiceGetQuery(query string) (string, error) {
 
 func getMediaURL(url string) (string, error) {
 	if isYouTubeURL(url) {
-		//Pass url with verified flag to bypass age gate
-		videoInfo, err := ytdl.GetVideoInfo(url + "&has_verified=1")
+		videoInfo, err := ytdl.GetVideoInfo(url)
 		if err != nil {
 			return url, err
 		}
