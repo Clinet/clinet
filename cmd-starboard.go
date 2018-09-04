@@ -222,6 +222,9 @@ func discordMessageReactionAdd(session *discordgo.Session, reaction *discordgo.M
 	if err != nil {
 		return
 	}
+	if message.Author.ID == session.State.User.ID {
+		return
+	}
 
 	//A user can't self-star their message to add it to the starboard, however I give up on finding
 	//a method of subtracting their star for now so it'll still show the total star count
