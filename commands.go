@@ -45,6 +45,9 @@ func initCommands() {
 	//All user-accessible commands with no parameters
 	botData.Commands["help"] = &Command{Function: commandHelp, HelpText: "Displays a list of commands you have permission to use."}
 	botData.Commands["about"] = &Command{Function: commandAbout, HelpText: "Displays information about " + botData.BotName + " and how to use it."}
+	botData.Commands["invite"] = &Command{Function: commandInvite, HelpText: "Displays available invite links for " + botData.BotName + "."}
+	botData.Commands["donate"] = &Command{Function: commandDonate, HelpText: "Displays available donation links for " + botData.BotName + "."}
+	botData.Commands["source"] = &Command{Function: commandSource, HelpText: "Displays available source code links for " + botData.BotName + "."}
 	botData.Commands["version"] = &Command{Function: commandVersion, HelpText: "Displays the current version of " + botData.BotName + "."}
 	botData.Commands["credits"] = &Command{Function: commandCredits, HelpText: "Displays a list of credits for the creation and functionality of " + botData.BotName + "."}
 	botData.Commands["roll"] = &Command{Function: commandRoll, HelpText: "Rolls a dice."}

@@ -26,18 +26,21 @@ type BotClients struct {
 	YouTube    *youtube.Service
 }
 type BotData struct {
-	BotClients      BotClients
-	BotKeys         BotKeys               `json:"botKeys"`
-	BotName         string                `json:"botName"`
-	BotOwnerID      string                `json:"botOwnerID"`
-	BotOptions      BotOptions            `json:"botOptions"`
-	BotToken        string                `json:"botToken"`
-	CommandPrefix   string                `json:"cmdPrefix"`
-	CustomResponses []CustomResponseQuery `json:"customResponses"`
-	CustomStatuses  []CustomStatus        `json:"customStatuses"`
-	DebugMode       bool                  `json:"debugMode"`
-	//RecoverCrashes       bool                  `json:"recoverCrashes"`
-	SendOwnerStackTraces bool `json:"sendOwnerStackTraces"`
+	BotClients           BotClients
+	BotKeys              BotKeys               `json:"botKeys"`
+	BotName              string                `json:"-"`
+	BotOwnerID           string                `json:"botOwnerID"`
+	BotOptions           BotOptions            `json:"botOptions"`
+	BotToken             string                `json:"botToken"`
+	BotInviteURL         string                `json:"botInviteURL"`
+	BotDiscordURL        string                `json:"botDiscordURL"`
+	BotDonationURL       string                `json:"botDonationURL"`
+	BotSourceURL         string                `json:"botSourceURL"`
+	CommandPrefix        string                `json:"cmdPrefix"`
+	CustomResponses      []CustomResponseQuery `json:"customResponses"`
+	CustomStatuses       []CustomStatus        `json:"customStatuses"`
+	DebugMode            bool                  `json:"debugMode"`
+	SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
@@ -86,9 +89,6 @@ type CustomStatus struct {
 
 func (configData *BotData) PrepConfig() error {
 	//Bot config checks
-	if configData.BotName == "" {
-		return errors.New("config:{botName: \"\"}")
-	}
 	if configData.BotToken == "" {
 		return errors.New("config:{botName: \"\"}")
 	}

@@ -169,6 +169,8 @@ func main() {
 		debugLog("> Connection successful", true)
 		botData.DiscordSession = discord
 
+		botData.BotName = discord.State.User.Username
+
 		if botData.SendOwnerStackTraces {
 			checkPanicRecovery()
 		}
