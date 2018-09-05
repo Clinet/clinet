@@ -43,7 +43,6 @@ func initCommands() {
 	botData.Commands = make(map[string]*Command)
 
 	//All user-accessible commands with no parameters
-	botData.Commands["help"] = &Command{Function: commandHelp, HelpText: "Displays a list of commands you have permission to use."}
 	botData.Commands["about"] = &Command{Function: commandAbout, HelpText: "Displays information about " + botData.BotName + " and how to use it."}
 	botData.Commands["invite"] = &Command{Function: commandInvite, HelpText: "Displays available invite links for " + botData.BotName + "."}
 	botData.Commands["donate"] = &Command{Function: commandDonate, HelpText: "Displays available donation links for " + botData.BotName + "."}
@@ -58,6 +57,14 @@ func initCommands() {
 	botData.Commands["ping"] = &Command{Function: commandPing, HelpText: "Returns the ping average to Discord."}
 
 	//All user-accessible commands with parameters
+	botData.Commands["help"] = &Command{
+		Function: commandHelp,
+		HelpText: "Displays a list of commands you have permission to use.",
+		Arguments: []CommandArgument{
+			{Name: "page", Description: "The help page to view", ArgType: "number"},
+			{Name: "command", Description: "The command to view help for", ArgType: "string"},
+		},
+	}
 	botData.Commands["hewwo"] = &Command{
 		Function: commandHewwo,
 		HelpText: "Hewwo!!! (´・ω・｀)",

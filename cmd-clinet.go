@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -195,15 +196,30 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		}
 	}
 
-	//Create the help embed and give it the command list
-	helpEmbed := NewEmbed().
+	pageNumber := 1
+	if len(args) > 0 {
+		newPageNumber, err := strconv.Atoi(args[0])
+		if err != nil {
+			return NewErrorEmbed("Help Error", "Invalid command or page number.")
+		}
+		pageNumber = newPageNumber
+	}
+
+	//Create the help page and give it the command list
+	helpEmbed, totalPages, err := page(commandFields, pageNumber, botData.BotOptions.HelpMaxResults)
+	if err != nil {
+		return NewErrorEmbed("Help Error", fmt.Sprintf("%v", err))
+	}
+
+	//Prepare the help page to look nice
+	helpEmbed.
 		SetTitle(botData.BotName + " - Help").
 		SetDescription("A list of commands you have permission to use.").
-		SetColor(0xFAFAFA).MessageEmbed
-	helpEmbed.Fields = commandFields
+		SetFooter("Page " + strconv.Itoa(pageNumber) + " of " + strconv.Itoa(totalPages) + " | " + botData.CommandPrefix + env.Command + " {page}").
+		SetColor(0xFAFAFA)
 
-	//Return the help embed to the caller
-	return helpEmbed
+	//Return the help page to the caller
+	return helpEmbed.MessageEmbed
 }
 func commandVersion(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	return NewEmbed().
