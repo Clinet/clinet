@@ -13,6 +13,7 @@ import (
 	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/jonas747/dca"
 	"github.com/rylio/ytdl"
+	youtube "google.golang.org/api/youtube/v3"
 )
 
 var encodeOptionsPresetHigh = &dca.EncodeOptions{
