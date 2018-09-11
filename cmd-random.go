@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/kortschak/zalgo"
 )
 
 func commandRoll(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -38,4 +42,27 @@ func commandHewwo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	message = strings.Replace(message, "r", "w", -1)
 
 	return NewGenericEmbed("Hewwo", message)
+}
+
+func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	z := zalgo.NewCorrupter(writer)
+	z.Zalgo = func(n int, r rune, z *zalgo.Corrupter) bool {
+		z.Up += 0.01
+		z.Middle += complex(0.01, 0.01)
+		z.Down += complex(real(z.Down)*0.1, 0)
+		return false
+	}
+	z.Up = complex(0, 0.2)
+	z.Middle = complex(0, 0.2)
+	z.Down = complex(0.001, 0.3)
+
+	fmt.Fprint(writer, []byte(strings.Join(args, " ")))
+	zalgo := buf.String()
+
+	fmt.Println(fmt.Sprintf("%v", zalgo))
+
+	return NewGenericEmbed("Zalgo", string(zalgo))
 }

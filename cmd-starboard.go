@@ -189,10 +189,8 @@ func commandStarboard(args []string, env *CommandEnvironment) *discordgo.Message
 		default:
 			return NewErrorEmbed("Starboard Error", "Unknown value ``"+args[1]+"``. Please use either ``enable`` or ``disable``.")
 		}
-	default:
-		return NewErrorEmbed("Starboard Error", "Error finding the setting ``"+args[0]+"``.")
 	}
-	return NewErrorEmbed("Starboard Error", "There was a logic flaw somewhere. Please contact <@"+botData.BotOwnerID+"> to resolve this issue.")
+	return NewErrorEmbed("Starboard Error", "Error finding the setting ``"+args[0]+"``.")
 }
 
 func discordMessageReactionAdd(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {

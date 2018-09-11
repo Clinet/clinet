@@ -2,6 +2,9 @@
 
 ### A Discord bot intended for assistance and control within your guilds
 
+[![Discord Bots](https://discordbots.org/api/widget/374546169755598849.svg)](https://discordbots.org/bot/374546169755598849)
+[![Go Report Card](https://goreportcard.com/badge/github.com/JoshuaDoes/clinet)](https://goreportcard.com/report/github.com/JoshuaDoes/clinet)
+
 ----
 
 ## Using the official development version of Clinet

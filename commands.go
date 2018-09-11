@@ -75,6 +75,16 @@ func initCommands() {
 			{Name: "message", Description: "The text to translate to Hewwo", ArgType: "string"},
 		},
 	}
+	botData.Commands["zalgo"] = &Command{
+		Function: commandZalgo,
+		HelpText: "Mystifies your text.",
+		RequiredArguments: []string{
+			"message",
+		},
+		Arguments: []CommandArgument{
+			{Name: "message", Description: "The text to mystify", ArgType: "string"},
+		},
+	}
 	botData.Commands["nlp"] = &Command{
 		Function: commandNLP,
 		HelpText: "Raw natural language processing in Discord. Powered by Prose:tm:.",
