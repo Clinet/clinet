@@ -62,7 +62,5 @@ func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	fmt.Fprint(writer, []byte(strings.Join(args, " ")))
 	zalgo := buf.String()
 
-	fmt.Println(fmt.Sprintf("%v", zalgo))
-
 	return NewGenericEmbed("Zalgo", string(zalgo))
 }
