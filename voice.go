@@ -13,7 +13,7 @@ import (
 	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/jonas747/dca"
 	"github.com/rylio/ytdl"
-	"google.golang.org/api/youtube/v3"
+	youtube "google.golang.org/api/youtube/v3"
 )
 
 var encodeOptionsPresetHigh = &dca.EncodeOptions{
@@ -103,7 +103,7 @@ func (page *YouTubeResultNav) Prev() error {
 		return errors.New("Could not find any video results for the previous page")
 	}
 
-	page.PageNumber -= 1
+	page.PageNumber--
 	page.Results = response.Items
 	page.PrevPageToken = response.PrevPageToken
 	page.NextPageToken = response.NextPageToken
@@ -128,7 +128,7 @@ func (page *YouTubeResultNav) Next() error {
 		return errors.New("Could not find any video results for the next page")
 	}
 
-	page.PageNumber += 1
+	page.PageNumber--
 	page.Results = response.Items
 	page.PrevPageToken = response.PrevPageToken
 	page.NextPageToken = response.NextPageToken

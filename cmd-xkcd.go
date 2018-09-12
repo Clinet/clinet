@@ -11,7 +11,7 @@ func commandXKCD(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	case "latest":
 		comic, err := botData.BotClients.XKCD.Latest()
 		if err != nil {
-			return NewErrorEmbed("XKCD Error", "There was an error fetching the latest XKCD comic.")
+			return NewErrorEmbed("xkcd Error", "There was an error fetching the latest xkcd comic.")
 		}
 		return NewEmbed().
 			SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -21,7 +21,7 @@ func commandXKCD(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	case "random":
 		comic, err := botData.BotClients.XKCD.Random()
 		if err != nil {
-			return NewErrorEmbed("XKCD Error", "There was an error fetching a random XKCD comic.")
+			return NewErrorEmbed("xkcd Error", "There was an error fetching a random xkcd comic.")
 		}
 		return NewEmbed().
 			SetTitle("xkcd - #" + strconv.Itoa(comic.Number)).
@@ -31,12 +31,12 @@ func commandXKCD(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	default:
 		comicNumber, err := strconv.Atoi(args[0])
 		if err != nil {
-			return NewErrorEmbed("XKCD Error", "``"+args[0]+"`` is not a valid number.")
+			return NewErrorEmbed("xkcd Error", "``"+args[0]+"`` is not a valid number.")
 		}
 
 		comic, err := botData.BotClients.XKCD.Get(comicNumber)
 		if err != nil {
-			return NewErrorEmbed("XKCD Error", "There was an error fetching XKCD comic #"+args[0]+".")
+			return NewErrorEmbed("xkcd Error", "There was an error fetching xkcd comic #"+args[0]+".")
 		}
 		return NewEmbed().
 			SetTitle("xkcd - #" + args[0]).
