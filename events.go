@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -354,7 +353,7 @@ func discordGuildMemberAdd(session *discordgo.Session, member *discordgo.GuildMe
 		if guildSettings[member.GuildID].LogSettings.LoggingEnabled && guildSettings[member.GuildID].LogSettings.LoggingEvents.GuildMemberAdd {
 			joinedAt := member.JoinedAt
 			joinedAtTimeFormatted := ""
-			joinedAtTime, err := time.Parse(time.RFC3339, joinedAt)
+			joinedAtTime, err := joinedAt.Parse()
 			if err != nil {
 				joinedAtTimeFormatted = string(joinedAt)
 			} else {
@@ -398,7 +397,7 @@ func discordGuildMemberRemove(session *discordgo.Session, member *discordgo.Guil
 		if guildSettings[member.GuildID].LogSettings.LoggingEnabled && guildSettings[member.GuildID].LogSettings.LoggingEvents.GuildMemberRemove {
 			joinedAt := member.JoinedAt
 			joinedAtTimeFormatted := ""
-			joinedAtTime, err := time.Parse(time.RFC3339, joinedAt)
+			joinedAtTime, err := joinedAt.Parse()
 			if err != nil {
 				joinedAtTimeFormatted = string(joinedAt)
 			} else {
