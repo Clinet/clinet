@@ -89,9 +89,15 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 	var responseEmbed *discordgo.MessageEmbed
 
-	if strings.HasPrefix(content, botData.CommandPrefix) {
-		typingEvent(session, message.ChannelID)
+	if guildSettings[guild.ID].BotPrefix != "" {
+		if strings.HasPrefix(content, guildSettings[guild.ID].BotPrefix) {
+			cmdMsg := strings.TrimPrefix(content, guildSettings[guild.ID].BotPrefix)
+			cmd := strings.Split(cmdMsg, " ")
 
+			commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
+			responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
+		}
+	} else if strings.HasPrefix(content, botData.CommandPrefix) {
 		cmdMsg := strings.TrimPrefix(content, botData.CommandPrefix)
 		cmd := strings.Split(cmdMsg, " ")
 

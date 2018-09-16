@@ -255,12 +255,21 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			guildSettings[env.Guild.ID].LogSettings.LoggingChannel = ""
 			guildSettings[env.Guild.ID].LogSettings.LoggingEnabled = false
 			guildSettings[env.Guild.ID].LogSettings.LoggingEvents = LogEvents{}
+		case "filter":
+			guildSettings[env.Guild.ID].SwearFilter.Enabled = false
+			guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords = make([]string, 0)
+			guildSettings[env.Guild.ID].SwearFilter.DisableNormalize = false
+			guildSettings[env.Guild.ID].SwearFilter.DisableSpacedTab = false
+			guildSettings[env.Guild.ID].SwearFilter.DisableMultiWhitespaceStripping = false
+			guildSettings[env.Guild.ID].SwearFilter.DisableZeroWidthStripping = false
+			guildSettings[env.Guild.ID].SwearFilter.DisableSpacedBypass = false
+			guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout = time.Duration(0)
+			guildSettings[env.Guild.ID].SwearFilter.AllowAdminBypass = false
+			guildSettings[env.Guild.ID].SwearFilter.AllowBotOwnerBypass = false
 		default:
 			return NewErrorEmbed("Server Settings - Reset Error", "Error finding the setting ``"+args[1]+"``.")
 		}
 		return NewGenericEmbed("Server Settings - Reset", "Successfully reset the settings for ``"+args[1]+"``.")
-	default:
-		return NewErrorEmbed("Server Settings Error", "Error finding the setting ``"+args[0]+"``.")
 	}
-	return nil
+	return NewErrorEmbed("Server Settings Error", "Error finding the setting ``"+args[0]+"``.")
 }

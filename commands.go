@@ -314,11 +314,22 @@ func initCommands() {
 			"setting (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "filter", Description: "Manages the swear filter for this server", ArgType: "this"},
+			{Name: "filter", Description: "Manages the swear filter", ArgType: "this"},
 			{Name: "joinmsg", Description: "Sets the join message for this channel", ArgType: "string"},
 			{Name: "leavemsg", Description: "Sets the leave message for this channel", ArgType: "string"},
-			{Name: "log", Description: "Sets the logging capabilities for this server", ArgType: "this"},
+			{Name: "log", Description: "Manages the logging events", ArgType: "this"},
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
+		},
+	}
+	botData.Commands["bot"] = &Command{
+		Function:            commandSettingsBot,
+		HelpText:            "Changes the specified settings for the bot within this server.",
+		RequiredPermissions: discordgo.PermissionAdministrator,
+		RequiredArguments: []string{
+			"setting (value)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "prefix", Description: "Sets the bot command prefix", ArgType: "string"},
 		},
 	}
 
