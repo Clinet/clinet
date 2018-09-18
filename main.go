@@ -212,7 +212,7 @@ func main() {
 			case _, ok := <-sc:
 				if ok {
 					botProcess, _ := os.FindProcess(botPid)
-					_ = botProcess.Kill()
+					_ = botProcess.Signal(syscall.SIGTERM)
 					os.Exit(0)
 				}
 			default:

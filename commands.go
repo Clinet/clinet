@@ -188,38 +188,32 @@ func initCommands() {
 
 	//Voice commands
 	botData.Commands["play"] = &Command{
-		Function:            commandPlay,
-		HelpText:            "Plays either the first result from a YouTube search query or the specified stream URL in the user's voice channel.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandPlay,
+		HelpText: "Plays either the first result from a YouTube search query or the specified stream URL in the user's voice channel.",
 		Arguments: []CommandArgument{
 			{Name: "search query", Description: "The YouTube search query to use when fetching a video to play", ArgType: "string"},
 			{Name: "url", Description: "The YouTube, SoundCloud, or direct audio/video URL to play", ArgType: "string"},
 		},
 	}
 	botData.Commands["stop"] = &Command{
-		Function:            commandStop,
-		HelpText:            "Stops the audio playback in the user's voice channel.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandStop,
+		HelpText: "Stops the audio playback in the user's voice channel.",
 	}
 	botData.Commands["skip"] = &Command{
-		Function:            commandSkip,
-		HelpText:            "Skips to the next queue entry in the user's voice channel.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandSkip,
+		HelpText: "Skips to the next queue entry in the user's voice channel.",
 	}
 	botData.Commands["pause"] = &Command{
-		Function:            commandPause,
-		HelpText:            "Pauses the audio playback in the user's voice channel.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandPause,
+		HelpText: "Pauses the audio playback in the user's voice channel.",
 	}
 	botData.Commands["resume"] = &Command{
-		Function:            commandResume,
-		HelpText:            "Resumes the audio playback in the user's voice channel.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandResume,
+		HelpText: "Resumes the audio playback in the user's voice channel.",
 	}
 	botData.Commands["volume"] = &Command{
-		Function:            commandVolume,
-		HelpText:            "Sets the volume level for the next audio playback.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandVolume,
+		HelpText: "Sets the volume level for the next audio playback.",
 		RequiredArguments: []string{
 			"volume",
 		},
@@ -228,19 +222,16 @@ func initCommands() {
 		},
 	}
 	botData.Commands["repeat"] = &Command{
-		Function:            commandRepeat,
-		HelpText:            "Switches queue playback between three modes: no repeat, repeat queue, and repeat now playing.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandRepeat,
+		HelpText: "Switches queue playback between three modes: no repeat, repeat queue, and repeat now playing.",
 	}
 	botData.Commands["shuffle"] = &Command{
-		Function:            commandShuffle,
-		HelpText:            "Toggles queue shuffling during playback.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandShuffle,
+		HelpText: "Toggles queue shuffling during playback.",
 	}
 	botData.Commands["youtube"] = &Command{
-		Function:            commandYouTube,
-		HelpText:            "Allows you to navigate YouTube search results to select what to add to the queue.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandYouTube,
+		HelpText: "Allows you to navigate YouTube search results to select what to add to the queue.",
 		RequiredArguments: []string{
 			"command (value)",
 		},
@@ -253,18 +244,16 @@ func initCommands() {
 		},
 	}
 	botData.Commands["queue"] = &Command{
-		Function:            commandQueue,
-		HelpText:            "Lists and manages entries in the queue.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandQueue,
+		HelpText: "Lists and manages entries in the queue.",
 		Arguments: []CommandArgument{
 			{Name: "clear", Description: "Clears the queue", ArgType: "this"},
 			{Name: "remove", Description: "Removes the specified queue entry or entries", ArgType: "number"},
 		},
 	}
 	botData.Commands["nowplaying"] = &Command{
-		Function:            commandNowPlaying,
-		HelpText:            "Displays the now playing entry.",
-		RequiredPermissions: discordgo.PermissionVoiceConnect,
+		Function: commandNowPlaying,
+		HelpText: "Displays the now playing entry.",
 	}
 
 	//All moderation commands with parameters
