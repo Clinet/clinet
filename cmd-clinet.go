@@ -166,11 +166,14 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	//Write the current channel ID to an update file for the bot to read after restarting
 	ioutil.WriteFile(".update", []byte(env.Channel.ID), 0644)
 
+	//Write the current master PID to an oldpid file for the bot to read after restarting
+	ioutil.WriteFile(".oldpid", []byte(strconv.Itoa(masterPID)), 0644)
+
 	//Save the state so it's not lost
 	stateSave()
 
 	//Spawn a new bot process that will kill this one
-	botProcess := exec.Command(os.Args[0], "-bot", "true", "-killpid", strconv.Itoa(os.Getpid()))
+	botProcess := exec.Command(os.Args[0], "-bot", "true", "-killold", "true")
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	err = botProcess.Start()

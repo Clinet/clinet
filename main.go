@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
 
 	"github.com/JoshuaDoes/duckduckgolang"
@@ -45,13 +46,15 @@ var (
 var (
 	configFile  string
 	configIsBot string
-	oldpid      int
+	masterPID   int
+	killOldBot  string
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", "config.json", "The location of the JSON-structured configuration file")
 	flag.StringVar(&configIsBot, "bot", "false", "Whether or not to act as a bot")
-	flag.IntVar(&oldpid, "killpid", -1, "The old PID to kill for the update process")
+	flag.IntVar(&masterPID, "masterpid", -1, "The bot master's PID")
+	flag.StringVar(&killOldBot, "killold", "false", "Whether or not to kill an old bot process")
 }
 
 func main() {
@@ -66,8 +69,8 @@ func main() {
 		debugLog("Process mode: MASTER\n", true)
 	}
 
-	if oldpid != -1 {
-		killSpawnBot(oldpid)
+	if killOldBot == "true" {
+		killSpawnBot()
 	}
 
 	if configIsBot == "true" {
@@ -428,11 +431,12 @@ func checkUpdate() {
 		botData.DiscordSession.ChannelMessageSendEmbed(string(updateChannelID), updateEmbed)
 
 		os.Remove(".update")
+		os.Remove(os.Args[0] + ".old")
 	}
 }
 
 func spawnBot() int {
-	botProcess := exec.Command(os.Args[0], "-bot", "true")
+	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	err := botProcess.Start()
@@ -442,13 +446,21 @@ func spawnBot() int {
 	return botProcess.Process.Pid
 }
 
-func killSpawnBot(oldpid int) int {
-	oldBotProcess, err := os.FindProcess(oldpid)
-	if err == nil {
-		oldBotProcess.Signal(os.Kill)
+func killSpawnBot() int {
+	oldpidBytes, err := ioutil.ReadFile(".oldpid")
+	if err == nil && len(oldpidBytes) > 0 {
+		defer os.Remove(".oldpid")
+
+		oldpid, err := strconv.Atoi(string(oldpidBytes))
+		if err == nil {
+			oldBotProcess, err := os.FindProcess(oldpid)
+			if err == nil {
+				oldBotProcess.Signal(os.Kill)
+			}
+		}
 	}
 
-	botProcess := exec.Command(os.Args[0], "-bot", "true")
+	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	err = botProcess.Start()
