@@ -178,8 +178,6 @@ func main() {
 		debugLog("> Connection successful", true)
 		botData.DiscordSession = discord
 
-		botData.BotName = discord.State.User.Username
-
 		if botData.SendOwnerStackTraces {
 			checkPanicRecovery()
 		}
@@ -232,6 +230,8 @@ func main() {
 
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	defer recoverPanic()
+
+	botData.BotName = botData.DiscordSession.State.User.Username
 
 	updateRandomStatus(session, 0)
 	cronjob := cron.New()
@@ -456,7 +456,7 @@ func killSpawnBot() int {
 		if err == nil {
 			oldBotProcess, err := os.FindProcess(oldpid)
 			if err == nil {
-				oldBotProcess.Signal(os.Kill)
+				oldBotProcess.Signal(syscall.SIGTERM)
 			}
 		}
 	}
