@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,7 +24,6 @@ import (
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -88,13 +90,36 @@ func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEm
 }
 
 func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	//Check if the Go compiler is installed
+	golangver := exec.Command("go", "version")
+
+	output, err := golangver.CombinedOutput()
+	if len(output) <= 0 || err != nil {
+		return NewErrorEmbed("Update Error", "Unable to execute ``go version``. Make sure Go ["+runtime.Version()+"] is installed on the host machine.\n\n"+fmt.Sprintf("%s\n```%v```", output, err))
+	}
+
+	//Check if the govvv wrapper is installed
+	govvv := exec.Command("govvv")
+
+	output, _ = govvv.CombinedOutput()
+	if len(output) <= 0 {
+		return NewErrorEmbed("Update Error", "Unable to execute ``govvv``. Make sure govvv is installed on the host machine."+fmt.Sprintf("```%v```", output))
+	}
+
+	//Create a temporary directory to store the git repository in
+	repodir, err := ioutil.TempDir("", "clinet")
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Error creating a temporary directory to store the Clinet git repository in.")
+	}
+	defer os.RemoveAll(repodir)
+
 	//Check if an update is available
-	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+	repo, err := git.PlainClone(repodir, false, &git.CloneOptions{
 		URL:   "https://github.com/JoshuaDoes/clinet",
 		Depth: 1,
 	})
 	if err != nil {
-		return NewErrorEmbed("Update Error", "Error finding the git repo.")
+		return NewErrorEmbed("Update Error", "Error cloning the git repo.")
 	}
 	ref, err := repo.Head()
 	if err != nil {
@@ -106,11 +131,37 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	}
 	commitHash := commit.Hash.String()
 	if commitHash == GitCommitFull {
-		return NewGenericEmbed("Update", botData.BotName+" is already up to date!")
+		if len(args) <= 0 || len(args) >= 1 && args[0] != "force" {
+			return NewGenericEmbed("Update", botData.BotName+" is already up to date!")
+		}
 	}
 
 	//Tell the user we're updating
 	botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewGenericEmbed("Update", "Updating "+botData.BotName+" to commit ``"+commitHash+"`` from commit ``"+GitCommitFull+"``..."))
+
+	//Build the update
+	outputFile := filepath.Dir(repodir)
+	if runtime.GOOS == "windows" {
+		outputFile += ".exe"
+	}
+
+	govvvbuild := exec.Command("govvv", "build", "-o", outputFile)
+	govvvbuild.Dir = repodir
+	if !botData.DebugMode {
+		govvvbuild.Args = append(govvvbuild.Args, "-ldflags=-s -w")
+	}
+
+	output, err = govvvbuild.CombinedOutput()
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Unable to build "+botData.BotName+" ``"+commitHash+"``.\n\n"+fmt.Sprintf("```%s```", output))
+	}
+
+	if _, err = os.Stat(outputFile); os.IsNotExist(err) {
+		return NewErrorEmbed("Update Error", "Unable to find the updated build of "+botData.BotName+" ``"+commitHash+"``.\n\n"+fmt.Sprintf("```%v```", err))
+	}
+
+	os.Rename(os.Args[0], os.Args[0]+".old")
+	os.Rename(outputFile, os.Args[0])
 
 	//Write the current channel ID to an update file for the bot to read after restarting
 	ioutil.WriteFile(".update", []byte(env.Channel.ID), 0644)
@@ -118,8 +169,14 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	//Save the state so it's not lost
 	stateSave()
 
-	//Close the bot process, as the MASTER process will perform the update and open it again
-	os.Exit(0)
+	//Spawn a new bot process that will kill this one
+	botProcess := exec.Command(os.Args[0], "-bot", "true", "-killpid", strconv.Itoa(os.Getpid()))
+	botProcess.Stdout = os.Stdout
+	botProcess.Stderr = os.Stderr
+	err = botProcess.Start()
+	if err != nil {
+		return NewErrorEmbed("Update Error", "Unable to spawn the updated bot process.")
+	}
 
 	return nil
 }

@@ -4,9 +4,14 @@ config.json
 # Bot save states
 state/
 
+# Bot temporaries
+.update
+.restart
+
 # Output executables (not accounting for Linux builds because fuck file extensions)
 *.exe
 *.app
+*.old
 
 # OS leftovers
 desktop.ini

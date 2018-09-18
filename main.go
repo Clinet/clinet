@@ -45,11 +45,13 @@ var (
 var (
 	configFile  string
 	configIsBot string
+	oldpid      int
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", "config.json", "The location of the JSON-structured configuration file")
 	flag.StringVar(&configIsBot, "bot", "false", "Whether or not to act as a bot")
+	flag.IntVar(&oldpid, "killpid", -1, "The old PID to kill for the update process")
 }
 
 func main() {
@@ -62,6 +64,10 @@ func main() {
 		debugLog("Process mode: BOT\n", true)
 	} else {
 		debugLog("Process mode: MASTER\n", true)
+	}
+
+	if oldpid != -1 {
+		killSpawnBot(oldpid)
 	}
 
 	if configIsBot == "true" {
@@ -176,6 +182,7 @@ func main() {
 		}
 
 		checkRestart()
+		checkUpdate()
 
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -414,11 +421,37 @@ func checkRestart() {
 	}
 }
 
+func checkUpdate() {
+	updateChannelID, err := ioutil.ReadFile(".update")
+	if err == nil && len(updateChannelID) > 0 {
+		updateEmbed := NewGenericEmbed("Update", "Successfully updated "+botData.BotName+"!")
+		botData.DiscordSession.ChannelMessageSendEmbed(string(updateChannelID), updateEmbed)
+
+		os.Remove(".update")
+	}
+}
+
 func spawnBot() int {
 	botProcess := exec.Command(os.Args[0], "-bot", "true")
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	err := botProcess.Start()
+	if err != nil {
+		panic(err)
+	}
+	return botProcess.Process.Pid
+}
+
+func killSpawnBot(oldpid int) int {
+	oldBotProcess, err := os.FindProcess(oldpid)
+	if err == nil {
+		oldBotProcess.Signal(os.Kill)
+	}
+
+	botProcess := exec.Command(os.Args[0], "-bot", "true")
+	botProcess.Stdout = os.Stdout
+	botProcess.Stderr = os.Stderr
+	err = botProcess.Start()
 	if err != nil {
 		panic(err)
 	}
