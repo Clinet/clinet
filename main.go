@@ -428,7 +428,6 @@ func checkUpdate() {
 		botData.DiscordSession.ChannelMessageSendEmbed(string(updateChannelID), updateEmbed)
 
 		os.Remove(".update")
-		os.Remove(os.Args[0] + ".old")
 	}
 }
 
@@ -442,6 +441,7 @@ func spawnBot() int {
 			oldBotProcess, err := os.FindProcess(oldpid)
 			if err == nil {
 				oldBotProcess.Signal(syscall.SIGTERM)
+				_, _ = oldBotProcess.Wait()
 			}
 		}
 	}
