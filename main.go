@@ -378,6 +378,7 @@ func recoverPanic() {
 		if botData.SendOwnerStackTraces {
 			stack := make([]byte, 65536)
 			l := runtime.Stack(stack, true)
+			fmt.Println("Stack trace:\n" + string(stack[:l]))
 			err := ioutil.WriteFile("stacktrace.txt", stack[:l], 0644)
 			if err != nil {
 				fmt.Println("Failed to write stack trace.")
