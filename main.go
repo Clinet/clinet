@@ -442,6 +442,7 @@ func spawnBot() int {
 			if err == nil {
 				oldBotProcess.Signal(syscall.SIGTERM)
 				_, _ = oldBotProcess.Wait()
+				os.Remove(os.Args[0] + ".old")
 			}
 		}
 	}
