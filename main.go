@@ -432,20 +432,33 @@ func checkUpdate() {
 }
 
 func spawnBot() int {
-	oldpidBytes, err := ioutil.ReadFile(".oldpid")
-	if err == nil && len(oldpidBytes) > 0 {
-		defer os.Remove(".oldpid")
+	oldmpidBytes, err := ioutil.ReadFile(".oldmpid")
+	if err == nil && len(oldmpidBytes) > 0 {
+		defer os.Remove(".oldmpid")
 
-		oldpid, err := strconv.Atoi(string(oldpidBytes))
+		oldmpid, err := strconv.Atoi(string(oldmpidBytes))
 		if err == nil {
-			oldBotProcess, err := os.FindProcess(oldpid)
+			oldMasterProcess, err := os.FindProcess(oldmpid)
 			if err == nil {
-				oldBotProcess.Signal(syscall.SIGTERM)
-				_, _ = oldBotProcess.Wait()
-				os.Remove(os.Args[0] + ".old")
+				oldMasterProcess.Signal(syscall.SIGTERM)
+				_, _ = oldMasterProcess.Wait()
 			}
 		}
 	}
+	oldbpidBytes, err := ioutil.ReadFile(".oldbpid")
+	if err == nil && len(oldbpidBytes) > 0 {
+		defer os.Remove(".oldbpid")
+
+		oldbpid, err := strconv.Atoi(string(oldbpidBytes))
+		if err == nil {
+			oldBotProcess, err := os.FindProcess(oldbpid)
+			if err == nil {
+				oldBotProcess.Signal(syscall.SIGTERM)
+				_, _ = oldBotProcess.Wait()
+			}
+		}
+	}
+	os.Remove(os.Args[0] + ".old")
 
 	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
 	botProcess.Stdout = os.Stdout

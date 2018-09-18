@@ -166,8 +166,11 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	//Write the current channel ID to an update file for the bot to read after restarting
 	ioutil.WriteFile(".update", []byte(env.Channel.ID), 0644)
 
-	//Write the current master PID to an oldpid file for the bot to read after restarting
-	ioutil.WriteFile(".oldpid", []byte(strconv.Itoa(masterPID)), 0644)
+	//Write the current master PID to an oldmpid file for the bot to read after restarting
+	ioutil.WriteFile(".oldmpid", []byte(strconv.Itoa(masterPID)), 0644)
+
+	//Write the current bot PID to an oldbpid file for the bot to read after restarting
+	ioutil.WriteFile(".oldbpid", []byte(strconv.Itoa(os.Getpid())), 0644)
 
 	//Save the state so it's not lost
 	stateSave()
