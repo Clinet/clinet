@@ -69,10 +69,6 @@ func main() {
 		debugLog("Process mode: MASTER\n", true)
 	}
 
-	if killOldBot == "true" {
-		killSpawnBot()
-	}
-
 	if configIsBot == "true" {
 		debugLog("> Loading settings...", true)
 		configFileHandle, err := os.Open(configFile)
@@ -437,17 +433,6 @@ func checkUpdate() {
 }
 
 func spawnBot() int {
-	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
-	botProcess.Stdout = os.Stdout
-	botProcess.Stderr = os.Stderr
-	err := botProcess.Start()
-	if err != nil {
-		panic(err)
-	}
-	return botProcess.Process.Pid
-}
-
-func killSpawnBot() int {
 	oldpidBytes, err := ioutil.ReadFile(".oldpid")
 	if err == nil && len(oldpidBytes) > 0 {
 		defer os.Remove(".oldpid")

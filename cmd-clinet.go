@@ -181,7 +181,7 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		return NewErrorEmbed("Update Error", "Unable to spawn the updated bot process.")
 	}
 
-	return nil
+	return NewGenericEmbed("Update", "Waiting for update to finish...")
 }
 
 func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
