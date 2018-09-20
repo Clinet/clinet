@@ -55,6 +55,7 @@ func initCommands() {
 	botData.Commands["join"] = &Command{Function: commandVoiceJoin, HelpText: "Joins the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
 	botData.Commands["leave"] = &Command{Function: commandVoiceLeave, HelpText: "Leaves the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
 	botData.Commands["ping"] = &Command{Function: commandPing, HelpText: "Returns the ping average to Discord."}
+	botData.Commands["botinfo"] = &Command{Function: commandBotInfo, HelpText: "Displays info about the bot's current state."}
 
 	//All user-accessible commands with parameters
 	botData.Commands["help"] = &Command{
@@ -370,18 +371,11 @@ func initCommands() {
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
 
-	//Testing commands, only available if debug mode is enabled
-	if botData.DebugMode {
-		botData.Commands["botinfo"] = &Command{
-			Function: commandBotInfo,
-			HelpText: "Displays info about the bot's current state.",
-		}
-	}
-
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
 	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
 	botData.Commands["update"] = &Command{Function: commandUpdate, HelpText: "Updates the bot to the latest git repo commit.", IsAdministrative: true}
+	botData.Commands["debug"] = &Command{Function: commandDebug, HelpText: "Toggles debug mode.", IsAdministrative: true}
 }
 
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
