@@ -27,7 +27,7 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	verificationLevel := "None"
-	switch guild.VerificationLevel {
+	switch env.Guild.VerificationLevel {
 	case discordgo.VerificationLevelLow:
 		verificationLevel = "Low"
 	case discordgo.VerificationLevelMedium:
@@ -37,8 +37,8 @@ func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.Messag
 	}
 
 	afkChannel := "None"
-	if guild.AfkChannelID != "" {
-		channel, err := botData.DiscordSession.Channel(guild.AfkChannelID)
+	if env.Guild.AfkChannelID != "" {
+		channel, err := botData.DiscordSession.Channel(env.Guild.AfkChannelID)
 		if err == nil && channel.Type == discordgo.ChannelTypeGuildVoice {
 			afkChannel = ":speaker: " + channel.Name
 		}
