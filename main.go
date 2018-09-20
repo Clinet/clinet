@@ -20,6 +20,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/koffeinsource/go-klogger"
+	"github.com/mitchellh/go-ps"
 	"github.com/nishanths/go-xkcd"
 	"github.com/robfig/cron"
 	"google.golang.org/api/googleapi/transport"
@@ -227,7 +228,7 @@ func main() {
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	defer recoverPanic()
 
-	botData.BotName = botData.DiscordSession.State.User.Username
+	botData.BotName = session.State.User.Username
 
 	updateRandomStatus(session, 0)
 	cronjob := cron.New()
@@ -432,29 +433,17 @@ func checkUpdate() {
 }
 
 func spawnBot() int {
-	oldmpidBytes, err := ioutil.ReadFile(".oldmpid")
-	if err == nil && len(oldmpidBytes) > 0 {
-		defer os.Remove(".oldmpid")
-
-		oldmpid, err := strconv.Atoi(string(oldmpidBytes))
+	if killOldBot == "true" {
+		processList, err := ps.Processes()
 		if err == nil {
-			oldMasterProcess, err := os.FindProcess(oldmpid)
-			if err == nil {
-				oldMasterProcess.Signal(syscall.SIGTERM)
-				_, _ = oldMasterProcess.Wait()
-			}
-		}
-	}
-	oldbpidBytes, err := ioutil.ReadFile(".oldbpid")
-	if err == nil && len(oldbpidBytes) > 0 {
-		defer os.Remove(".oldbpid")
-
-		oldbpid, err := strconv.Atoi(string(oldbpidBytes))
-		if err == nil {
-			oldBotProcess, err := os.FindProcess(oldbpid)
-			if err == nil {
-				oldBotProcess.Signal(syscall.SIGTERM)
-				_, _ = oldBotProcess.Wait()
+			for _, process := range processList {
+				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == os.Args[0] {
+					oldProcess, err := os.FindProcess(process.Pid())
+					if err == nil {
+						oldProcess.Signal(syscall.SIGTERM)
+						_, _ = oldProcess.Wait()
+					}
+				}
 			}
 		}
 	}
@@ -463,7 +452,7 @@ func spawnBot() int {
 	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
-	err = botProcess.Start()
+	err := botProcess.Run()
 	if err != nil {
 		panic(err)
 	}
