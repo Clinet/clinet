@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -437,11 +438,10 @@ func spawnBot() int {
 		processList, err := ps.Processes()
 		if err == nil {
 			for _, process := range processList {
-				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == os.Args[0] {
+				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == filepath.Base(os.Args[0]) {
 					oldProcess, err := os.FindProcess(process.Pid())
 					if err == nil {
-						oldProcess.Signal(syscall.SIGTERM)
-						_, _ = oldProcess.Wait()
+						oldProcess.Signal(syscall.SIGKILL)
 					}
 				}
 			}
