@@ -26,24 +26,6 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 )
 
-func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	guildCount := len(botData.DiscordSession.State.Guilds)
-	commandCount := len(botData.Commands)
-
-	return NewEmbed().
-		SetTitle("Bot Info").
-		SetDescription("Info regarding this bot.").
-		AddField("Bot Name", botData.BotName).
-		AddField("Bot Owner", "<@!"+botData.BotOwnerID+">").
-		AddField("Guild Count", strconv.Itoa(guildCount)).
-		AddField("Default Prefix", botData.CommandPrefix).
-		AddField("Command Count", strconv.Itoa(commandCount)).
-		AddField("Disabled Wolfram|Alpha Pods", strings.Join(botData.BotOptions.WolframDeniedPods, ", ")).
-		AddField("Debug Mode", strconv.FormatBool(botData.DebugMode)).
-		InlineAllFields().
-		SetColor(0x1C1C1C).MessageEmbed
-}
-
 func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	configFileHandle, err := os.Open(configFile)
 	defer configFileHandle.Close()

@@ -55,7 +55,17 @@ func initCommands() {
 	botData.Commands["join"] = &Command{Function: commandVoiceJoin, HelpText: "Joins the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
 	botData.Commands["leave"] = &Command{Function: commandVoiceLeave, HelpText: "Leaves the current voice channel.", RequiredPermissions: discordgo.PermissionVoiceConnect}
 	botData.Commands["ping"] = &Command{Function: commandPing, HelpText: "Returns the ping average to Discord."}
+
+	//All user-accessible info commands with or without parameters
 	botData.Commands["botinfo"] = &Command{Function: commandBotInfo, HelpText: "Displays info about the bot's current state."}
+	botData.Commands["serverinfo"] = &Command{Function: commandServerInfo, HelpText: "Displays info about the current server."}
+	botData.Commands["userinfo"] = &Command{
+		Function: commandUserInfo,
+		HelpText: "Displays info about the current or specified user.",
+		Arguments: []CommandArgument{
+			{Name: "user", Description: "The user to view info about", ArgType: "mention"},
+		},
+	}
 
 	//All user-accessible commands with parameters
 	botData.Commands["help"] = &Command{
@@ -370,6 +380,7 @@ func initCommands() {
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
+	botData.Commands["guildinfo"] = &Command{IsAlternateOf: "serverinfo"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}

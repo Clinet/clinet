@@ -83,6 +83,18 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 	return false, nil
 }
 
+// CreationTime returns the creation time of a Snowflake ID relative to the creation of Discord.
+// Taken from https://github.com/Moonlington/FloSelfbot/blob/master/commands/commandutils.go#L117
+func CreationTime(ID string) (t time.Time, err error) {
+	i, err := strconv.ParseInt(ID, 10, 64)
+	if err != nil {
+		return
+	}
+	timestamp := (i >> 22) + 1420070400000
+	t = time.Unix(timestamp/1000, 0)
+	return
+}
+
 type CaseInsensitiveReplacer struct {
 	toReplace   *regexp.Regexp
 	replaceWith string
