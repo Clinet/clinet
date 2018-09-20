@@ -368,7 +368,7 @@ func initCommands() {
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
-	botData.Commands["uwu"] = &Command{IsAlternateOf: "uwu"}
+	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
 
 	//Testing commands, only available if debug mode is enabled
 	if botData.DebugMode {

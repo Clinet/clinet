@@ -95,7 +95,7 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 
 	output, err := golangver.CombinedOutput()
 	if len(output) <= 0 || err != nil {
-		return NewErrorEmbed("Update Error", "Unable to execute ``go version``. Make sure Go ["+runtime.Version()+"] is installed on the host machine.\n\n"+fmt.Sprintf("%s\n```%v```", output, err))
+		return NewErrorEmbed("Update Error", "Unable to execute ``go version``. Make sure Go ["+GolangVersion+"] is installed on the host machine.\n\n"+fmt.Sprintf("%s\n```%v```", output, err))
 	}
 
 	//Check if the govvv wrapper is installed
