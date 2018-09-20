@@ -40,6 +40,7 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		AddField("Command Count", strconv.Itoa(commandCount)).
 		AddField("Disabled Wolfram|Alpha Pods", strings.Join(botData.BotOptions.WolframDeniedPods, ", ")).
 		AddField("Debug Mode", strconv.FormatBool(botData.DebugMode)).
+		InlineAllFields().
 		SetColor(0x1C1C1C).MessageEmbed
 }
 
