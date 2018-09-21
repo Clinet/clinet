@@ -401,7 +401,7 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 		if command.IsAdministrative && env.User.ID != botData.BotOwnerID {
 			return NewErrorEmbed("Command Error - Not Authorized (NA)", "You are not authorized to use this command.")
 		}
-		if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
+		if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
 			if len(args) >= len(command.RequiredArguments) {
 				return command.Function(args, env)
 			}

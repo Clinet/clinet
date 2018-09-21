@@ -53,6 +53,9 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 		if err != nil {
 			return false, err
 		}
+		if role.Permissions&discordgo.PermissionAdministrator != 0 {
+			return true, nil
+		}
 		if role.Permissions&permission != 0 {
 			return true, nil
 		}
