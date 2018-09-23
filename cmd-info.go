@@ -9,7 +9,12 @@ import (
 
 func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	guildCount := len(botData.DiscordSession.State.Guilds)
-	commandCount := len(botData.Commands)
+	commandCount := 0
+	for _, command := range botData.Commands {
+		if command.IsAlternateOf == "" {
+			commandCount++
+		}
+	}
 
 	return NewEmbed().
 		SetTitle("Bot Info").
