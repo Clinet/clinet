@@ -261,7 +261,7 @@ func discordMessageReactionAdd(session *discordgo.Session, reaction *discordgo.M
 
 	entry := createStarboardEntry(stars, message, channel)
 
-	//Check to see if the entry already exists, and if so, update it instead of create a new one
+	//Check to see if the entry already exists, and if so, update it instead of creating a new one
 	for _, starboardEntry := range starboards[channel.GuildID].StarboardEntries {
 		if starboardEntry.SourceMessageID == message.ID {
 			if channel.NSFW {

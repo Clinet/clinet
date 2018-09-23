@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -491,14 +492,13 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		}
 	}
 
-	if len(guildData[env.Guild.ID].AudioQueue) == 0 {
-		return NewErrorEmbed("Queue Error", "There are no entries in the queue.")
-	}
-	queueList := ""
+	queueList := "There are no entries in the queue."
 	for queueEntryNumber, queueEntry := range guildData[env.Guild.ID].AudioQueue {
 		displayNumber := strconv.Itoa(queueEntryNumber + 1)
-		if queueList != "" {
+		if queueList != "There are no entries in the queue." {
 			queueList += "\n"
+		} else {
+			queueList = ""
 		}
 		queueList += displayNumber + ". ``" + secondsToHuman(queueEntry.Duration) + "`` "
 		if queueEntry.Title != "" && queueEntry.Author != "" {
@@ -508,7 +508,40 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		}
 		queueList += " | Requested by <@" + queueEntry.Requester.ID + ">"
 	}
-	return NewGenericEmbed("Queue for "+env.Guild.Name, queueList)
+
+	queueEmbed := NewEmbed().
+		SetTitle("Queue for " + env.Guild.Name).
+		SetDescription(queueList).
+		SetColor(0x1C1C1C)
+
+	nowPlaying := guildData[env.Guild.ID].AudioNowPlaying
+	nowPlayingField := &discordgo.MessageEmbedField{
+		Name:  "Now Playing",
+		Value: "There is no audio currently playing.",
+	}
+
+	if voiceIsStreaming(env.Guild.ID) {
+		switch nowPlaying.Type {
+		case "youtube":
+			nowPlayingField.Name += " from YouTube"
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
+		case "soundcloud":
+			nowPlayingField.Name += " from SoundCloud"
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
+		default:
+			if nowPlaying.Author != "" && nowPlaying.Title != "" {
+				nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+			} else {
+				nowPlayingField.Value = nowPlaying.MediaURL
+			}
+		}
+
+	}
+	queueEmbed.Fields = append(queueEmbed.Fields, nowPlayingField)
+
+	return queueEmbed.MessageEmbed
 }
 
 func commandNowPlaying(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
