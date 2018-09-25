@@ -66,7 +66,12 @@ For a list of available commands, use the `cli$help` command in a server with Cl
 ## Rolling your own locally
 
 In order to run `Clinet` locally, you must have already installed a working Golang
-environment on your development system. Clinet is currently built using Golang `1.11`.
+environment on your development system. Clinet is currently built using Golang `1.11`,
+and other versions of Go are guaranteed to be supported at this time.
+
+### Fetching Clinet and dependencies
+
+Run `go get github.com/JoshuaDoes/clinet` and watch the magic happen!
 
 ### Building
 
