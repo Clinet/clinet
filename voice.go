@@ -128,7 +128,7 @@ func (page *YouTubeResultNav) Next() error {
 		return errors.New("Could not find any video results for the next page")
 	}
 
-	page.PageNumber--
+	page.PageNumber++
 	page.Results = response.Items
 	page.PrevPageToken = response.PrevPageToken
 	page.NextPageToken = response.NextPageToken
