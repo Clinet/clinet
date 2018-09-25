@@ -96,6 +96,7 @@ func (page *YouTubeResultNav) Prev() error {
 	searchCall := botData.BotClients.YouTube.Search.
 		List("id").
 		Q(page.Query).
+		MaxResults(page.MaxResults).
 		PageToken(page.PrevPageToken)
 
 	response, err := searchCall.Do()
@@ -121,6 +122,7 @@ func (page *YouTubeResultNav) Next() error {
 	searchCall := botData.BotClients.YouTube.Search.
 		List("id").
 		Q(page.Query).
+		MaxResults(page.MaxResults).
 		PageToken(page.NextPageToken)
 
 	response, err := searchCall.Do()
