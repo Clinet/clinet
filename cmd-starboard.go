@@ -360,7 +360,9 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 				} else {
 					session.ChannelMessageDelete(starboards[channel.GuildID].ChannelID, starboardEntry.StarboardMessageID)
 				}
-				starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1])
+                if len(starboards[channel.GuildID].StarboardEntries) > 1 {
+    				starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1])
+                }
 				return
 			}
 		}
