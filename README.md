@@ -66,41 +66,12 @@ For a list of available commands, use the `cli$help` command in a server with Cl
 ## Rolling your own locally
 
 In order to run `Clinet` locally, you must have already installed a working Golang
-environment on your development system and installed the package dependencies that
-Clinet relies on to fully function. Clinet is currently built using Golang `1.10.3`.
-
-### Dependencies
-
-In order to build Clinet, you must satisfy the dependency requirements. This can either
-be done by go-getting Clinet directly with `go get github.com/JoshuaDoes/clinet` or by
-following the instructions for each dependency below manually.
-
-| Package Name | Notes |
-| ------------ | ----- |
-| [duckduckgolang](https://github.com/JoshuaDoes/duckduckgolang) |
-| [go-soundcloud](https://github.com/JoshuaDoes/go-soundcloud) |
-| [go-wolfram](https://github.com/JoshuaDoes/go-wolfram) |
-| [discordgo](https://github.com/bwmarrin/discordgo) | Make sure to switch to the `develop` branch |
-| [github](https://github.com/google/go-github/github) |
-| [dca](https://github.com/jonas747/dca) |
-| [go-imgur](https://github.com/koffeinsource/go-imgur) |
-| [go-klogger](https://github.com/koffeinsource/go-klogger) |
-| [go-xkcd](https://github.com/nishanths/go-xkcd) |
-| [cron](https://github.com/robfig/cron) |
-| [ytdl](https://github.com/rylio/ytdl) |
-| [transport](https://google.golang.org/api/googleapi/transport) |
-| [youtube](https://google.golang.org/api/youtube/v3) |
-| [urbandictionary](https://github.com/JoshuaDoes/urbandictionary) |
-| [goprobe](https://github.com/JoshuaDoes/goprobe) |
-| [go-cve](https://github.com/JoshuaDoes/go-cve) |
-| [goeip](https://github.com/JoshuaDoes/goeip) |
-| [prose](https://gopkg.in/jdkato/prose.v2) |
-| [structs](https://github.com/fatih/structs) |
+environment on your development system. Clinet is currently built using Golang `1.11`.
 
 ### Building
 
 `Clinet` is built using a compiler wrapper known as `govvv`, and opts to use an
-altered version to support additional things. govvv acts as a git version injector
+altered version to support additional things. govvv acts as a git status injector
 for the output compiled binary, taking current statuses of the git repo Clinet is
 in and injecting them into uninitialized strings in the main source file to be used
 in the command `cli$version`. Simply follow the instructions on the [govvv](https://github.com/JoshuaDoes/govvv) repo page
@@ -240,7 +211,7 @@ The configuration file by default will never be included in git commits, as decl
 
 ### Running `Clinet`
 
-Finally, to run Clinet, simply type `./clinet-discord` in your terminal/shell or `.\clinet-discord.exe` in your command prompt. If everything goes well, you can find your bot user application and generate an OAuth2 URL to invite the bot into various servers in which you have the `Administrator` permission of.
+Finally, to run Clinet, simply type `./clinet` in your terminal/shell or `.\clinet.exe` in your command prompt. If everything goes well, you can find your bot user application and generate an OAuth2 URL to invite the bot into various servers in which you have the `Administrator` permission of.
 
 ### Panic recovery
 
@@ -251,6 +222,10 @@ Running Clinet by itself will spawn a "master" process with a few small jobs: Sp
 ### States
 
 If you close Clinet after running it long enough for it to merely exist on Discord, you'll notice a new folder called `state`. This folder contains "states" of various structs within Clinet's memory, stored in JSON format. Upon reopening Clinet, these state files are then loaded into memory so Clinet can (for the most part) return to its original "state" before it was closed. States were added as helpers to panic recovery so users can continue with what they were doing.
+
+### Updating
+
+If you want to keep Clinet up to date without manually running ``go get github.com/JoshuaDoes/clinet``, ``go build github.com/JoshuaDoes/clinet``, and running Clinet again, you have the full ability to do so! Make sure your Discord user ID is specified as the bot owner in Clinet's configuration and run `cli$update` whenever a new commit is pushed. And if you need to make sure it works without waiting on a new update, run `cli$update force`.
 
 ----
 
