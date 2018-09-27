@@ -506,7 +506,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		} else {
 			queueList += queueEntry.MediaURL
 		}
-		queueList += " | Requested by <@" + queueEntry.Requester.ID + ">"
+		queueList += "\nRequested by <@!" + queueEntry.Requester.ID + ">"
 	}
 
 	queueEmbed := NewEmbed().
@@ -524,17 +524,17 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		switch nowPlaying.Type {
 		case "youtube":
 			nowPlayingField.Name += " from YouTube"
-			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
 			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
 		case "soundcloud":
 			nowPlayingField.Name += " from SoundCloud"
-			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
 			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
 		default:
 			if nowPlaying.Author != "" && nowPlaying.Title != "" {
-				nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author)
+				nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
 			} else {
-				nowPlayingField.Value = nowPlaying.MediaURL
+				nowPlayingField.Value = fmt.Sprintf("%s\nRequested by <@!%s>", nowPlaying.MediaURL, nowPlaying.Requester.ID)
 			}
 		}
 
