@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -159,13 +161,21 @@ func commandStarboard(args []string, env *CommandEnvironment) *discordgo.Message
 		if len(args) == 1 {
 			return NewGenericEmbed("Starboard", "Emoji: "+starboards[env.Guild.ID].Emoji)
 		}
+		if strings.Contains(args[1], ":") {
+			//starboards[env.Guild.ID].Emoji = GetStringInBetween(args[1], ":", ">")
+			return NewErrorEmbed("Starboard Error", "Custom emojis are not permitted at this time.")
+		}
 		starboards[env.Guild.ID].Emoji = args[1]
 		return NewGenericEmbed("Starboard", "Set the emoji to "+args[1]+".")
 	case "nsfwemoji":
 		if len(args) == 1 {
 			return NewGenericEmbed("Starboard", "NSFW Emoji: "+starboards[env.Guild.ID].NSFWEmoji)
 		}
-		starboards[env.Guild.ID].Emoji = args[1]
+		if strings.Contains(args[1], ":") {
+			//starboards[env.Guild.ID].NSFWEmoji = GetStringInBetween(args[1], ":", ">")
+			return NewErrorEmbed("Starboard Error", "Custom emojis are not permitted at this time.")
+		}
+		starboards[env.Guild.ID].NSFWEmoji = args[1]
 		return NewGenericEmbed("Starboard", "Set the NSFW emoji to "+args[1]+".")
 	case "selfstar":
 		if len(args) == 1 {
@@ -233,29 +243,18 @@ func discordMessageReactionAdd(session *discordgo.Session, reaction *discordgo.M
 	stars := 0
 	for _, msgReaction := range message.Reactions {
 		if channel.NSFW {
-			if msgReaction.Emoji.Name == starboards[channel.GuildID].NSFWEmoji {
-				stars = msgReaction.Count
-				break
-			}
-			if msgReaction.Emoji.ID == starboards[channel.GuildID].NSFWEmoji {
+			if msgReaction.Emoji.Name == starboards[channel.GuildID].NSFWEmoji || starboards[channel.GuildID].NSFWEmoji == msgReaction.Emoji.Name+":"+msgReaction.Emoji.ID {
 				stars = msgReaction.Count
 				break
 			}
 		} else {
-			if msgReaction.Emoji.Name == starboards[channel.GuildID].Emoji {
-				stars = msgReaction.Count
-				break
-			}
-			if msgReaction.Emoji.ID == starboards[channel.GuildID].Emoji {
+			if msgReaction.Emoji.Name == starboards[channel.GuildID].Emoji || starboards[channel.GuildID].Emoji == msgReaction.Emoji.Name+":"+msgReaction.Emoji.ID {
 				stars = msgReaction.Count
 				break
 			}
 		}
 	}
-	if stars == 0 {
-		return
-	}
-	if stars < starboards[channel.GuildID].MinimumStars {
+	if stars == 0 || stars < starboards[channel.GuildID].MinimumStars {
 		return
 	}
 
@@ -265,9 +264,9 @@ func discordMessageReactionAdd(session *discordgo.Session, reaction *discordgo.M
 	for _, starboardEntry := range starboards[channel.GuildID].StarboardEntries {
 		if starboardEntry.SourceMessageID == message.ID {
 			if channel.NSFW {
-				session.ChannelMessageEditEmbed(starboards[channel.GuildID].NSFWChannelID, starboardEntry.SourceMessageID, entry)
+				session.ChannelMessageEditEmbed(starboards[channel.GuildID].NSFWChannelID, starboardEntry.StarboardMessageID, entry)
 			} else {
-				session.ChannelMessageEditEmbed(starboards[channel.GuildID].ChannelID, starboardEntry.SourceMessageID, entry)
+				session.ChannelMessageEditEmbed(starboards[channel.GuildID].ChannelID, starboardEntry.StarboardMessageID, entry)
 			}
 			return
 		}
@@ -337,16 +336,8 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 				stars = msgReaction.Count
 				break
 			}
-			if msgReaction.Emoji.ID == starboards[channel.GuildID].NSFWEmoji {
-				stars = msgReaction.Count
-				break
-			}
 		} else {
 			if msgReaction.Emoji.Name == starboards[channel.GuildID].Emoji {
-				stars = msgReaction.Count
-				break
-			}
-			if msgReaction.Emoji.ID == starboards[channel.GuildID].Emoji {
 				stars = msgReaction.Count
 				break
 			}
@@ -360,9 +351,10 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 				} else {
 					session.ChannelMessageDelete(starboards[channel.GuildID].ChannelID, starboardEntry.StarboardMessageID)
 				}
-                if len(starboards[channel.GuildID].StarboardEntries) > 1 {
-    				starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1])
-                }
+
+				starboards[channel.GuildID].StarboardEntries[i] = starboards[channel.GuildID].StarboardEntries[len(starboards[channel.GuildID].StarboardEntries)-1]
+				starboards[channel.GuildID].StarboardEntries = starboards[channel.GuildID].StarboardEntries[:len(starboards[channel.GuildID].StarboardEntries)-1]
+
 				return
 			}
 		}
@@ -458,11 +450,20 @@ func createStarboardEntry(stars int, message *discordgo.Message, channel *discor
 		SetAuthor(message.Author.Username+"#"+message.Author.Discriminator+" in #"+channel.Name, message.Author.AvatarURL("2048"))
 
 	if channel.NSFW {
-		entry.SetFooter(starboards[channel.GuildID].NSFWEmoji + " " + strconv.Itoa(stars)).
-			SetColor(0xDEA7DF)
+		if strings.Contains(starboards[channel.GuildID].NSFWEmoji, ":") {
+			entry.SetFooter("<:" + starboards[channel.GuildID].NSFWEmoji + "> " + strconv.Itoa(stars))
+		} else {
+			entry.SetFooter(starboards[channel.GuildID].NSFWEmoji + " " + strconv.Itoa(stars))
+		}
+		entry.SetColor(0xDEA7DF)
 	} else {
-		entry.SetFooter(starboards[channel.GuildID].Emoji + " " + strconv.Itoa(stars)).
-			SetColor(0xFFE200)
+		if strings.Contains(starboards[channel.GuildID].Emoji, ":") {
+			emoji := GetStringInBetween(":"+starboards[channel.GuildID].Emoji, ":", ":")
+			entry.SetFooter(":" + emoji + ": " + strconv.Itoa(stars))
+		} else {
+			entry.SetFooter(starboards[channel.GuildID].Emoji + " " + strconv.Itoa(stars))
+		}
+		entry.SetColor(0xFFE200)
 	}
 
 	if message.Content != "" {

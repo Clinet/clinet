@@ -4,6 +4,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -160,4 +161,16 @@ func remove(s []string, r string) []string {
 		}
 	}
 	return s
+}
+
+// GetStringInBetween returns empty string if no start string found
+func GetStringInBetween(str string, start string, end string) (result string) {
+	s := strings.Index(str, start)
+	if s == -1 {
+		return
+	}
+	s += len(start)
+	str = str[s:]
+	e := strings.Index(str, end)
+	return str[:e]
 }
