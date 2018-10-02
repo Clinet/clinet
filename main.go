@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
@@ -43,6 +44,9 @@ var (
 
 	//Contains guild-specific starboard data in a string map, where key = guild ID
 	starboards = make(map[string]*Starboard)
+
+	//Contains all remind entries
+	remindEntries = make([]RemindEntry, 0)
 )
 
 var (
@@ -235,6 +239,12 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	cronjob := cron.New()
 	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, 0) })
 	cronjob.Start()
+
+	oldRemindEntries := remindEntries
+	remindEntries = make([]RemindEntry, 0)
+	for i := range oldRemindEntries {
+		remindWhen(oldRemindEntries[i].UserID, oldRemindEntries[i].ChannelID, oldRemindEntries[i].Message, oldRemindEntries[i].Added, oldRemindEntries[i].When, time.Now())
+	}
 }
 
 func updateRandomStatus(session *discordgo.Session, status int) {
@@ -317,6 +327,19 @@ func stateSave() {
 			debugLog(err.Error(), true)
 		}
 	}
+
+	debugLog("> Saving remind entries...", true)
+	remindEntriesJSON, err := json.MarshalIndent(remindEntries, "", "\t")
+	if err != nil {
+		debugLog("> Error saving remind entries", true)
+		debugLog(err.Error(), true)
+	} else {
+		err = ioutil.WriteFile("state/reminds.json", remindEntriesJSON, 0644)
+		if err != nil {
+			debugLog("> Error saving remind entries", true)
+			debugLog(err.Error(), true)
+		}
+	}
 }
 
 func stateRestore() {
@@ -366,6 +389,18 @@ func stateRestore() {
 		}
 	} else {
 		debugLog("> No starboards state was found", true)
+	}
+
+	remindEntriesJSON, err := ioutil.ReadFile("state/reminds.json")
+	if err == nil {
+		debugLog("> Restoring remind entries...", true)
+		err = json.Unmarshal(remindEntriesJSON, &remindEntries)
+		if err != nil {
+			debugLog("> Error restoring remind entries", true)
+			debugLog(err.Error(), true)
+		}
+	} else {
+		debugLog("> No remind entries were found", true)
 	}
 }
 

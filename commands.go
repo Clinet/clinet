@@ -76,6 +76,16 @@ func initCommands() {
 			{Name: "command", Description: "The command to view help for", ArgType: "string"},
 		},
 	}
+	botData.Commands["remind"] = &Command{
+		Function: commandRemind,
+		HelpText: "Reminds you with the written message at the specified time.",
+		RequiredArguments: []string{
+			"message and time",
+		},
+		Arguments: []CommandArgument{
+			{Name: "message and time", Description: "The message to remind you with, including what time to remind you at", ArgType: "string"},
+		},
+	}
 	botData.Commands["hewwo"] = &Command{
 		Function: commandHewwo,
 		HelpText: "Hewwo!!! (´・ω・｀)",
