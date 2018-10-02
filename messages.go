@@ -92,14 +92,62 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	if guildSettings[guild.ID].BotPrefix != "" {
 		if strings.HasPrefix(content, guildSettings[guild.ID].BotPrefix) {
 			cmdMsg := strings.TrimPrefix(content, guildSettings[guild.ID].BotPrefix)
+
 			cmd := strings.Split(cmdMsg, " ")
+
+			//0>-1>>>>>-2>>>>>>>>>>>>>>>>>>-3>>>>>>>>>>>>
+			//yt search "dance gavin dance" "bloodsucker"
+			newCmd := make([]string, 0)
+			for i := 0; i < len(cmd); i++ {
+				if strings.HasPrefix(cmd[i], "\"") && !strings.HasPrefix(cmd[i], "\"\"") {
+					for j := i; j < len(cmd); j++ {
+						if strings.HasSuffix(cmd[j], "\"") && !strings.HasSuffix(cmd[j], "\"\"") {
+							newArg := strings.Join(cmd[i:j+1], " ")
+							newArg = strings.TrimPrefix(newArg, "\"")
+							newArg = strings.TrimSuffix(newArg, "\"")
+							newCmd = append(newCmd, newArg)
+							i = j
+							break
+						}
+					}
+				} else {
+					newCmd = append(newCmd, cmd[i])
+				}
+			}
+			if len(newCmd) > 0 {
+				cmd = newCmd
+			}
 
 			commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
 			responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 		}
 	} else if strings.HasPrefix(content, botData.CommandPrefix) {
 		cmdMsg := strings.TrimPrefix(content, botData.CommandPrefix)
+
 		cmd := strings.Split(cmdMsg, " ")
+
+		//0>-1>>>>>-2>>>>>>>>>>>>>>>>>>-3>>>>>>>>>>>>
+		//yt search "dance gavin dance" "bloodsucker"
+		newCmd := make([]string, 0)
+		for i := 0; i < len(cmd); i++ {
+			if strings.HasPrefix(cmd[i], "\"") && !strings.HasPrefix(cmd[i], "\"\"") {
+				for j := i; j < len(cmd); j++ {
+					if strings.HasSuffix(cmd[j], "\"") && !strings.HasSuffix(cmd[j], "\"\"") {
+						newArg := strings.Join(cmd[i:j+1], " ")
+						newArg = strings.TrimPrefix(newArg, "\"")
+						newArg = strings.TrimSuffix(newArg, "\"")
+						newCmd = append(newCmd, newArg)
+						i = j
+						break
+					}
+				}
+			} else {
+				newCmd = append(newCmd, cmd[i])
+			}
+		}
+		if len(newCmd) > 0 {
+			cmd = newCmd
+		}
 
 		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
 		responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
