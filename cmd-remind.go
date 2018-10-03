@@ -47,10 +47,10 @@ func remindWhen(userID, channelID, message string, added, when, now time.Time) {
 				SetColor(0x1C1C1C).MessageEmbed,
 		})
 
-		for i := range remindEntries {
+		for i := len(remindEntries) - 1; i >= 0; i-- {
 			if remindEntries[i].UserID == userID && remindEntries[i].Message == message {
-				remindEntries[i] = remindEntries[len(remindEntries)-1]
-				remindEntries = remindEntries[:len(remindEntries)-1]
+				remindEntries = append(remindEntries[:i], remindEntries[i+1:]...)
+				break
 			}
 		}
 	})
