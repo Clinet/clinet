@@ -243,7 +243,7 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	oldRemindEntries := remindEntries
 	remindEntries = make([]RemindEntry, 0)
 	for i := range oldRemindEntries {
-		remindWhen(oldRemindEntries[i].UserID, oldRemindEntries[i].ChannelID, oldRemindEntries[i].Message, oldRemindEntries[i].Added, oldRemindEntries[i].When, time.Now())
+		remindWhen(oldRemindEntries[i].UserID, oldRemindEntries[i].GuildID, oldRemindEntries[i].ChannelID, oldRemindEntries[i].Message, oldRemindEntries[i].Added, oldRemindEntries[i].When, time.Now())
 	}
 }
 
