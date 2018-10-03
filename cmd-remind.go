@@ -29,6 +29,11 @@ func commandRemind(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		return NewErrorEmbed("Remind Error", "There was an error figuring out what time to remind you with this message at.")
 	}
 
+	waitDuration := r.Time.Sub(now)
+	if waitDuration < 0 {
+		return NewErrorEmbed("Remind Error", "That time was "+humanize.Time(r.Time)+"!")
+	}
+
 	defer remindWhen(env.User.ID, env.Guild.ID, env.Channel.ID, text, now, r.Time, now)
 
 	return NewEmbed().
