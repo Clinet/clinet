@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
 	"github.com/fatih/structs"
 )
@@ -30,7 +31,27 @@ func commandSettingsBot(args []string, env *CommandEnvironment) *discordgo.Messa
 
 func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	//We're getting there (⟃ ͜ʖ ⟄)
-	return nil
+
+	switch args[0] {
+	case "timezone", "tz":
+		if len(args) <= 1 {
+			if userSettings[env.User.ID].Timezone == "" {
+				return NewErrorEmbed("User Settings - Timezone Error", "You must specify a timezone!")
+			}
+			location, err := tz.LoadLocation(userSettings[env.User.ID].Timezone)
+			if err != nil {
+				return NewErrorEmbed("User Settings - Timezone Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+			}
+			return NewGenericEmbed("User Settings - Timezone", "Your current timezone is set to ``"+userSettings[env.User.ID].Timezone+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
+		}
+		location, err := tz.LoadLocation(args[1])
+		if err != nil {
+			return NewErrorEmbed("User Settings - Timezone Error", "Invalid timezone!")
+		}
+		userSettings[env.User.ID].Timezone = args[1]
+		return NewGenericEmbed("User Settings - Timezone", "Successfully set your timezone to ``"+args[1]+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
+	}
+	return NewErrorEmbed("User Settings Error", "Error finding the setting ``"+args[0]+"``.")
 }
 
 func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 	"github.com/olebedev/when"
@@ -20,25 +21,34 @@ type RemindEntry struct {
 }
 
 func commandRemind(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	timezone := userSettings[env.User.ID].Timezone
+	if timezone == "" {
+		return NewErrorEmbed("Remind Error", "Please set a timezone first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+	}
+	location, err := tz.LoadLocation(timezone)
+	if err != nil {
+		return NewErrorEmbed("Remind Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+	}
+
 	w := when.EN
 	text := strings.Join(args, " ")
-	now := time.Now()
+	now := time.Now().In(location)
 
 	r, err := w.Parse(text, now)
 	if err != nil || r == nil {
 		return NewErrorEmbed("Remind Error", "There was an error figuring out what time to remind you with this message at.")
 	}
 
-	waitDuration := r.Time.Sub(now)
+	waitDuration := r.Time.In(location).Sub(now)
 	if waitDuration < 0 {
-		return NewErrorEmbed("Remind Error", "That time was "+humanize.Time(r.Time)+"!")
+		return NewErrorEmbed("Remind Error", "That time was "+humanize.Time(r.Time.In(location))+"!")
 	}
 
-	defer remindWhen(env.User.ID, env.Guild.ID, env.Channel.ID, text, now, r.Time, now)
+	defer remindWhen(env.User.ID, env.Guild.ID, env.Channel.ID, text, now.In(location), r.Time.In(location), now.In(location))
 
 	return NewEmbed().
 		SetTitle("Remind").
-		SetDescription("I will give you this reminder "+humanize.Time(r.Time)).
+		SetDescription("I will give you this reminder "+humanize.Time(r.Time.In(location))+" at ``"+r.Time.In(location).String()+"``.").
 		AddField("Reminder", r.Source).
 		SetColor(0x1C1C1C).MessageEmbed
 }

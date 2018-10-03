@@ -20,4 +20,5 @@ type GuildSettings struct { //By default this will only be configurable for user
 type UserSettings struct {
 	Balance     int    `json:"balance"`     //A balance to use as virtual currency for some bot tasks
 	Description string `json:"description"` //A description set by the user
+	Timezone    string `json:"timezone"`    //A timezone set by the user to use in other functions
 }

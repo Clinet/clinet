@@ -342,6 +342,16 @@ func initCommands() {
 			{Name: "prefix", Description: "Sets the bot command prefix", ArgType: "string"},
 		},
 	}
+	botData.Commands["user"] = &Command{
+		Function: commandSettingsUser,
+		HelpText: "Changes the specified settings for the user.",
+		RequiredArguments: []string{
+			"setting (value)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "timezone", Description: "Sets the timezone to use", ArgType: "timezone"},
+		},
+	}
 
 	botData.Commands["starboard"] = &Command{
 		Function:            commandStarboard,
