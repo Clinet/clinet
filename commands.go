@@ -349,6 +349,7 @@ func initCommands() {
 			"setting (value)",
 		},
 		Arguments: []CommandArgument{
+			{Name: "about/aboutme/description/desc/info", Description: "Sets your aboutme or views the aboutme of another user", ArgType: "string/mention"},
 			{Name: "timezone", Description: "Sets the timezone to use", ArgType: "timezone"},
 		},
 	}

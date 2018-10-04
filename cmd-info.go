@@ -17,9 +17,7 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	}
 
 	return NewEmbed().
-		SetTitle("Bot Info").
-		SetDescription("Info regarding this bot.").
-		AddField("Bot Name", botData.BotName).
+		SetAuthor(botData.BotName, botData.DiscordSession.State.User.AvatarURL("2048")).
 		AddField("Bot Owner", "<@!"+botData.BotOwnerID+">").
 		AddField("Guild Count", strconv.Itoa(guildCount)).
 		AddField("Default Prefix", botData.CommandPrefix).
@@ -62,11 +60,11 @@ func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.Messag
 	channelCount := len(env.Guild.Channels)
 	voiceStateCount := len(env.Guild.VoiceStates)
 
+	guildIcon := "https://cdn.discordapp.com/icons/" + env.Guild.ID + "/" + env.Guild.Icon + ".jpg"
+
 	return NewEmbed().
-		SetTitle("Server Info").
-		SetDescription("Info regarding this server.").
+		SetAuthor(env.Guild.Name, guildIcon).
 		AddField("Server ID", env.Guild.ID).
-		AddField("Server Name", env.Guild.Name).
 		AddField("Server Region", env.Guild.Region).
 		AddField("Server Owner", "<@!"+env.Guild.OwnerID+">").
 		AddField("Creation Date", creationDate).
@@ -96,14 +94,21 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 		creationDate = creationTime.Format("01/02/2006 15:04:05 MST")
 	}
 
-	return NewEmbed().
-		SetTitle("User Info - "+user.Username+"#"+user.Discriminator).
-		SetDescription("Info regarding <@!"+user.ID+">.").
+	userInfoEmbed := NewEmbed().
+		SetAuthor(user.Username+"#"+user.Discriminator, user.AvatarURL("2048")).
 		AddField("User ID", user.ID).
-		AddField("Username", user.Username).
 		AddField("Discriminator", user.Discriminator).
 		AddField("Creation Date", creationDate).
 		AddField("Bot", strconv.FormatBool(user.Bot)).
-		InlineAllFields().
-		SetColor(0x1C1C1C).MessageEmbed
+		SetColor(0x1C1C1C)
+
+	if userSettings, found := userSettings[user.ID]; found {
+		if userSettings.AboutMe != "" {
+			userInfoEmbed.AddField("About Me", userSettings.AboutMe)
+		}
+	}
+
+	userInfoEmbed.InlineAllFields()
+
+	return userInfoEmbed.MessageEmbed
 }

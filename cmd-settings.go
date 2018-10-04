@@ -10,6 +10,29 @@ import (
 	"github.com/fatih/structs"
 )
 
+// GuildSettings holds settings specific to a guild
+type GuildSettings struct { //By default this will only be configurable for users in a role with the server admin permission
+	AllowVoice              bool                  `json:"allowVoice"`              //Whether voice commands should be usable in this guild
+	BotAdminRoles           []string              `json:"adminRoles"`              //An array of role IDs that can admin the bot without the guild administrator permission
+	BotAdminUsers           []string              `json:"adminUsers"`              //An array of user IDs that can admin the bot without a guild administrator role
+	BotOptions              BotOptions            `json:"botOptions"`              //The bot options to use in this guild (true gets overridden if global bot config is false)
+	BotPrefix               string                `json:"botPrefix"`               //The bot prefix to use in this guild
+	CustomResponses         []CustomResponseQuery `json:"customResponses"`         //An array of custom responses specific to the guild
+	LogSettings             LogSettings           `json:"logSettings"`             //Logging settings
+	SwearFilter             SwearFilter           `json:"swearFilter"`             //The swear filter settings specific to this guild
+	UserJoinMessage         string                `json:"userJoinMessage"`         //A message to send when a user joins
+	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  //The channel to send the user join message to
+	UserLeaveMessage        string                `json:"userLeaveMessage"`        //A message to send when a user leaves
+	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel"` //The channel to send the user leave message to
+}
+
+// UserSettings holds settings specific to a user
+type UserSettings struct {
+	Balance  int    `json:"balance"`     //A balance to use as virtual currency for some bot tasks
+	AboutMe  string `json:"description"` //An aboutme set by the user
+	Timezone string `json:"timezone"`    //A timezone set by the user to use in other functions
+}
+
 func commandSettingsBot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	switch args[0] {
 	case "prefix":
@@ -33,25 +56,54 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 	//We're getting there (⟃ ͜ʖ ⟄)
 
 	switch args[0] {
+	case "about", "aboutme", "description", "desc", "info":
+		if len(args) <= 1 {
+			if userSettings[env.User.ID].AboutMe == "" {
+				return NewErrorEmbed("User Settings - About Me Error", "You must specify an aboutme to view it.")
+			}
+			return aboutMe(env.User.ID)
+		}
+		if len(args) == 2 && len(env.Message.Mentions) > 0 {
+			return aboutMe(env.Message.Mentions[0].ID)
+		}
+		userSettings[env.User.ID].AboutMe = strings.Join(args[1:], " ")
+		return NewGenericEmbed("User Settings - About Me", "Successfully set your about me!")
 	case "timezone", "tz":
 		if len(args) <= 1 {
 			if userSettings[env.User.ID].Timezone == "" {
-				return NewErrorEmbed("User Settings - Timezone Error", "You must specify a timezone!")
+				return NewErrorEmbed("User Settings - Timezone Error", "You must specify a timezone to view it.")
 			}
 			location, err := tz.LoadLocation(userSettings[env.User.ID].Timezone)
 			if err != nil {
-				return NewErrorEmbed("User Settings - Timezone Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+				return NewErrorEmbed("User Settings - Timezone Error", "You have an invalid timezone set, please set a new one first.\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
 			}
 			return NewGenericEmbed("User Settings - Timezone", "Your current timezone is set to ``"+userSettings[env.User.ID].Timezone+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
 		}
 		location, err := tz.LoadLocation(args[1])
 		if err != nil {
-			return NewErrorEmbed("User Settings - Timezone Error", "Invalid timezone!")
+			return NewErrorEmbed("User Settings - Timezone Error", "Invalid timezone.")
 		}
 		userSettings[env.User.ID].Timezone = args[1]
 		return NewGenericEmbed("User Settings - Timezone", "Successfully set your timezone to ``"+args[1]+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
 	}
 	return NewErrorEmbed("User Settings Error", "Error finding the setting ``"+args[0]+"``.")
+}
+
+func aboutMe(userID string) *discordgo.MessageEmbed {
+	settings, found := userSettings[userID]
+	if !found {
+		return NewErrorEmbed("About Me - Error", "Error finding the aboutme for <@!"+userID+">.")
+	}
+
+	user, err := botData.DiscordSession.User(userID)
+	if err != nil {
+		return NewErrorEmbed("About Me - Error", "Error finding the user <@!"+userID+">.")
+	}
+
+	return NewEmbed().
+		SetAuthor(user.Username+"#"+user.Discriminator, user.AvatarURL("2048")).
+		AddField("About Me", settings.AboutMe).
+		SetColor(0x1C1C1C).MessageEmbed
 }
 
 func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

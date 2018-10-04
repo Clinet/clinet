@@ -1,3 +1,7 @@
+4d63.com/tz v0.0.0-20180303073054-73a1e3d39b09 h1:+cBKUfpcDWhKRJs8B4IwuA9x52JIFEud1O8tRPH/qvY=
+4d63.com/tz v0.0.0-20180303073054-73a1e3d39b09/go.mod h1:Wb9xUAJLUbmcxZn11yBmZQ2VbDwHL+JXn9gT+a3S1uc=
+github.com/AlekSi/pointer v1.0.0 h1:KWCWzsvFxNLcmM5XmiqHsGTTsuwZMsLFwWF9Y+//bNE=
+github.com/AlekSi/pointer v1.0.0/go.mod h1:1kjywbfcPFCmncIxtk6fIEub6LKrfMz3gc5QKVOSOA8=
 github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4 h1:Xnyp6friexiRjOXnWPHtab+QsWGAJ+ZJ4lRwSYWKSuQ=
 github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4/go.mod h1:ayOZWVLVr/9vO5CBOLNxRUtXyQnkXcX/b8HPDXecE00=
 github.com/JoshuaDoes/go-cve v0.0.0-20180802130150-ddfd9d0080df h1:3WPnjKzMswPRCvKFZP0uQCrvuU1YsC3JxzfQFG5IfTA=
@@ -32,6 +36,8 @@ github.com/deckarep/golang-set v1.7.1 h1:SCQV0S6gTtp6itiFrTqI+pfmJ4LN85S1YzhDf9r
 github.com/deckarep/golang-set v1.7.1/go.mod h1:93vsz/8Wt4joVM7c2AVqh+YRMiUSc14yDtF28KmMOgQ=
 github.com/disintegration/gift v1.1.2 h1:9ZyHJr+kPamiH10FX3Pynt1AxFUob812bU9Wt4GMzhs=
 github.com/disintegration/gift v1.1.2/go.mod h1:Jh2i7f7Q2BM7Ezno3PhfezbR1xpUg9dUg3/RlKGr4HI=
+github.com/dustin/go-humanize v0.0.0-20180713052910-9f541cc9db5d h1:lDrio3iIdNb0Gw9CgH7cQF+iuB5mOOjdJ9ERNJCBgb4=
+github.com/dustin/go-humanize v0.0.0-20180713052910-9f541cc9db5d/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/emirpasic/gods v1.12.0 h1:QAUIPSaCu4G+POclxeqb3F+WPpdKqFGlw36+yOzGlrg=
 github.com/emirpasic/gods v1.12.0/go.mod h1:YfzfFFoVP/catgzJb4IKIqXjX78Ha8FMSDh3ymbK86o=
 github.com/fatih/structs v1.0.0 h1:BrX964Rv5uQ3wwS+KRUAJCBBw5PQmgJfJ6v4yly5QwU=
@@ -85,6 +91,8 @@ github.com/neurosnap/sentences v1.0.6 h1:iBVUivNtlwGkYsJblWV8GGVFmXzZzak907Ci8aA
 github.com/neurosnap/sentences v1.0.6/go.mod h1:pg1IapvYpWCJJm/Etxeh0+gtMf1rI1STY9S7eUCPbDc=
 github.com/nishanths/go-xkcd v0.0.0-20160531092901-9497d909de39 h1:hD/Ob1zaeDAw1hxc2ne34CVJaZIelKMOmaJB/wGDujo=
 github.com/nishanths/go-xkcd v0.0.0-20160531092901-9497d909de39/go.mod h1:R7jhXmaqF0tVqZCC6SR+1nhmS2RvzF7oQF96fZXDAXQ=
+github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8 h1:dEkpxvT85Rcis+fjQr6KLdR0JjZr3v5wRBqnO+6OTtY=
+github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8/go.mod h1:ORG/TCF5vYkM7vlSh+M8Tq6nrXt+4lwLyOEes8VGieo=
 github.com/onsi/ginkgo v1.6.0 h1:Ix8l273rp3QzYgXSR+c8d1fTG7UPgYkOSELPhiY/YGw=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.2 h1:3mYCb7aPxS/RU7TI1y4rkEn1oKmPRjNJLNEXgw7MH2I=

@@ -1,6 +1,8 @@
 module github.com/JoshuaDoes/clinet
 
 require (
+	4d63.com/tz v0.0.0-20180303073054-73a1e3d39b09
+	github.com/AlekSi/pointer v1.0.0 // indirect
 	github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4
 	github.com/JoshuaDoes/go-cve v0.0.0-20180802130150-ddfd9d0080df
 	github.com/JoshuaDoes/go-soundcloud v0.0.0-20180304005454-9d4c26f4bf5a
@@ -18,6 +20,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/disintegration/gift v1.1.2
+	github.com/dustin/go-humanize v0.0.0-20180713052910-9f541cc9db5d
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fatih/structs v1.0.0
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
@@ -39,6 +42,7 @@ require (
 	github.com/montanaflynn/stats v0.0.0-20180911141734-db72e6cae808 // indirect
 	github.com/neurosnap/sentences v1.0.6 // indirect
 	github.com/nishanths/go-xkcd v0.0.0-20160531092901-9497d909de39
+	github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/pkg/errors v0.8.0 // indirect
