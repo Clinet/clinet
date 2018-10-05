@@ -42,21 +42,53 @@ func (e *Embed) SetDescription(description string) *Embed {
 
 //AddField [name] [value]
 func (e *Embed) AddField(name, value string) *Embed {
-	if len(value) > 1024 {
-		value = value[:1024]
+	fields := make([]*discordgo.MessageEmbedField, 0)
+
+	if len(name) > EmbedLimitFieldName {
+		name = name[:EmbedLimitFieldName]
 	}
 
-	if len(name) > 1024 {
-		name = name[:1024]
+	if len(value) > EmbedLimitFieldValue {
+		i := EmbedLimitFieldValue
+		for i = EmbedLimitFieldValue; i < len(value); {
+			if i != EmbedLimitFieldValue {
+				name += " (extended)"
+			}
+			if value[i] == []byte(" ")[0] || value[i] == []byte("\n")[0] || value[i] == []byte("-")[0] {
+				fields = append(fields, &discordgo.MessageEmbedField{
+					Name:  name,
+					Value: value[i-EmbedLimitFieldValue : i],
+				})
+			} else {
+				fields = append(fields, &discordgo.MessageEmbedField{
+					Name:  name,
+					Value: value[i-EmbedLimitFieldValue:i-1] + "-",
+				})
+				i--
+			}
+
+			if (i + EmbedLimitFieldValue) < len(value) {
+				i += EmbedLimitFieldValue
+			} else {
+				break
+			}
+		}
+		if i < len(value) {
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:  name,
+				Value: value[i:],
+			})
+		}
+	} else {
+		fields = append(fields, &discordgo.MessageEmbedField{
+			Name:  name,
+			Value: value,
+		})
 	}
 
-	e.Fields = append(e.Fields, &discordgo.MessageEmbedField{
-		Name:  name,
-		Value: value,
-	})
+	e.Fields = append(e.Fields, fields...)
 
 	return e
-
 }
 
 //SetFooter [Text] [iconURL]
@@ -237,7 +269,7 @@ func (e *Embed) TruncateFooter() *Embed {
 	return e
 }
 
-// Additional helper functions to make life simpler
+// NewGenericEmbed creates a new generic embed
 func NewGenericEmbed(embedTitle, embedMsg string) *discordgo.MessageEmbed {
 	genericEmbed := NewEmbed().
 		SetTitle(embedTitle).
@@ -245,6 +277,8 @@ func NewGenericEmbed(embedTitle, embedMsg string) *discordgo.MessageEmbed {
 		SetColor(0x1c1c1c).MessageEmbed
 	return genericEmbed
 }
+
+// NewGenericEmbedAdvanced creates a new generic embed with a custom color
 func NewGenericEmbedAdvanced(embedTitle, embedMsg string, embedColor int) *discordgo.MessageEmbed {
 	genericEmbed := NewEmbed().
 		SetTitle(embedTitle).
@@ -252,6 +286,8 @@ func NewGenericEmbedAdvanced(embedTitle, embedMsg string, embedColor int) *disco
 		SetColor(embedColor).MessageEmbed
 	return genericEmbed
 }
+
+// NewErrorEmbed creates a new error embed
 func NewErrorEmbed(errorTitle, errorMsg string) *discordgo.MessageEmbed {
 	errorEmbed := NewEmbed().
 		SetTitle(errorTitle).
@@ -259,6 +295,8 @@ func NewErrorEmbed(errorTitle, errorMsg string) *discordgo.MessageEmbed {
 		SetColor(0xb40000).MessageEmbed
 	return errorEmbed
 }
+
+// NewErrorEmbedAdvanced creates a new error embed with a custom color
 func NewErrorEmbedAdvanced(errorTitle, errorMsg string, errorColor int) *discordgo.MessageEmbed {
 	errorEmbed := NewEmbed().
 		SetTitle(errorTitle).

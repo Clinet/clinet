@@ -17,6 +17,7 @@ require (
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/bwmarrin/discordgo v0.16.1-0.20180920193828-6d2c944ad6d5
 	github.com/channelmeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/disintegration/gift v1.1.2
@@ -28,7 +29,9 @@ require (
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/google/pprof v0.0.0-20181002142953-f36417847b1c // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/ianlancetaylor/demangle v0.0.0-20180714043527-fcd258a6f0b4 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jonas747/dca v0.0.0-20180225204759-bf5d11669cdb
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
