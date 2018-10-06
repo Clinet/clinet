@@ -47,15 +47,6 @@ func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				g = gift.New(gift.Transpose())
 			case "transverse":
 				g = gift.New(gift.Transverse())
-			case "test":
-				g = gift.New(gift.Convolution(
-					[]float32{
-						-1, -1, 0,
-						-1, 1, 1,
-						0, 1, 1,
-					},
-					false, false, false, 0.0,
-				))
 			}
 
 			dstImage := image.NewRGBA(g.Bounds(srcImage.Bounds()))
@@ -66,12 +57,12 @@ func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				return NewErrorEmbed("Image Error", "Unable to encode processed image.")
 			}
 			_, err = botData.DiscordSession.ChannelMessageSendComplex(env.Channel.ID, &discordgo.MessageSend{
-				Content: "Processed image:",
 				File: &discordgo.File{
 					Name:   args[0] + ".png",
 					Reader: &outImage,
 				},
 				Embed: &discordgo.MessageEmbed{
+					Title: "Processed Image",
 					Image: &discordgo.MessageEmbedImage{
 						URL: "attachment://" + args[0] + ".png",
 					},
@@ -81,8 +72,6 @@ func commandImage(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				return NewErrorEmbed("Image Error", "Unable to upload processed image.")
 			}
 		}
-	} else {
-		return NewErrorEmbed("Image Error", "You must upload an image to process.")
 	}
-	return nil
+	return NewErrorEmbed("Image Error", "You must upload an image to process.")
 }
