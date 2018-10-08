@@ -22,7 +22,7 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	for _, voiceState := range env.Guild.VoiceStates {
-		if guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID == "" {
+		if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
 			return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
 		}
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
