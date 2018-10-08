@@ -70,10 +70,13 @@ func main() {
 
 	flag.Parse()
 	if configIsBot == "true" {
-		debugLog("Process mode: BOT\n", true)
+		debugLog("Process mode: BOT", true)
 	} else {
-		debugLog("Process mode: MASTER\n", true)
+		debugLog("Process mode: MASTER", true)
 	}
+
+	debugLog("Current PID: "+strconv.Itoa(os.Getpid()), true)
+	debugLog("", true)
 
 	if configIsBot == "true" {
 		debugLog("> Loading settings...", true)
@@ -218,7 +221,7 @@ func main() {
 			case _, ok := <-sc:
 				if ok {
 					botProcess, _ := os.FindProcess(botPid)
-					_ = botProcess.Signal(syscall.SIGTERM)
+					_ = botProcess.Signal(syscall.SIGKILL)
 					os.Exit(0)
 				}
 			default:
@@ -408,7 +411,7 @@ func recoverPanic() {
 	if panicReason := recover(); panicReason != nil {
 		fmt.Println("Clinet has encountered an unrecoverable error and has crashed.")
 		fmt.Println("Some information describing this crash: " + panicReason.(error).Error())
-		if botData.SendOwnerStackTraces {
+		if botData.SendOwnerStackTraces || configIsBot == "false" {
 			stack := make([]byte, 65536)
 			l := runtime.Stack(stack, true)
 			fmt.Println("Stack trace:\n" + string(stack[:l]))
@@ -487,7 +490,7 @@ func spawnBot() int {
 	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
-	err := botProcess.Run()
+	err := botProcess.Start()
 	if err != nil {
 		panic(err)
 	}
