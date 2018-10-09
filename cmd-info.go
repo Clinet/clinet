@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -81,9 +82,20 @@ func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.Messag
 }
 
 func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	timezone := userSettings[env.User.ID].Timezone
+	if timezone == "" {
+		return NewErrorEmbed("User Info Error", "Please set a timezone first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+	}
+	location, err := tz.LoadLocation(timezone)
+	if err != nil {
+		return NewErrorEmbed("User Info Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+	}
+
 	user := env.User
+	member := env.Member
 	if len(env.Message.Mentions) > 0 {
 		user = env.Message.Mentions[0]
+		member, _ = botData.DiscordSession.GuildMember(env.Guild.ID, user.ID)
 	}
 
 	creationDate := ""
@@ -91,16 +103,37 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 	if err != nil {
 		creationDate = "Unable to find creation date"
 	} else {
-		creationDate = creationTime.Format("01/02/2006 15:04:05 MST")
+		creationDate = creationTime.In(location).Format("01/02/2006 15:04:05 MST")
 	}
 
 	userInfoEmbed := NewEmbed().
 		SetAuthor(user.Username+"#"+user.Discriminator, user.AvatarURL("2048")).
-		AddField("User ID", user.ID).
-		AddField("Discriminator", user.Discriminator).
-		AddField("Creation Date", creationDate).
-		AddField("Bot", strconv.FormatBool(user.Bot)).
-		SetColor(0x1C1C1C)
+		SetColor(0x1C1C1C).
+		SetFooter(user.ID)
+
+	if member.Nick != "" {
+		userInfoEmbed.AddField("Nickname", member.Nick)
+	}
+
+	userInfoEmbed.AddField("Creation Date", creationDate)
+
+	joinedAtTime, err := member.JoinedAt.Parse()
+	if err == nil {
+		userInfoEmbed.AddField("Guild Join Date", joinedAtTime.In(location).Format("01/02/2006 15:04:05 MST"))
+	}
+
+	if len(member.Roles) > 0 {
+		roles := make([]string, 0)
+		for _, roleID := range member.Roles {
+			role, err := botData.DiscordSession.State.Role(env.Guild.ID, roleID)
+			if err == nil {
+				roles = append(roles, role.Name)
+			}
+		}
+		userInfoEmbed.AddField("Roles", strings.Join(roles, ", "))
+	}
+
+	userInfoEmbed.AddField("Bot", strconv.FormatBool(user.Bot))
 
 	if userSettings, found := userSettings[user.ID]; found {
 		if userSettings.AboutMe != "" {

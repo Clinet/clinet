@@ -32,6 +32,7 @@ type CommandEnvironment struct {
 	Guild   *discordgo.Guild   //The guild the command was executed in
 	Message *discordgo.Message //The message that triggered the command execution
 	User    *discordgo.User    //The user that executed the command
+	Member  *discordgo.Member  //The guild member that executed the command
 
 	Command string //The command used to execute the command with this environment (in the event of a command alias)
 

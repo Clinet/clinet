@@ -118,7 +118,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				cmd = newCmd
 			}
 
-			commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
+			member, _ := botData.DiscordSession.GuildMember(guild.ID, message.Author.ID)
+
+			commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
 			responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 		}
 	} else if strings.HasPrefix(content, botData.CommandPrefix) {
@@ -149,7 +151,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			cmd = newCmd
 		}
 
-		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
+		member, _ := botData.DiscordSession.GuildMember(guild.ID, message.Author.ID)
+
+		commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, Command: cmd[0], UpdatedMessageEvent: updatedMessageEvent}
 		responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 	} else {
 		//Swear filter check
