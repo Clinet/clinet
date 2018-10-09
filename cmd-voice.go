@@ -140,7 +140,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			guildData[env.Guild.ID].QueueAdd(queueData)
 		}
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-		return NewGenericEmbed("Voice", "Added the attached files to the guild queue. Use ``"+botData.CommandPrefix+"play`` to begin playback from the beginning of the queue.")
+		return NewGenericEmbed("Voice", "Added the attached files to the guild queue. Use ``"+env.BotPrefix+"play`` to begin playback from the beginning of the queue.")
 	}
 	if guildData[env.Guild.ID].AudioNowPlaying.MediaURL != "" {
 		queueData := guildData[env.Guild.ID].AudioNowPlaying
@@ -379,14 +379,14 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
 	}
 
-	commandList := botData.CommandPrefix + env.Command + " play N - Plays result N"
+	commandList := env.BotPrefix + env.Command + " play N - Plays result N"
 	if page.PrevPageToken != "" {
-		commandList += "\n" + botData.CommandPrefix + env.Command + " prev - Displays the results for the previous page"
+		commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the results for the previous page"
 	}
 	if page.NextPageToken != "" {
-		commandList += "\n" + botData.CommandPrefix + env.Command + " next - Displays the results for the next page"
+		commandList += "\n" + env.BotPrefix + env.Command + " next - Displays the results for the next page"
 	}
-	commandList += "\n" + botData.CommandPrefix + env.Command + " cancel - Cancels the search session"
+	commandList += "\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
 	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
 
 	results, _ := page.GetResults()

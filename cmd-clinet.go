@@ -187,7 +187,7 @@ func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		SetDescription(botData.BotName+" is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
 		AddField("How can I use "+botData.BotName+" in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
 		AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
-		AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``"+botData.CommandPrefix+"help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``@"+botData.DiscordSession.State.User.String()+", what time is it?`` or ``@"+botData.DiscordSession.State.User.String()+", what is DiscordApp?``.").
+		AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``"+env.BotPrefix+"help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``@"+botData.DiscordSession.State.User.String()+", what time is it?`` or ``@"+botData.DiscordSession.State.User.String()+", what is DiscordApp?``.").
 		AddField("Where can I join the "+botData.BotName+" Discord server?", "If you would like to get help and support with "+botData.BotName+" or experiment with the latest and greatest of "+botData.BotName+", use the Discord Server Invite Link at the end of this message.").
 		AddField("Bot Invite Link", botData.BotInviteURL).
 		AddField("Discord Server Invite Link", botData.BotDiscordURL).
@@ -228,7 +228,7 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 					return nil
 				}
 			}
-			return getCommandUsage(args[0], "Help for **"+args[0]+"**")
+			return getCommandUsage(args[0], "Help for **"+args[0]+"**", env)
 		}
 	}
 
@@ -247,7 +247,7 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		command := botData.Commands[commandName]
 		if command.IsAlternateOf == "" {
 			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
-				commandField := &discordgo.MessageEmbedField{Name: botData.CommandPrefix + commandName, Value: command.HelpText, Inline: true}
+				commandField := &discordgo.MessageEmbedField{Name: env.BotPrefix + commandName, Value: command.HelpText, Inline: true}
 				commandFields = append(commandFields, commandField)
 			}
 		}
@@ -272,7 +272,7 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	helpEmbed.
 		SetTitle(botData.BotName + " - Help").
 		SetDescription("A list of commands you have permission to use.").
-		SetFooter("Page " + strconv.Itoa(pageNumber) + " of " + strconv.Itoa(totalPages) + " | " + botData.CommandPrefix + env.Command + " {page}").
+		SetFooter("Page " + strconv.Itoa(pageNumber) + " of " + strconv.Itoa(totalPages) + " | " + env.BotPrefix + env.Command + " {page}").
 		SetColor(0xFAFAFA)
 
 	//Return the help page to the caller

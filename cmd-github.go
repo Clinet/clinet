@@ -94,7 +94,7 @@ func commandGitHub(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		return responseEmbed.MessageEmbed
 	}
 
-	return NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+botData.CommandPrefix+"github JoshuaDoes\n"+botData.CommandPrefix+"gh JoshuaDoes/clinet-discord```")
+	return NewErrorEmbed("GitHub Error", "You must specify a GitHub user or a GitHub repo to fetch info about.\n\nExamples:\n```"+env.BotPrefix+"github JoshuaDoes\n"+env.BotPrefix+"gh JoshuaDoes/clinet-discord```")
 }
 
 func GitHubFetchUser(username string) (*github.User, error) {

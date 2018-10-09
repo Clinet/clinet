@@ -75,7 +75,7 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 			}
 			location, err := tz.LoadLocation(userSettings[env.User.ID].Timezone)
 			if err != nil {
-				return NewErrorEmbed("User Settings - Timezone Error", "You have an invalid timezone set, please set a new one first.\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+				return NewErrorEmbed("User Settings - Timezone Error", "You have an invalid timezone set, please set a new one first.\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
 			}
 			return NewGenericEmbed("User Settings - Timezone", "Your current timezone is set to ``"+userSettings[env.User.ID].Timezone+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
 		}
@@ -130,7 +130,7 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 					{Name: "words", Description: "Lists filtered words, or adds/removes specified words/clears all words", ArgType: "this/(add word1)/(remove word2)/clear"},
 				},
 			}
-			return getCustomCommandUsage(filterHelpCmd, "server filter", "Server Settings - Swear Filter Help")
+			return getCustomCommandUsage(filterHelpCmd, "server filter", "Server Settings - Swear Filter Help", env)
 		}
 
 		switch args[1] {
@@ -197,7 +197,7 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 					{Name: "events", Description: "Returns a list of available events to enable/disable", ArgType: "this"},
 				},
 			}
-			return getCustomCommandUsage(logHelpCmd, "server log", "Server Settings - Log Help")
+			return getCustomCommandUsage(logHelpCmd, "server log", "Server Settings - Log Help", env)
 		}
 
 		LoggingEventsTmp := &guildSettings[env.Guild.ID].LogSettings.LoggingEvents

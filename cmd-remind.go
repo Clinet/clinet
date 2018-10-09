@@ -23,11 +23,11 @@ type RemindEntry struct {
 func commandRemind(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	timezone := userSettings[env.User.ID].Timezone
 	if timezone == "" {
-		return NewErrorEmbed("Remind Error", "Please set a timezone first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+		return NewErrorEmbed("Remind Error", "Please set a timezone first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
 	}
 	location, err := tz.LoadLocation(timezone)
 	if err != nil {
-		return NewErrorEmbed("Remind Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+botData.CommandPrefix+"user timezone America/New_York``")
+		return NewErrorEmbed("Remind Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
 	}
 
 	w := when.EN

@@ -34,7 +34,8 @@ type CommandEnvironment struct {
 	User    *discordgo.User    //The user that executed the command
 	Member  *discordgo.Member  //The guild member that executed the command
 
-	Command string //The command used to execute the command with this environment (in the event of a command alias)
+	Command   string //The command used to execute the command with this environment (in the event of a command alias)
+	BotPrefix string //The bot prefix used to execute this command (useful for command lists and example commands)
 
 	UpdatedMessageEvent bool
 }
@@ -427,21 +428,21 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 			if len(args) >= len(command.RequiredArguments) {
 				return command.Function(args, env)
 			}
-			return getCommandUsage(commandName, "Command Error - Not Enough Parameters (NEP)")
+			return getCommandUsage(commandName, "Command Error - Not Enough Parameters (NEP)", env)
 		}
 		return NewErrorEmbed("Command Error - No Permissions (NP)", "You do not have the necessary permissions to use this command.")
 	}
 	return nil
 }
 
-func getCommandUsage(commandName, title string) *discordgo.MessageEmbed {
+func getCommandUsage(commandName, title string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	command := botData.Commands[commandName]
 	if command.IsAlternateOf != "" {
 		command = botData.Commands[command.IsAlternateOf]
 	}
 
 	parameterFields := []*discordgo.MessageEmbedField{}
-	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: botData.CommandPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
+	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: env.BotPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
 	for i := 0; i < len(command.Arguments); i++ {
 		parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: command.Arguments[i].Name + " (" + command.Arguments[i].ArgType + ")", Value: command.Arguments[i].Description, Inline: true})
 	}
@@ -455,9 +456,9 @@ func getCommandUsage(commandName, title string) *discordgo.MessageEmbed {
 	return usageEmbed
 }
 
-func getCustomCommandUsage(command *Command, commandName, title string) *discordgo.MessageEmbed {
+func getCustomCommandUsage(command *Command, commandName, title string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	parameterFields := []*discordgo.MessageEmbedField{}
-	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: botData.CommandPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
+	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: env.BotPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
 	for i := 0; i < len(command.Arguments); i++ {
 		parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: command.Arguments[i].Name + " (" + command.Arguments[i].ArgType + ")", Value: command.Arguments[i].Description, Inline: true})
 	}
