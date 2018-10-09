@@ -139,9 +139,6 @@ func main() {
 			botData.BotClients.GitHub = github.NewClient(nil)
 		}
 
-		debugLog("> Preparing command list...", true)
-		initCommands()
-
 		debugLog("> Creating a Discord session...", true)
 		discord, err := discordgo.New("Bot " + botData.BotToken)
 		if err != nil {
@@ -187,11 +184,15 @@ func main() {
 			checkPanicRecovery()
 		}
 
+		debugLog("> Checking if bot was restarted...", false)
 		checkRestart()
+
+		debugLog("> Checking if bot was updated...", false)
 		checkUpdate()
 
+		debugLog("> Halting main until SIGINT, SIGTERM, INTERRUPT, or KILL", false)
 		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill, syscall.SIGKILL)
 		<-sc
 
 		//Save the current state before shutting down
@@ -209,6 +210,7 @@ func main() {
 				guildDataRow.VoiceData.VoiceConnection.Close()
 			}
 		}
+
 		debugLog("> Disconnecting from Discord...", true)
 		discord.Close()
 	} else {
@@ -236,13 +238,21 @@ func main() {
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	defer recoverPanic()
 
+	debugLog("> Setting bot username from Discord...", false)
 	botData.BotName = session.State.User.Username
 
+	debugLog("> Preparing command list...", false)
+	initCommands()
+
+	debugLog("> Setting random status...", false)
 	updateRandomStatus(session, 0)
+
+	debugLog("> Creating random status update cronjob...", false)
 	cronjob := cron.New()
 	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, 0) })
 	cronjob.Start()
 
+	debugLog("> Preparing saved remind entries...", false)
 	oldRemindEntries := remindEntries
 	remindEntries = make([]RemindEntry, 0)
 	for i := range oldRemindEntries {
