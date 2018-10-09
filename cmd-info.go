@@ -3,9 +3,11 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 )
 
 func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -131,6 +133,39 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 			}
 		}
 		userInfoEmbed.AddField("Roles", strings.Join(roles, ", "))
+	}
+
+	presence, err := botData.DiscordSession.State.Presence(env.Guild.ID, user.ID)
+	if err == nil {
+		status := ""
+		switch presence.Status {
+		case discordgo.StatusOnline:
+			status = "Online"
+		case discordgo.StatusOffline:
+			status = "Offline"
+		case discordgo.StatusIdle:
+			status = "Idle"
+		case discordgo.StatusDoNotDisturb:
+			status = "Do Not Disturb"
+		case discordgo.StatusInvisible:
+			status = "Invisible"
+		}
+		if presence.Game != nil {
+			gameName := presence.Game.Name
+			if presence.Game.URL != "" {
+				gameName = "[" + presence.Game.Name + "](" + presence.Game.URL + ")"
+			}
+			switch presence.Game.Type {
+			case discordgo.GameTypeGame:
+				status += ", playing " + gameName
+			case discordgo.GameTypeStreaming:
+				status += ", streaming " + gameName
+			}
+			if presence.Game.TimeStamps.StartTimestamp != 0 {
+				status += " as of " + humanize.Time(time.Unix(presence.Game.TimeStamps.StartTimestamp, 0).In(location))
+			}
+		}
+		userInfoEmbed.AddField("Presence", status)
 	}
 
 	userInfoEmbed.AddField("Bot", strconv.FormatBool(user.Bot))
