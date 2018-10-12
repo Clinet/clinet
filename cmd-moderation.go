@@ -138,3 +138,56 @@ func commandBan(args []string, env *CommandEnvironment) *discordgo.MessageEmbed 
 	}
 	return NewGenericEmbed("Ban", "Successfully banned the selected user(s) for the following reason:\n**"+reasonMessage+"**")
 }
+func commandHackBan(args []CommandArgument, env *CommandEnvironment) *discordgo.MessageEmbed {
+	reasonMessage := ""
+	usersToBan := make([]string, 0)
+	messagesDaysToDelete := 0
+
+	for i := 0; i < len(args); i++ {
+		switch args[i].Name {
+		case "days":
+			if args[i].Value == "" {
+				return NewErrorEmbed("HackBan Error", "You must specify how many days of messages to delete if you use the ``-days`` argument.")
+			}
+			days, err := strconv.Atoi(args[i].Value)
+			if err != nil {
+				return NewErrorEmbed("HackBan Error", "Invalid days ``"+args[i].Value+"``.")
+			}
+			messagesDaysToDelete = days
+		case "id":
+			if args[i].Value == "" {
+				return NewErrorEmbed("HackBan Error", "You must specify the ID of the user to hackban if you use the ``-id`` argument.")
+			}
+			usersToBan = append(usersToBan, args[i].Value)
+		case "reason":
+			if args[i].Value == "" {
+				return NewErrorEmbed("HackBan Error", "You must specify the reason for hackbanning if you use the ``-reason`` argument.")
+			}
+			reasonMessage = args[i].Value
+		}
+	}
+
+	if len(usersToBan) == 0 {
+		return NewErrorEmbed("HackBan Error", "You must specify which user IDs to hackban.")
+	}
+
+	if reasonMessage == "" {
+		reasonMessage = "Banned by " + env.User.Username + "#" + env.User.Discriminator + " using Clinet"
+	}
+
+	failedBans := make([]string, 0)
+	for i := range usersToBan {
+		err := botData.DiscordSession.GuildBanCreateWithReason(env.Guild.ID, usersToBan[i], reasonMessage, messagesDaysToDelete)
+		if err != nil {
+			failedBans = append(failedBans, usersToBan[i])
+		}
+	}
+
+	if len(failedBans) == len(usersToBan) {
+		return NewErrorEmbed("HackBan Error", "There was an error hackbanning the selected user ID(s).")
+	}
+	if len(failedBans) < len(usersToBan) && len(failedBans) > 0 {
+		return NewErrorEmbed("HackBan Error", "There was an error hackbanning "+strconv.Itoa(len(failedBans))+" of the selected user ID(s):\n\n- "+strings.Join(failedBans, "\n- "))
+	}
+	return NewGenericEmbed("HackBan", "Successfully hackbanned the selected user ID(s).")
+}

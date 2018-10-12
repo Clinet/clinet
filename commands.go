@@ -334,6 +334,20 @@ func initCommands() {
 			{Name: "reason", Description: "The reason for the ban", ArgType: "string"},
 		},
 	}
+	botData.Commands["hackban"] = &Command{
+		IsAdvancedCommand:   true,
+		AdvancedFunction:    commandHackBan,
+		HelpText:            "Bans the specified user ID(s) from the server.",
+		RequiredPermissions: discordgo.PermissionBanMembers,
+		RequiredArguments: []string{
+			"(-days days) -id user1 (-id user2) (-id user3) (-reason reason for ban)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "days", Description: "How many days worth of messages to delete from the specified user(s)", ArgType: "number"},
+			{Name: "id", Description: "The user ID to ban", ArgType: "user ID"},
+			{Name: "reason", Description: "The reason for the ban"},
+		},
+	}
 
 	botData.Commands["server"] = &Command{
 		Function:            commandSettingsServer,
