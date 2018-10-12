@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -17,13 +18,20 @@ type Command struct {
 	IsAlternateOf string //If this is an alternate command, point to the original command
 
 	IsAdministrative bool //Whether or not this command requires the user to be a bot admin
+
+	IsAdvancedCommand bool                                                                 //Whether or not this command uses advanced parameters
+	AdvancedFunction  func([]CommandArgument, *CommandEnvironment) *discordgo.MessageEmbed //The function value of what to execute when the command is ran
 }
 
 // CommandArgument holds data related to an argument available or required by a command
 type CommandArgument struct {
+	//Used for help text
 	Name        string //The name of the argument
 	ArgType     string //The argument's type
 	Description string //A description of the argument
+
+	//Used for command argument parsing
+	Value string //The value supplied with the argument
 }
 
 // CommandEnvironment holds data related to the environment a command can utilize for data or functionality
@@ -119,24 +127,33 @@ func initCommands() {
 		},
 	}
 	botData.Commands["image"] = &Command{
-		Function:            commandImage,
-		HelpText:            "Allows you to manipulate images with various filters and encodings.",
-		RequiredPermissions: discordgo.PermissionAttachFiles,
+		IsAdvancedCommand: true,
+		AdvancedFunction:  commandImageAdv,
+		HelpText:          "Allows you to manipulate images with various effects.",
 		RequiredArguments: []string{
-			"effect",
+			"-effect (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "fliphorizontal", Description: "Flips the image horizontally", ArgType: "this"},
-			{Name: "flipvertical", Description: "Flips the image vertically", ArgType: "this"},
-			{Name: "grayscale/greyscale", Description: "Applies a grayscale effect to the image", ArgType: "this"},
-			{Name: "invert", Description: "Inverts the colors of the image", ArgType: "this"},
-			{Name: "rotate90", Description: "Rotates the image by 90° clockwise", ArgType: "this"},
-			{Name: "rotate180", Description: "Rotates the image by 180° clockwise", ArgType: "this"},
-			{Name: "rotate270", Description: "Rotates the image by 270° clockwise", ArgType: "this"},
-			{Name: "sobel", Description: "Applies the Sobel filter to the image", ArgType: "this"},
-			{Name: "transpose", Description: "Transposes the image", ArgType: "this"},
-			{Name: "transverse", Description: "Transverses the image", ArgType: "this"},
-			{Name: "test", Description: "Applies a testing convolution effect to the image", ArgType: "this"},
+			{Name: "backgroundcolor", Description: "Sets the background color (if transparent; set before other effects)", ArgType: "#hex, rgb(), rgba()"},
+			{Name: "brightness", Description: "Sets the brightness", ArgType: "percentage"},
+			{Name: "contrast", Description: "Sets the contrast", ArgType: "percentage"},
+			{Name: "flip", Description: "Flips the image", ArgType: "horizontal/vertical"},
+			{Name: "gamma", Description: "Sets the gamma", ArgType: "percentage"},
+			{Name: "gaussian", Description: "Applies the gaussian blur effect at the specified intensity", ArgType: "percentage"},
+			{Name: "grayscale/greyscale", Description: "Applies a grayscale effect"},
+			{Name: "height", Description: "Sets the height", ArgType: "number"},
+			{Name: "interpolation", Description: "Sets the interpolation (set before other effects)", ArgType: "cubic, linear, nearest"},
+			{Name: "invert", Description: "Inverts the colors"},
+			{Name: "pixelate", Description: "Applies a pixelation effect at the specified intensity", ArgType: "number"},
+			{Name: "resampling", Description: "Sets the resampling (set before other effects)", ArgType: "box, cubic, lanczos, linear, nearest"},
+			{Name: "rotate", Description: "Rotates by the specified degrees", ArgType: "circular degrees"},
+			{Name: "saturation", Description: "Applies a saturation effect at the specified intensity", ArgType: "percentage"},
+			{Name: "sepia", Description: "Applies a sepia effect at the specified intensity", ArgType: "percentage"},
+			{Name: "sobel", Description: "Applies the sobel filter"},
+			{Name: "threshold", Description: "Applies a black/white threshold at the specified intensity", ArgType: "percentage"},
+			{Name: "transpose", Description: "Flips the image horizontally and rotates it 90° counter-clockwise"},
+			{Name: "transverse", Description: "Flips the image vertically and rotates it 90° counter-clockwise"},
+			{Name: "width", Description: "Sets the width", ArgType: "number"},
 		},
 	}
 	botData.Commands["cve"] = &Command{
@@ -412,6 +429,12 @@ func initCommands() {
 	botData.Commands["debug"] = &Command{Function: commandDebug, HelpText: "Toggles debug mode.", IsAdministrative: true}
 }
 
+func commandAdvArgTest(args []CommandArgument, env *CommandEnvironment) *discordgo.MessageEmbed {
+	return NewEmbed().
+		SetTitle("ADVARGTEST").
+		AddField("ARGS", fmt.Sprintf("%v", args)).MessageEmbed
+}
+
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	if command, exists := botData.Commands[commandName]; exists {
 		if command.IsAlternateOf != "" {
@@ -426,6 +449,31 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 		}
 		if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
 			if len(args) >= len(command.RequiredArguments) {
+				if command.IsAdvancedCommand {
+					advancedArgs := make([]CommandArgument, 0)
+
+					//Make sure each legacy argument value is either an argument identifier or an argument value
+					for i := 0; i < len(args); i++ {
+						if strings.HasPrefix(args[i], "-") {
+							if i+1 < len(args) {
+								if !strings.HasPrefix(args[i+1], "-") {
+									advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: strings.TrimSpace(args[i+1])})
+									i++
+									continue
+								} else {
+									advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
+									continue
+								}
+							}
+							advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
+							continue
+						} else {
+							return getCommandUsage(commandName, "Command Error - Loose Argument Value (LAV)", env)
+						}
+					}
+
+					return command.AdvancedFunction(advancedArgs, env)
+				}
 				return command.Function(args, env)
 			}
 			return getCommandUsage(commandName, "Command Error - Not Enough Parameters (NEP)", env)
@@ -444,6 +492,14 @@ func getCommandUsage(commandName, title string, env *CommandEnvironment) *discor
 	parameterFields := []*discordgo.MessageEmbedField{}
 	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: env.BotPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
 	for i := 0; i < len(command.Arguments); i++ {
+		if command.IsAdvancedCommand {
+			name := "-" + command.Arguments[i].Name
+			if command.Arguments[i].ArgType != "" {
+				name += " (" + command.Arguments[i].ArgType + ")"
+			}
+			parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: name, Value: command.Arguments[i].Description, Inline: true})
+			continue
+		}
 		parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: command.Arguments[i].Name + " (" + command.Arguments[i].ArgType + ")", Value: command.Arguments[i].Description, Inline: true})
 	}
 
@@ -460,6 +516,14 @@ func getCustomCommandUsage(command *Command, commandName, title string, env *Com
 	parameterFields := []*discordgo.MessageEmbedField{}
 	parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: "Usage", Value: env.BotPrefix + commandName + " " + strings.Join(command.RequiredArguments, " ")})
 	for i := 0; i < len(command.Arguments); i++ {
+		if command.IsAdvancedCommand {
+			name := "-" + command.Arguments[i].Name
+			if command.Arguments[i].ArgType != "" {
+				name += " (" + command.Arguments[i].ArgType + ")"
+			}
+			parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: name, Value: command.Arguments[i].Description, Inline: true})
+			continue
+		}
 		parameterFields = append(parameterFields, &discordgo.MessageEmbedField{Name: command.Arguments[i].Name + " (" + command.Arguments[i].ArgType + ")", Value: command.Arguments[i].Description, Inline: true})
 	}
 
