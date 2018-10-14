@@ -8,6 +8,7 @@ import (
 	"github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
 	"github.com/JoshuaDoes/go-wolfram"
+	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/koffeinsource/go-imgur"
@@ -21,6 +22,7 @@ type BotClients struct {
 	GitHub     *github.Client
 	Imgur      imgur.Client
 	SoundCloud *soundcloud.Client
+	Spotify    *spotigo.Client
 	Wolfram    *wolfram.Client
 	XKCD       *xkcd.Client
 	YouTube    *youtube.Service
@@ -50,6 +52,8 @@ type BotKeys struct {
 	ImgurClientID        string `json:"imgurClientID"`
 	SoundCloudAppVersion string `json:"soundcloudAppVersion"`
 	SoundCloudClientID   string `json:"soundcloudClientID"`
+	SpotifyHost          string `json:"spotifyHost"`
+	SpotifyPass          string `json:"spotifyPass"`
 	WolframAppID         string `json:"wolframAppID"`
 	YouTubeAPIKey        string `json:"youtubeAPIKey"`
 }
@@ -62,6 +66,7 @@ type BotOptions struct {
 	UseGitHub          bool     `json:"useGitHub"`
 	UseImgur           bool     `json:"useImgur"`
 	UseSoundCloud      bool     `json:"useSoundCloud"`
+	UseSpotify         bool     `json:"useSpotify"`
 	UseWolframAlpha    bool     `json:"useWolframAlpha"`
 	UseXKCD            bool     `json:"useXKCD"`
 	UseYouTube         bool     `json:"useYouTube"`

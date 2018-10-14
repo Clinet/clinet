@@ -19,6 +19,7 @@ import (
 	"github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
 	"github.com/JoshuaDoes/go-wolfram"
+	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/koffeinsource/go-klogger"
@@ -112,6 +113,10 @@ func main() {
 		if botData.BotOptions.UseSoundCloud {
 			debugLog("> Initializing SoundCloud...", false)
 			botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
+		}
+		if botData.BotOptions.UseSpotify {
+			debugLog("> Initializing Spotify...", false)
+			botData.BotClients.Spotify = &spotigo.Client{Host: botData.BotKeys.SpotifyHost, Pass: botData.BotKeys.SpotifyPass}
 		}
 		if botData.BotOptions.UseWolframAlpha {
 			debugLog("> Initializing Wolfram|Alpha...", false)

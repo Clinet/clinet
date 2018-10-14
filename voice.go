@@ -186,6 +186,7 @@ type AudioQueueEntry struct {
 	Title            string
 	Type             string
 	Duration         float64
+	TrackID          string //Used for instances like Spotify where the media URL is not allowed to be directly served
 }
 
 func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageEmbed {
@@ -204,6 +205,13 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageE
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
+	case "spotify":
+		return NewEmbed().
+			AddField("Now Playing from Spotify", "["+audioQueueEntry.Title+"](https://open.spotify.com/track/"+audioQueueEntry.TrackID+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0x1DB954).MessageEmbed
 	default:
 		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
 			return NewEmbed().
@@ -240,6 +248,13 @@ func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.S
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
+	case "spotify":
+		return NewEmbed().
+			AddField("Now Playing from Spotify", "["+audioQueueEntry.Title+"](https://open.spotify.com/track/"+audioQueueEntry.TrackID+") by **"+audioQueueEntry.Author+"**").
+			AddField("Time", playbackPosition+" / "+fullDuration).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0x1DB954).MessageEmbed
 	default:
 		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
 			return NewEmbed().
@@ -262,6 +277,8 @@ func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageE
 			audioQueueEntry.Type = "youtube"
 		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "soundcloud"
+		} else if isSpotifyURLURI(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "spotify"
 		} else {
 			audioQueueEntry.Type = "direct"
 		}
@@ -282,6 +299,13 @@ func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageE
 			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
 			SetThumbnail(audioQueueEntry.ThumbnailURL).
 			SetColor(0xFF7700).MessageEmbed
+	case "spotify":
+		return NewEmbed().
+			AddField("Added to Queue from Spotify", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
+			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
+			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
+			SetThumbnail(audioQueueEntry.ThumbnailURL).
+			SetColor(0x1DB954).MessageEmbed
 	default:
 		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
 			return NewEmbed().
@@ -304,6 +328,8 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 			audioQueueEntry.Type = "youtube"
 		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "soundcloud"
+		} else if isSpotifyURLURI(audioQueueEntry.MediaURL) {
+			audioQueueEntry.Type = "spotify"
 		} else {
 			audioQueueEntry.Type = "direct"
 		}
@@ -370,6 +396,17 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
 		audioQueueEntry.Title = audioInfo.Title
 		audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
+	case "spotify":
+		audioInfo, err := botData.BotClients.Spotify.GetTrackInfo(audioQueueEntry.MediaURL)
+		if err != nil {
+			return NewErrorEmbed("Voice Error", "Error getting info about the Spotify track.")
+		}
+		audioQueueEntry.Author = audioInfo.Artist
+		audioQueueEntry.ImageURL = audioInfo.ArtURL
+		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
+		audioQueueEntry.Title = audioInfo.Title
+		audioQueueEntry.Duration = float64(audioInfo.Duration / 1000)
+		audioQueueEntry.TrackID = audioInfo.TrackID
 	default:
 		audioQueueEntry.Author = probe.Format.Tags.Artist
 		audioQueueEntry.Title = probe.Format.Tags.Title
@@ -728,6 +765,15 @@ func getMediaURL(url string) (string, error) {
 		return audioInfo.DownloadURL, nil
 	}
 
+	if isSpotifyURLURI(url) {
+		audioInfo, err := botData.BotClients.Spotify.GetTrackInfo(url)
+		if err != nil {
+			return url, err
+		}
+
+		return audioInfo.StreamURL, nil
+	}
+
 	return url, nil
 }
 
@@ -741,6 +787,13 @@ func isYouTubeURL(url string) bool {
 func isSoundCloudURL(url string) bool {
 	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
 	if regexpHasSoundCloud {
+		return true
+	}
+	return false
+}
+func isSpotifyURLURI(url string) bool {
+	regexpHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/track\\/|spotify:track:)([a-zA-Z0-9]+)(.*)$", url)
+	if regexpHasSpotify {
 		return true
 	}
 	return false
