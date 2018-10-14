@@ -124,6 +124,8 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 		userInfoEmbed.AddField("Guild Join Date", joinedAtTime.In(location).Format("01/02/2006 15:04:05 MST"))
 	}
 
+	userInfoEmbed.AddField("Bot", strconv.FormatBool(user.Bot))
+
 	if len(member.Roles) > 0 {
 		roles := make([]string, 0)
 		for _, roleID := range member.Roles {
@@ -168,11 +170,12 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 		userInfoEmbed.AddField("Presence", status)
 	}
 
-	userInfoEmbed.AddField("Bot", strconv.FormatBool(user.Bot))
-
 	if userSettings, found := userSettings[user.ID]; found {
 		if userSettings.AboutMe != "" {
 			userInfoEmbed.AddField("About Me", userSettings.AboutMe)
+		}
+		if userSettings.Timezone != "" {
+			userInfoEmbed.AddField("Timezone", userSettings.Timezone)
 		}
 	}
 
