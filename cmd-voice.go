@@ -17,7 +17,7 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 			return NewGenericEmbed("Voice", "Joined the voice channel.")
 		}
 	}
-	return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the join command.")
+	return NewErrorEmbed("Voice Error", "You must join the voice channel to use before using the join command.")
 }
 
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -53,8 +53,8 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	foundVoiceChannel := false
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
-			if voiceState.ChannelID != guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-				return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is already in before using the play command.")
+			if guildData[env.Guild.ID].VoiceData.VoiceConnection != nil && voiceState.ChannelID != guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
+				return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the play command.")
 			}
 			foundVoiceChannel = true
 			voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
