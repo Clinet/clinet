@@ -109,15 +109,17 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 	}
 
 	userInfoEmbed := NewEmbed().
-		SetAuthor(user.Username+"#"+user.Discriminator, user.AvatarURL("2048")).
 		SetColor(0x1C1C1C).
 		SetFooter(user.ID)
 
+	author := user.Username + "#" + user.Discriminator
+
 	if member.Nick != "" {
-		userInfoEmbed.AddField("Nickname", member.Nick)
+		author += " AKA " + member.Nick
 	}
 
-	userInfoEmbed.AddField("Creation Date", creationDate)
+	userInfoEmbed.SetAuthor(author, user.AvatarURL("2048")).
+		AddField("Creation Date", creationDate)
 
 	joinedAtTime, err := member.JoinedAt.Parse()
 	if err == nil {
