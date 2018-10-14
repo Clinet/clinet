@@ -62,7 +62,10 @@ func commandKick(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	usersToKick := make([]string, 0)
 	for i, part := range args {
 		if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
-			usersToKick = append(usersToKick, strings.TrimRight(strings.TrimLeft(part, "<@!"), ">"))
+			if strings.TrimRight(strings.TrimLeft(strings.TrimLeft(part, "<@"), "!"), ">") == env.User.ID {
+				return NewErrorEmbed("Kick Error", "You can't kick yourself!")
+			}
+			usersToKick = append(usersToKick, strings.TrimRight(strings.TrimLeft(strings.TrimLeft(part, "<@"), "!"), ">"))
 			continue
 		}
 		reasonMessage = strings.Join(args[i:], " ")
@@ -108,7 +111,10 @@ func commandBan(args []string, env *CommandEnvironment) *discordgo.MessageEmbed 
 			}
 		}
 		if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
-			usersToBan = append(usersToBan, strings.TrimRight(strings.TrimLeft(part, "<@!"), ">"))
+			if strings.TrimRight(strings.TrimLeft(strings.TrimLeft(part, "<@"), "!"), ">") == env.User.ID {
+				return NewErrorEmbed("Kick Error", "You can't kick yourself!")
+			}
+			usersToBan = append(usersToBan, strings.TrimRight(strings.TrimLeft(strings.TrimLeft(part, "<@"), "!"), ">"))
 			continue
 		}
 		reasonMessage = strings.Join(args[i:], " ")
