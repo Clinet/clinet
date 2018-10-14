@@ -21,10 +21,11 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 }
 
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
-		if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
-			return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
-		}
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			voiceStop(env.Guild.ID)
 			err := voiceLeave(env.Guild.ID, voiceState.ChannelID)
@@ -52,6 +53,9 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	foundVoiceChannel := false
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
+			if voiceState.ChannelID != guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
+				return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is already in before using the play command.")
+			}
 			foundVoiceChannel = true
 			voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
 			break
@@ -171,10 +175,11 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
-		if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
-			return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
-		}
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			if voiceIsStreaming(env.Guild.ID) {
 				voiceStop(env.Guild.ID)
@@ -187,6 +192,10 @@ func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			if voiceIsStreaming(env.Guild.ID) {
@@ -200,6 +209,10 @@ func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			isPaused, err := voicePause(env.Guild.ID)
@@ -216,6 +229,10 @@ func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 }
 
 func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
 			isPaused, err := voiceResume(env.Guild.ID)
