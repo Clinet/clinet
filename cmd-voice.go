@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/go-playground/colors"
 	"github.com/rylio/ytdl"
 )
 
@@ -630,6 +631,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		}
 	}
 
+	queueColors := make([]*colors.RGBColor, 0)
 	queueList := "There are no entries in the queue."
 	for queueEntryNumber, queueEntry := range guildData[env.Guild.ID].AudioQueue {
 		displayNumber := strconv.Itoa(queueEntryNumber + 1)
@@ -645,12 +647,44 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 			queueList += queueEntry.MediaURL
 		}
 		queueList += "\nRequested by <@!" + queueEntry.Requester.ID + ">"
+
+		switch queueEntry.Type {
+		case "youtube":
+			color, _ := colors.RGB(0xFF, 0x00, 0x00)
+			queueColors = append(queueColors, color)
+		case "soundcloud":
+			color, _ := colors.RGB(0xFF, 0x77, 0x00)
+			queueColors = append(queueColors, color)
+		case "spotify":
+			color, _ := colors.RGB(0x1D, 0xB9, 0x54)
+			queueColors = append(queueColors, color)
+		default:
+			color, _ := colors.RGB(0x1C, 0x1C, 0x1C)
+			queueColors = append(queueColors, color)
+		}
+	}
+
+	queueColor := 0x1C1C1C
+	if len(queueColors) > 0 {
+		queueColorR := uint8(0x0)
+		queueColorG := uint8(0x0)
+		queueColorB := uint8(0x0)
+		for _, color := range queueColors {
+			queueColorR += color.R
+			queueColorG += color.G
+			queueColorB += color.B
+		}
+		queueColorsLen := uint8(len(queueColors))
+		queueColorR /= queueColorsLen
+		queueColorG /= queueColorsLen
+		queueColorB /= queueColorsLen
+		queueColor = int(queueColorR + queueColorG + queueColorB)
 	}
 
 	queueEmbed := NewEmbed().
 		SetTitle("Queue for " + env.Guild.Name).
 		SetDescription(queueList).
-		SetColor(0x1C1C1C)
+		SetColor(queueColor)
 
 	nowPlaying := guildData[env.Guild.ID].AudioNowPlaying
 	nowPlayingField := &discordgo.MessageEmbedField{
