@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/JoshuaDoes/goprobe"
+	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/jonas747/dca"
@@ -68,6 +69,35 @@ func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
 	} else {
 		return AudioQueueEntry{}
 	}
+}
+
+type SpotifyResultNav struct {
+	Query        string
+	TotalResults int
+	Results      []spotigo.SpotigoSearchHit
+}
+
+func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
+	if len(page.Results) == 0 {
+		return nil, errors.New("No search results found")
+	}
+	return page.Results, nil
+}
+func (page *SpotifyResultNav) Search(query string) error {
+	page.Query = ""
+	page.TotalResults = 0
+	page.Results = nil
+
+	trackResults, err := botData.BotClients.Spotify.SearchTracks(query)
+	if err != nil {
+		return err
+	}
+
+	page.Query = query
+	page.TotalResults = len(trackResults.Hits)
+	page.Results = trackResults.Hits
+
+	return nil
 }
 
 //YouTube search results, interacted with via commands

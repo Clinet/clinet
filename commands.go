@@ -283,6 +283,18 @@ func initCommands() {
 			{Name: "play", Description: "Plays the chosen search result from the current page", ArgType: "number"},
 		},
 	}
+	botData.Commands["spotify"] = &Command{
+		Function: commandSpotify,
+		HelpText: "Allows you to search Spotify search results to select to what to add to the queue.",
+		RequiredArguments: []string{
+			"command (value)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "search", Description: "Searches the specified query value", ArgType: "string"},
+			{Name: "cancel", Description: "Cancels the search result", ArgType: "this"},
+			{Name: "play", Description: "Plays the chosen search result", ArgType: "number"},
+		},
+	}
 	botData.Commands["queue"] = &Command{
 		Function: commandQueue,
 		HelpText: "Lists and manages entries in the queue.",
@@ -430,6 +442,7 @@ func initCommands() {
 	botData.Commands["img"] = &Command{IsAlternateOf: "image"}
 	botData.Commands["gh"] = &Command{IsAlternateOf: "github"}
 	botData.Commands["yt"] = &Command{IsAlternateOf: "youtube"}
+	botData.Commands["sp"] = &Command{IsAlternateOf: "sp"}
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}

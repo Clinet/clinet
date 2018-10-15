@@ -20,6 +20,7 @@ type GuildData struct {
 	VoiceData       VoiceData
 	Queries         map[string]*Query
 	YouTubeResults  map[string]*YouTubeResultNav
+	SpotifyResults  map[string]*SpotifyResultNav
 }
 
 // Query holds data about a query's response message

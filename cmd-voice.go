@@ -406,7 +406,10 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	commandList += "\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
 	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
 
-	results, _ := page.GetResults()
+	results, err := page.GetResults()
+	if err != nil {
+		return NewErrorEmbed("YouTube Error", "No search results were found.")
+	}
 	responseEmbed := NewEmbed().
 		SetTitle("YouTube Search Results - Page " + strconv.Itoa(page.PageNumber)).
 		SetDescription(strconv.FormatInt(page.TotalResults, 10) + " results for \"" + page.Query + "\"").
@@ -422,6 +425,118 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			title := videoInfo.Title
 
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://youtube.com/watch?v=" + results[i].Id.VideoId + ") by **" + author + "**"})
+		}
+	}
+	fields = append(fields, commandListField)
+	responseEmbed.Fields = fields
+
+	return responseEmbed
+}
+
+func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	page := &SpotifyResultNav{}
+
+	switch args[0] {
+	case "search", "s":
+		query := strings.Join(args[1:], " ")
+		if query == "" {
+			return NewErrorEmbed("Spotify Error", "You must enter a search query to use before using the "+args[0]+" command.")
+		}
+
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			guildData[env.Guild.ID].SpotifyResults = make(map[string]*SpotifyResultNav)
+		}
+
+		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &SpotifyResultNav{}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		err := page.Search(query)
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified query.\n\n"+fmt.Sprintf("%v", err))
+		}
+	case "cancel", "c":
+		if guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] != nil {
+			guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = nil
+			return NewGenericEmbed("Spotify", "Cancelled the search session.")
+		}
+		return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+	case "select", "choose", "play":
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+		}
+		if len(args) < 2 {
+			return NewErrorEmbed("Spotify Error", "You must specify which search result to select.")
+		}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		results, _ := page.GetResults()
+
+		selection, err := strconv.Atoi(args[1])
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "``"+args[1]+"`` is not a valid number.")
+		}
+		if selection > len(results) || selection <= 0 {
+			return NewErrorEmbed("Spotify Error", "An invalid selection was specified.")
+		}
+
+		for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+			//Wait for the handling of a previous playback command to finish
+		}
+		foundVoiceChannel := false
+		for _, voiceState := range env.Guild.VoiceStates {
+			if voiceState.UserID == env.Message.Author.ID {
+				foundVoiceChannel = true
+				voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+				break
+			}
+		}
+		if !foundVoiceChannel {
+			return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+		}
+
+		result := results[selection-1]
+		resultURL := "https://open.spotify.com/track/" + result.ID
+
+		queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
+		errEmbed := queueData.FillMetadata()
+		if errEmbed != nil {
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+			return errEmbed
+		}
+		if voiceIsStreaming(env.Guild.ID) {
+			guildData[env.Guild.ID].QueueAdd(queueData)
+			return queueData.GetQueueAddedEmbed()
+		}
+		guildData[env.Guild.ID].AudioNowPlaying = queueData
+		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+		return queueData.GetNowPlayingEmbed()
+	default:
+		return NewErrorEmbed("Spotify Error", "Unknown command ``"+args[0]+"``.")
+	}
+
+	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
+		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
+	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+	results, err := page.GetResults()
+	if err != nil {
+		return NewErrorEmbed("Spotify Error", "No search results were found.")
+	}
+	responseEmbed := NewEmbed().
+		SetTitle("Spotify Search Results").
+		SetDescription(strconv.Itoa(page.TotalResults) + " results for \"" + page.Query + "\"").
+		SetColor(0x1DB954).MessageEmbed
+
+	fields := []*discordgo.MessageEmbedField{}
+	for i := 0; i < len(results); i++ {
+		trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(results[i].URI)
+		if err != nil {
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this track](https://open.spotify.com/track/" + results[i].ID + ")"})
+		} else {
+			artist := trackInfo.Artist
+			title := trackInfo.Title
+
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://open.spotify.com/track/" + results[i].ID + ") by **" + artist + "**"})
 		}
 	}
 	fields = append(fields, commandListField)
