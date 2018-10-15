@@ -21,7 +21,7 @@ var encodeOptionsPresetHigh = &dca.EncodeOptions{
 	Channels:         2,
 	FrameRate:        48000,
 	FrameDuration:    20,
-	Bitrate:          96,
+	Bitrate:          128,
 	Application:      "lowdelay",
 	CompressionLevel: 10,
 	PacketLoss:       0,
