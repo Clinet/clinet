@@ -444,6 +444,7 @@ func initCommands() {
 	botData.Commands["yt"] = &Command{IsAlternateOf: "youtube"}
 	botData.Commands["sp"] = &Command{IsAlternateOf: "sp"}
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
+	botData.Commands["q"] = &Command{IsAlternateOf: "queue"}
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}

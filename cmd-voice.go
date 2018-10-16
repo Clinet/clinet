@@ -642,7 +642,11 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		}
 		queueList += displayNumber + ". ``" + secondsToHuman(queueEntry.Duration) + "`` "
 		if queueEntry.Title != "" && queueEntry.Author != "" {
-			queueList += "[" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+			if queueEntry.Type == "spotify" {
+				queueList += "[" + queueEntry.Title + "](https://open.spotify.com/track/" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+			} else {
+				queueList += "[" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+			}
 		} else {
 			queueList += queueEntry.MediaURL
 		}
