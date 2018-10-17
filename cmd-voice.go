@@ -466,6 +466,13 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 
 		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &SpotifyResultNav{}
+		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID].GuildID = env.Guild.ID
+
+		waitEmbed := NewEmbed().
+			SetTitle("Spotify").
+			SetDescription("Please wait a while as we fetch the tracks from the specified playlist...\n\nDuring this process, it may feel as if other commands are slow or don't work; give them some time to process.\nYou may cancel at any moment with ``" + env.BotPrefix + env.Command + " cancel``. Once cancelled, the tracks gathered so far will still be displayed.").
+			SetColor(0x1DB954).MessageEmbed
+		botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
 
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		err := page.Playlist(playlistURL)

@@ -87,6 +87,8 @@ type SpotifyResultNav struct {
 	AddingAll  bool
 	AddedSoFar int
 	Cancelled  bool
+
+	GuildID string //To know what guild this page belongs to
 }
 
 func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
@@ -133,6 +135,15 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 
 	playlistItems := make([]spotigo.SpotigoSearchHit, 0)
 	for i := 0; i < len(playlist.Contents.Items); i++ {
+		//Give a chance for other commands waiting in line to execute
+		guildData[page.GuildID].Unlock()
+		guildData[page.GuildID].Lock()
+
+		if page.Cancelled {
+			page.Cancelled = false
+			break
+		}
+
 		item := playlist.Contents.Items[i]
 		hit := spotigo.SpotigoSearchHit{}
 
