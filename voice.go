@@ -641,9 +641,6 @@ func voicePlay(guildID, mediaURL string) error {
 	if guildData[guildID].VoiceData.EncodingOptions == nil {
 		guildData[guildID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
 	}
-	guildData[guildID].VoiceData.EncodingOptions.RawOutput = true
-	guildData[guildID].VoiceData.EncodingOptions.Bitrate = 96
-	guildData[guildID].VoiceData.EncodingOptions.Application = "lowdelay"
 
 	//Create the encoding session to encode the audio to DCA in a stream
 	guildData[guildID].VoiceData.EncodingSession, err = dca.EncodeFile(mediaURL, guildData[guildID].VoiceData.EncodingOptions)
@@ -707,7 +704,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 	if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
 		for guildData[guildID].VoiceData.RepeatLevel == 2 {
 			err = voicePlay(guildID, mediaURL)
-			if err != nil {
+			if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
 				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 				errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 				session.ChannelMessageSendEmbed(channelID, errorEmbed)
@@ -719,7 +716,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 		guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 	}
 	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-	if err != nil {
+	if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
 		errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 		session.ChannelMessageSendEmbed(channelID, errorEmbed)
 		return
@@ -756,7 +753,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 				if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
 					for guildData[guildID].VoiceData.RepeatLevel == 2 {
 						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
-						if err != nil {
+						if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
 							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
 							errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 							session.ChannelMessageSendEmbed(channelID, errorEmbed)
@@ -768,7 +765,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 				}
 				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-				if err != nil {
+				if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
 					errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
 					session.ChannelMessageSendEmbed(channelID, errorEmbed)
 					return //Prevent next guild queue entry from playing

@@ -543,6 +543,10 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			page.AddingAll = true
 
 			for i, result := range page.AllResults {
+				//Give a chance for other commands waiting in line to execute
+				guildData[env.Guild.ID].Unlock()
+				guildData[env.Guild.ID].Lock()
+
 				if page.Cancelled {
 					page.AddingAll = false
 					return nil
@@ -582,6 +586,73 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.TotalResults)+" results to the queue.", 0x1DB954)
 		case "view":
+			foundVoiceChannel := false
+			for _, voiceState := range env.Guild.VoiceStates {
+				if voiceState.UserID == env.Message.Author.ID {
+					foundVoiceChannel = true
+					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					break
+				}
+			}
+			if !foundVoiceChannel {
+				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
+
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
+			}
+
+			waitEmbed := NewEmbed().
+				SetTitle("Spotify").
+				SetDescription("Please wait a moment as we add all " + strconv.Itoa(len(page.Results)) + " results to the queue...\n\nThe first result added will automatically begin playing. During this process, it may feel as if other commands are slow or don't work; give them some time to process.\nYou may cancel at any moment with ``" + env.BotPrefix + env.Command + " cancel``. Cancelling will not remove any results added to the queue during this process.").
+				SetColor(0x1DB954).MessageEmbed
+			botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
+
+			page.AddingAll = true
+
+			for i, result := range page.Results {
+				//Give a chance for other commands waiting in line to execute
+				guildData[env.Guild.ID].Unlock()
+				guildData[env.Guild.ID].Lock()
+
+				if page.Cancelled {
+					page.AddingAll = false
+					return nil
+				}
+
+				resultURL := "https://open.spotify.com/track/" + result.ID
+
+				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
+				if err != nil {
+					botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewErrorEmbed("Spotify Error", "Error finding track info for result "+strconv.Itoa(i+1)+"."))
+					continue
+				}
+
+				queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify",
+					Author:       trackInfo.Artist,
+					ImageURL:     trackInfo.ArtURL,
+					ThumbnailURL: trackInfo.ArtURL,
+					Title:        trackInfo.Title,
+					Duration:     float64(trackInfo.Duration / 1000),
+					TrackID:      trackInfo.TrackID,
+				}
+
+				if voiceIsStreaming(env.Guild.ID) {
+					guildData[env.Guild.ID].QueueAdd(queueData)
+					page.AddedSoFar++
+					continue
+				}
+
+				guildData[env.Guild.ID].AudioNowPlaying = queueData
+				page.AddedSoFar++
+				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+
+				botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, queueData.GetNowPlayingEmbed())
+			}
+
+			page.AddingAll = false
+
+			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(len(page.Results))+" results to the queue.", 0x1DB954)
 		default:
 			selection, err := strconv.Atoi(args[1])
 			if err != nil {

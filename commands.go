@@ -290,13 +290,14 @@ func initCommands() {
 			"command (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "search", Description: "Displays track results for the specified query value", ArgType: "string"},
+			{Name: "search", Description: "Displays track results for the specified search query", ArgType: "string"},
 			{Name: "playlist", Description: "Displays track results for the specified playlist", ArgType: "playlist"},
 			{Name: "next", Description: "Navigates forward in a playlist's pages", ArgType: "this"},
 			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: "this"},
-			{Name: "cancel", Description: "Cancels the result", ArgType: "this"},
+			{Name: "cancel", Description: "Cancels the search/playlist session", ArgType: "this"},
 			{Name: "play", Description: "Plays the chosen result", ArgType: "number"},
 			{Name: "play all", Description: "Plays every result", ArgType: "this"},
+			{Name: "play view", Description: "Plays every result on the current page", ArgType: "this"},
 		},
 	}
 	botData.Commands["queue"] = &Command{
