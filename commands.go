@@ -285,12 +285,15 @@ func initCommands() {
 	}
 	botData.Commands["spotify"] = &Command{
 		Function: commandSpotify,
-		HelpText: "Allows you to search Spotify search results to select to what to add to the queue.",
+		HelpText: "Allows you to search Spotify search results and playlists to select to what to add to the queue.",
 		RequiredArguments: []string{
 			"command (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "search", Description: "Searches the specified query value", ArgType: "string"},
+			{Name: "search", Description: "Displays track results for the specified query value", ArgType: "string"},
+			{Name: "playlist", Description: "Displays track results for the specified playlist", ArgType: "playlist"},
+			{Name: "next", Description: "Navigates forward in a playlist's pages", ArgType: "this"},
+			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: "this"},
 			{Name: "cancel", Description: "Cancels the search result", ArgType: "this"},
 			{Name: "play", Description: "Plays the chosen search result", ArgType: "number"},
 		},

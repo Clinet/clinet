@@ -472,7 +472,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified playlist.\n\n"+fmt.Sprintf("%v", err))
 		}
-	case "next":
+	case "next", "n", "forward", "+":
 		if guildData[env.Guild.ID].SpotifyResults == nil {
 			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
 		}
@@ -482,7 +482,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			return NewErrorEmbed("Spotify Error", "There was an error finding the next page.")
 		}
-	case "prev":
+	case "prev", "previous", "p", "back", "-":
 		if guildData[env.Guild.ID].SpotifyResults == nil {
 			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
 		}
