@@ -850,7 +850,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		Value: "There is no audio currently playing.",
 	}
 
-	if voiceIsStreaming(env.Guild.ID) {
+	if voiceIsStreaming(env.Guild.ID) && nowPlaying.MediaURL != "" {
 		switch nowPlaying.Type {
 		case "youtube":
 			nowPlayingField.Name += " from YouTube"
