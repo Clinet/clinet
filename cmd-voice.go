@@ -752,8 +752,11 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		switch args[0] {
 		case "clear":
 			if len(guildData[env.Guild.ID].AudioQueue) > 0 {
+				queueLength := len(guildData[env.Guild.ID].AudioQueue)
+
 				guildData[env.Guild.ID].QueueClear()
-				return NewGenericEmbed("Queue", "Cleared the queue.")
+
+				return NewGenericEmbed("Queue", "Cleared all "+strconv.Itoa(queueLength)+" entries from the queue.")
 			}
 			return NewErrorEmbed("Queue Error", "There are no entries in the queue to clear.")
 		case "remove":
@@ -939,6 +942,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 
 	queueEmbed := pagedQueueList.
 		SetTitle("Queue for " + env.Guild.Name + " - Page " + strconv.Itoa(pageNumber) + "/" + strconv.Itoa(totalPages)).
+		SetDescription("There are " + strconv.Itoa(len(queueList)) + " entries in the queue.").
 		SetColor(queueColor).
 		SetThumbnail(nowPlaying.ThumbnailURL)
 
