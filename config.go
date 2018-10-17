@@ -72,6 +72,7 @@ type BotOptions struct {
 	UseYouTube         bool     `json:"useYouTube"`
 	WolframDeniedPods  []string `json:"wolframDeniedPods"`
 	YouTubeMaxResults  int      `json:"youtubeMaxResults"`
+	SpotifyMaxResults  int      `json:"spotifyMaxResults"`
 }
 type CustomResponseQuery struct {
 	Expression   string `json:"expression"`

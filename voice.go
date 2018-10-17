@@ -74,7 +74,15 @@ func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
 type SpotifyResultNav struct {
 	Query        string
 	TotalResults int
-	Results      []spotigo.SpotigoSearchHit
+	AllResults   []spotigo.SpotigoSearchHit //All results
+	Results      []spotigo.SpotigoSearchHit //Results for current page
+
+	PlaylistID     string
+	PlaylistUserID string
+	IsPlaylist     bool
+
+	PageNumber int
+	MaxResults int
 }
 
 func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
@@ -87,6 +95,7 @@ func (page *SpotifyResultNav) Search(query string) error {
 	page.Query = ""
 	page.TotalResults = 0
 	page.Results = nil
+	page.IsPlaylist = false
 
 	trackResults, err := botData.BotClients.Spotify.SearchTracks(query)
 	if err != nil {
@@ -96,6 +105,82 @@ func (page *SpotifyResultNav) Search(query string) error {
 	page.Query = query
 	page.TotalResults = len(trackResults.Hits)
 	page.Results = trackResults.Hits
+
+	return nil
+}
+func (page *SpotifyResultNav) Playlist(url string) error {
+	if page.MaxResults == 0 {
+		page.MaxResults = botData.BotOptions.SpotifyMaxResults
+	}
+
+	page.Query = ""
+	page.TotalResults = 0
+	page.Results = nil
+	page.PageNumber = 0
+	page.IsPlaylist = false
+
+	playlist, err := botData.BotClients.Spotify.GetPlaylist(url)
+	if err != nil {
+		return err
+	}
+
+	playlistItems := make([]spotigo.SpotigoSearchHit, 0)
+	for i := 0; i < len(playlist.Contents.Items); i++ {
+		item := playlist.Contents.Items[i]
+		hit := spotigo.SpotigoSearchHit{}
+
+		trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(item.TrackURI)
+		if err != nil {
+			continue
+		}
+
+		artists := make([]spotigo.SpotigoSearchHitArtist, 0)
+		artists = append(artists, spotigo.SpotigoSearchHitArtist{Name: trackInfo.Artist})
+
+		hit.URI = item.TrackURI
+		hit.ID = trackInfo.TrackID
+		hit.Name = trackInfo.Title
+		hit.ImageURL = trackInfo.ArtURL
+		hit.Duration = trackInfo.Duration
+		hit.Artists = artists
+
+		playlistItems = append(playlistItems, hit)
+	}
+
+	page.PageNumber = 1
+	page.IsPlaylist = true
+	page.Query = playlist.Attributes.Name
+	page.AllResults = playlistItems
+	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
+	page.TotalResults = len(page.AllResults)
+	page.PlaylistID = playlist.PlaylistID
+	page.PlaylistUserID = playlist.UserID
+
+	return nil
+}
+func (page *SpotifyResultNav) Prev() error {
+	if page.PageNumber == 0 {
+		return errors.New("No pages found")
+	}
+	if ((page.PageNumber-1)*page.MaxResults) > page.TotalResults || ((page.PageNumber-1)*page.MaxResults) <= 0 {
+		return errors.New("Page not available")
+	}
+
+	page.PageNumber--
+	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
+
+	return nil
+}
+func (page *SpotifyResultNav) Next() error {
+	if page.PageNumber == 0 {
+		return errors.New("No pages found")
+	}
+	if ((page.PageNumber+1)*page.MaxResults) > page.TotalResults || ((page.PageNumber+1)*page.MaxResults) <= 0 {
+		return errors.New("Page not available")
+	}
+
+	page.PageNumber++
+	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
 
 	return nil
 }
@@ -307,7 +392,7 @@ func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageE
 			audioQueueEntry.Type = "youtube"
 		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "soundcloud"
-		} else if isSpotifyURLURI(audioQueueEntry.MediaURL) {
+		} else if isSpotifyTrackURLURI(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "spotify"
 		} else {
 			audioQueueEntry.Type = "direct"
@@ -358,7 +443,7 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 			audioQueueEntry.Type = "youtube"
 		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "soundcloud"
-		} else if isSpotifyURLURI(audioQueueEntry.MediaURL) {
+		} else if isSpotifyTrackURLURI(audioQueueEntry.MediaURL) {
 			audioQueueEntry.Type = "spotify"
 		} else {
 			audioQueueEntry.Type = "direct"
@@ -795,7 +880,7 @@ func getMediaURL(url string) (string, error) {
 		return audioInfo.DownloadURL, nil
 	}
 
-	if isSpotifyURLURI(url) {
+	if isSpotifyTrackURLURI(url) {
 		audioInfo, err := botData.BotClients.Spotify.GetTrackInfo(url)
 		if err != nil {
 			return url, err
@@ -821,9 +906,16 @@ func isSoundCloudURL(url string) bool {
 	}
 	return false
 }
-func isSpotifyURLURI(url string) bool {
+func isSpotifyTrackURLURI(url string) bool {
 	regexpHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/track\\/|spotify:track:)([a-zA-Z0-9]+)(.*)$", url)
 	if regexpHasSpotify {
+		return true
+	}
+	return false
+}
+func isSpotifyPlaylistURLURI(url string) bool {
+	regexHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/user\\/|spotify:user:)([a-zA-Z0-9]+)(\\/playlist\\/|:playlist:)([a-zA-Z0-9]+)(.*)$", url)
+	if regexHasSpotify {
 		return true
 	}
 	return false

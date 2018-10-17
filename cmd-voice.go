@@ -455,6 +455,43 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified query.\n\n"+fmt.Sprintf("%v", err))
 		}
+	case "playlist", "list":
+		playlistURL := strings.Join(args[1:], " ")
+		if playlistURL == "" {
+			return NewErrorEmbed("Spotify Error", "You must enter a playlist URL to use before using the "+args[0]+" command.")
+		}
+
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			guildData[env.Guild.ID].SpotifyResults = make(map[string]*SpotifyResultNav)
+		}
+
+		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &SpotifyResultNav{}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		err := page.Playlist(playlistURL)
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified playlist.\n\n"+fmt.Sprintf("%v", err))
+		}
+	case "next":
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+		}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		err := page.Next()
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "There was an error finding the next page.")
+		}
+	case "prev":
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+		}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		err := page.Prev()
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "There was an error finding the previous page.")
+		}
 	case "cancel", "c":
 		if guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] != nil {
 			guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = nil
@@ -515,18 +552,35 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		return NewErrorEmbed("Spotify Error", "Unknown command ``"+args[0]+"``.")
 	}
 
-	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
-		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
-	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
-
 	results, err := page.GetResults()
 	if err != nil {
 		return NewErrorEmbed("Spotify Error", "No search results were found.")
 	}
-	responseEmbed := NewEmbed().
-		SetTitle("Spotify Search Results").
-		SetDescription(strconv.Itoa(page.TotalResults) + " results for \"" + page.Query + "\"").
-		SetColor(0x1DB954).MessageEmbed
+
+	spotifyEmbed := NewEmbed().
+		SetColor(0x1DB954)
+
+	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
+		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
+
+	if page.IsPlaylist {
+		spotifyEmbed.SetTitle("Spotify Playlist - Page " + strconv.Itoa(page.PageNumber)).
+			SetDescription(strconv.Itoa(page.TotalResults) + " results for [" + page.Query + "](https://open.spotify.com/user/" + page.PlaylistUserID + "/playlist/" + page.PlaylistID + ")")
+
+		if ((page.PageNumber-1)*page.MaxResults) < page.TotalResults && ((page.PageNumber-1)*page.MaxResults) > 0 {
+			commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the previous page"
+		}
+		if ((page.PageNumber+1)*page.MaxResults) < page.TotalResults && ((page.PageNumber+1)*page.MaxResults) > 0 {
+			commandList += "\n" + env.BotPrefix + env.Command + " next - Displays the next page"
+		}
+	} else {
+		spotifyEmbed.SetTitle("Spotify Search Results").
+			SetDescription(strconv.Itoa(page.TotalResults) + " results for \"" + page.Query + "\"")
+	}
+
+	commandListField := &discordgo.MessageEmbedField{Name: "Commands", Value: commandList}
+
+	responseEmbed := spotifyEmbed.MessageEmbed
 
 	fields := []*discordgo.MessageEmbedField{}
 	for i := 0; i < len(results); i++ {
