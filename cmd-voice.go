@@ -340,7 +340,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	case "cancel", "c":
 		if guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] != nil {
 			guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] = nil
-			return NewGenericEmbed("YouTube", "Cancelled the search session.")
+			return NewGenericEmbedAdvanced("YouTube", "Cancelled the search session.", 0xFF0000)
 		}
 		return NewErrorEmbed("YouTube Error", "No search session is in progress.")
 	case "select", "choose", "play":
@@ -453,7 +453,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		err := page.Search(query)
 		if err != nil {
-			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified query.\n\n"+fmt.Sprintf("%v", err))
+			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified query.")
 		}
 	case "playlist", "list":
 		playlistURL := strings.Join(args[1:], " ")
@@ -470,7 +470,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		err := page.Playlist(playlistURL)
 		if err != nil {
-			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified playlist.\n\n"+fmt.Sprintf("%v", err))
+			return NewErrorEmbed("Spotify Error", "There was an error getting a result for the specified playlist.")
 		}
 	case "next", "n", "forward", "+":
 		if guildData[env.Guild.ID].SpotifyResults == nil {
@@ -493,61 +493,137 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("Spotify Error", "There was an error finding the previous page.")
 		}
 	case "cancel", "c":
-		if guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] != nil {
-			guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = nil
-			return NewGenericEmbed("Spotify", "Cancelled the search session.")
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		if page == nil {
+			return NewErrorEmbed("Spotify Error", "No Spotify session is in progress.")
 		}
-		return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+
+		if page.AddingAll {
+			page.Cancelled = true
+			return NewGenericEmbedAdvanced("Spotify", "Stopped adding results to the queue. A total of "+strconv.Itoa(page.AddedSoFar)+" tracks were added.", 0x1DB954)
+		}
+
+		page = nil
+		return NewGenericEmbedAdvanced("Spotify", "Cancelled the Spotify session.", 0x1DB954)
 	case "select", "choose", "play":
 		if guildData[env.Guild.ID].SpotifyResults == nil {
 			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
 		}
 		if len(args) < 2 {
-			return NewErrorEmbed("Spotify Error", "You must specify which search result to select.")
+			return NewErrorEmbed("Spotify Error", "You must specify which result to select.")
 		}
 
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		results, _ := page.GetResults()
 
-		selection, err := strconv.Atoi(args[1])
-		if err != nil {
-			return NewErrorEmbed("Spotify Error", "``"+args[1]+"`` is not a valid number.")
-		}
-		if selection > len(results) || selection <= 0 {
-			return NewErrorEmbed("Spotify Error", "An invalid selection was specified.")
-		}
-
-		for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-			//Wait for the handling of a previous playback command to finish
-		}
-		foundVoiceChannel := false
-		for _, voiceState := range env.Guild.VoiceStates {
-			if voiceState.UserID == env.Message.Author.ID {
-				foundVoiceChannel = true
-				voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
-				break
+		switch args[1] {
+		case "all", "*":
+			foundVoiceChannel := false
+			for _, voiceState := range env.Guild.VoiceStates {
+				if voiceState.UserID == env.Message.Author.ID {
+					foundVoiceChannel = true
+					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					break
+				}
 			}
-		}
-		if !foundVoiceChannel {
-			return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
-		}
+			if !foundVoiceChannel {
+				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
 
-		result := results[selection-1]
-		resultURL := "https://open.spotify.com/track/" + result.ID
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
+			}
 
-		queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
-		errEmbed := queueData.FillMetadata()
-		if errEmbed != nil {
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
-			return errEmbed
+			waitEmbed := NewEmbed().
+				SetTitle("Spotify").
+				SetDescription("Please wait a while as we add all " + strconv.Itoa(page.TotalResults) + " results to the queue...\n\nThe first result added will automatically begin playing. During this process, it may feel as if other commands are slow or don't work; give them some time to process.\nYou may cancel at any moment with ``" + env.BotPrefix + env.Command + " cancel``. Cancelling will not remove any results added to the queue during this process.").
+				SetColor(0x1DB954).MessageEmbed
+			botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
+
+			page.AddingAll = true
+
+			for i, result := range page.AllResults {
+				if page.Cancelled {
+					page.AddingAll = false
+					return nil
+				}
+
+				resultURL := "https://open.spotify.com/track/" + result.ID
+
+				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
+				if err != nil {
+					botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewErrorEmbed("Spotify Error", "Error finding track info for result "+strconv.Itoa(i+1)+"."))
+					continue
+				}
+
+				queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify",
+					Author:       trackInfo.Artist,
+					ImageURL:     trackInfo.ArtURL,
+					ThumbnailURL: trackInfo.ArtURL,
+					Title:        trackInfo.Title,
+					Duration:     float64(trackInfo.Duration / 1000),
+					TrackID:      trackInfo.TrackID,
+				}
+
+				if voiceIsStreaming(env.Guild.ID) {
+					guildData[env.Guild.ID].QueueAdd(queueData)
+					page.AddedSoFar++
+					continue
+				}
+
+				guildData[env.Guild.ID].AudioNowPlaying = queueData
+				page.AddedSoFar++
+				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+
+				botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, queueData.GetNowPlayingEmbed())
+			}
+
+			page.AddingAll = false
+
+			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.TotalResults)+" results to the queue.", 0x1DB954)
+		case "view":
+		default:
+			selection, err := strconv.Atoi(args[1])
+			if err != nil {
+				return NewErrorEmbed("Spotify Error", "``"+args[1]+"`` is not a valid number.")
+			}
+			if selection > len(results) || selection <= 0 {
+				return NewErrorEmbed("Spotify Error", "An invalid selection was specified.")
+			}
+
+			foundVoiceChannel := false
+			for _, voiceState := range env.Guild.VoiceStates {
+				if voiceState.UserID == env.Message.Author.ID {
+					foundVoiceChannel = true
+					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					break
+				}
+			}
+			if !foundVoiceChannel {
+				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
+
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playback command to finish
+			}
+
+			result := results[selection-1]
+			resultURL := "https://open.spotify.com/track/" + result.ID
+
+			queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
+			errEmbed := queueData.FillMetadata()
+			if errEmbed != nil {
+				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+				return errEmbed
+			}
+			if voiceIsStreaming(env.Guild.ID) {
+				guildData[env.Guild.ID].QueueAdd(queueData)
+				return queueData.GetQueueAddedEmbed()
+			}
+			guildData[env.Guild.ID].AudioNowPlaying = queueData
+			go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+			return queueData.GetNowPlayingEmbed()
 		}
-		if voiceIsStreaming(env.Guild.ID) {
-			guildData[env.Guild.ID].QueueAdd(queueData)
-			return queueData.GetQueueAddedEmbed()
-		}
-		guildData[env.Guild.ID].AudioNowPlaying = queueData
-		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
-		return queueData.GetNowPlayingEmbed()
 	default:
 		return NewErrorEmbed("Spotify Error", "Unknown command ``"+args[0]+"``.")
 	}
@@ -685,26 +761,61 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		}
 	}
 
+	pageNumber := 1
+	if len(args) >= 1 {
+		num, err := strconv.Atoi(args[0])
+		if err != nil {
+			return NewErrorEmbed("Queue Error", "Invalid page number ``"+args[0]+"``.")
+		}
+		pageNumber = num
+	}
+
+	nowPlaying := guildData[env.Guild.ID].AudioNowPlaying
+	nowPlayingField := &discordgo.MessageEmbedField{
+		Name:  "Now Playing",
+		Value: "There is no audio currently playing.",
+	}
+
+	if voiceIsStreaming(env.Guild.ID) {
+		switch nowPlaying.Type {
+		case "youtube":
+			nowPlayingField.Name += " from YouTube"
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
+		case "soundcloud":
+			nowPlayingField.Name += " from SoundCloud"
+			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
+		case "spotify":
+			nowPlayingField.Name += " from Spotify"
+			nowPlayingField.Value = fmt.Sprintf("[%s](https://open.spotify.com/track/%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
+		default:
+			if nowPlaying.Author != "" && nowPlaying.Title != "" {
+				nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
+			} else {
+				nowPlayingField.Value = fmt.Sprintf("%s\nRequested by <@!%s>", nowPlaying.MediaURL, nowPlaying.Requester.ID)
+			}
+		}
+	}
+
 	queueColors := make([]*colors.RGBColor, 0)
-	queueList := "There are no entries in the queue."
+	queueList := make([]*discordgo.MessageEmbedField, 0)
 	for queueEntryNumber, queueEntry := range guildData[env.Guild.ID].AudioQueue {
 		displayNumber := strconv.Itoa(queueEntryNumber + 1)
-		if queueList != "There are no entries in the queue." {
-			queueList += "\n"
-		} else {
-			queueList = ""
-		}
-		queueList += displayNumber + ". ``" + secondsToHuman(queueEntry.Duration) + "`` "
+
+		queueEntryFieldName := "Entry #" + displayNumber
+		queueEntryFieldValue := ""
+
 		if queueEntry.Title != "" && queueEntry.Author != "" {
 			if queueEntry.Type == "spotify" {
-				queueList += "[" + queueEntry.Title + "](https://open.spotify.com/track/" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+				queueEntryFieldValue = "[" + queueEntry.Title + "](https://open.spotify.com/track/" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
 			} else {
-				queueList += "[" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
+				queueEntryFieldValue = "[" + queueEntry.Title + "](" + queueEntry.MediaURL + ") by **" + queueEntry.Author + "**"
 			}
 		} else {
-			queueList += queueEntry.MediaURL
+			queueEntryFieldValue = queueEntry.MediaURL
 		}
-		queueList += "\nRequested by <@!" + queueEntry.Requester.ID + ">"
+		queueEntryFieldValue += "\nRequested by <@!" + queueEntry.Requester.ID + ">"
+
+		queueList = append(queueList, &discordgo.MessageEmbedField{Name: queueEntryFieldName, Value: queueEntryFieldValue})
 
 		switch queueEntry.Type {
 		case "youtube":
@@ -720,6 +831,22 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 			color, _ := colors.RGB(0x1C, 0x1C, 0x1C)
 			queueColors = append(queueColors, color)
 		}
+	}
+
+	if len(queueList) <= 0 {
+		queueEmbed := NewEmbed().
+			SetTitle("Queue Error").
+			SetDescription("No queue entries found.").
+			SetThumbnail(nowPlaying.ThumbnailURL)
+
+		queueEmbed.Fields = append(queueEmbed.Fields, nowPlayingField)
+
+		return queueEmbed.MessageEmbed
+	}
+
+	pagedQueueList, totalPages, err := page(queueList, pageNumber, 10)
+	if err != nil {
+		return NewErrorEmbed("Queue Error", fmt.Sprintf("%v", err))
 	}
 
 	queueColor := 0x1C1C1C
@@ -739,36 +866,11 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		queueColor = int(queueColorR + queueColorG + queueColorB)
 	}
 
-	queueEmbed := NewEmbed().
-		SetTitle("Queue for " + env.Guild.Name).
-		SetDescription(queueList).
-		SetColor(queueColor)
+	queueEmbed := pagedQueueList.
+		SetTitle("Queue for " + env.Guild.Name + " - Page " + strconv.Itoa(pageNumber) + "/" + strconv.Itoa(totalPages)).
+		SetColor(queueColor).
+		SetThumbnail(nowPlaying.ThumbnailURL)
 
-	nowPlaying := guildData[env.Guild.ID].AudioNowPlaying
-	nowPlayingField := &discordgo.MessageEmbedField{
-		Name:  "Now Playing",
-		Value: "There is no audio currently playing.",
-	}
-
-	if voiceIsStreaming(env.Guild.ID) {
-		switch nowPlaying.Type {
-		case "youtube":
-			nowPlayingField.Name += " from YouTube"
-			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
-			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
-		case "soundcloud":
-			nowPlayingField.Name += " from SoundCloud"
-			nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
-			queueEmbed.SetThumbnail(nowPlaying.ThumbnailURL)
-		default:
-			if nowPlaying.Author != "" && nowPlaying.Title != "" {
-				nowPlayingField.Value = fmt.Sprintf("[%s](%s) by **%s**\nRequested by <@!%s>", nowPlaying.Title, nowPlaying.MediaURL, nowPlaying.Author, nowPlaying.Requester.ID)
-			} else {
-				nowPlayingField.Value = fmt.Sprintf("%s\nRequested by <@!%s>", nowPlaying.MediaURL, nowPlaying.Requester.ID)
-			}
-		}
-
-	}
 	queueEmbed.Fields = append(queueEmbed.Fields, nowPlayingField)
 
 	return queueEmbed.MessageEmbed

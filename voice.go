@@ -83,6 +83,10 @@ type SpotifyResultNav struct {
 
 	PageNumber int
 	MaxResults int
+
+	AddingAll  bool
+	AddedSoFar int
+	Cancelled  bool
 }
 
 func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
@@ -123,6 +127,9 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 	if err != nil {
 		return err
 	}
+	if len(playlist.Contents.Items) <= 0 {
+		return errors.New("no tracks found")
+	}
 
 	playlistItems := make([]spotigo.SpotigoSearchHit, 0)
 	for i := 0; i < len(playlist.Contents.Items); i++ {
@@ -147,11 +154,20 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 		playlistItems = append(playlistItems, hit)
 	}
 
+	if len(playlistItems) <= 0 {
+		return errors.New("no tracks found")
+	}
+
+	maxResults := page.MaxResults
+	if len(playlistItems) < page.MaxResults {
+		maxResults = len(playlistItems)
+	}
+
 	page.PageNumber = 1
 	page.IsPlaylist = true
 	page.Query = playlist.Attributes.Name
 	page.AllResults = playlistItems
-	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
+	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*maxResults]
 	page.TotalResults = len(page.AllResults)
 	page.PlaylistID = playlist.PlaylistID
 	page.PlaylistUserID = playlist.UserID
@@ -450,30 +466,35 @@ func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
 		}
 	}
 
-	probeURL, err := getMediaURL(audioQueueEntry.MediaURL)
-	if err != nil {
-		return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL. Err: "+fmt.Sprintf("%v", err))
-	}
-
-	probe, err := goprobe.ProbeMedia(probeURL)
-	if err != nil {
-		return NewErrorEmbed("Voice Error", "Error probing the media for audio.")
-	}
-	if len(probe.Streams) == 0 {
-		return NewErrorEmbed("Voice Error", "Error probing the media for audio: No streams were found.")
-	}
-
-	hasAudio := false
+	probe := &goprobe.Probe{}
 	audioStream := 0
-	for i, stream := range probe.Streams {
-		if stream.CodecType == "audio" {
-			hasAudio = true
-			audioStream = i
-			break
+
+	if audioQueueEntry.Type != "spotify" {
+		probeURL, err := getMediaURL(audioQueueEntry.MediaURL)
+		if err != nil {
+			return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL. Err: "+fmt.Sprintf("%v", err))
 		}
-	}
-	if !hasAudio {
-		return NewErrorEmbed("Voice Error", "Error probing the media for audio: Media does not have audio.")
+
+		probe, err = goprobe.ProbeMedia(probeURL)
+		if err != nil {
+			return NewErrorEmbed("Voice Error", "Error probing the media for audio.")
+		}
+		if len(probe.Streams) == 0 {
+			return NewErrorEmbed("Voice Error", "Error probing the media for audio: No streams were found.")
+		}
+
+		hasAudio := false
+		audioStream = 0
+		for i, stream := range probe.Streams {
+			if stream.CodecType == "audio" {
+				hasAudio = true
+				audioStream = i
+				break
+			}
+		}
+		if !hasAudio {
+			return NewErrorEmbed("Voice Error", "Error probing the media for audio: Media does not have audio.")
+		}
 	}
 
 	switch audioQueueEntry.Type {

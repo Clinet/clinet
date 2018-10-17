@@ -325,12 +325,12 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			guildData[guild.ID].Queries[message.ID] = &Query{}
 		}
 
-		typingEvent(session, message.ChannelID)
-
 		if canUpdateMessage {
 			debugLog("> Editing response...", false)
 			session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
 		} else {
+			typingEvent(session, message.ChannelID)
+
 			debugLog("> Sending response...", false)
 			responseMessage, err := session.ChannelMessageSendEmbed(message.ChannelID, responseEmbed)
 			if err != nil {
