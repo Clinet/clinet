@@ -264,6 +264,11 @@ func initCommands() {
 	botData.Commands["repeat"] = &Command{
 		Function: commandRepeat,
 		HelpText: "Switches queue playback between three modes: no repeat, repeat queue, and repeat now playing.",
+		Arguments: []CommandArgument{
+			{Name: "disable", Description: "Disables repeat mode", ArgType: "this"},
+			{Name: "queue", Description: "Enables repeat queue mode", ArgType: "this"},
+			{Name: "now playing", Description: "Enables repeat now playing mode", ArgType: "this"},
+		},
 	}
 	botData.Commands["shuffle"] = &Command{
 		Function: commandShuffle,

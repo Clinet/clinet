@@ -274,16 +274,29 @@ func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 }
 
 func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if len(args) > 0 {
+		switch strings.Join(args, " ") {
+		case "normal", "norm", "disable", "d", "0", "zero":
+			guildData[env.Guild.ID].VoiceData.RepeatLevel = 0
+			return NewGenericEmbed("Voice", "The queue will now play through as normal.")
+		case "queue", "list", "queue list", "q", "l", "1", "one":
+			guildData[env.Guild.ID].VoiceData.RepeatLevel = 1
+			return NewGenericEmbed("Voice", "The queue will now be repeated on a loop.")
+		case "nowplaying", "now playing", "now", "playing", "np", "n", "enable", "e", "2", "two":
+			guildData[env.Guild.ID].VoiceData.RepeatLevel = 2
+			return NewGenericEmbed("Voice", "The now playing entry will now be repeated on a loop.")
+		}
+	}
 	switch guildData[env.Guild.ID].VoiceData.RepeatLevel {
 	case 0: //No repeat
 		guildData[env.Guild.ID].VoiceData.RepeatLevel = 1
-		return NewGenericEmbed("Voice", "The queue will be repeated on a loop.")
+		return NewGenericEmbed("Voice", "The queue will now be repeated on a loop.")
 	case 1: //Repeat the current queue
 		guildData[env.Guild.ID].VoiceData.RepeatLevel = 2
-		return NewGenericEmbed("Voice", "The now playing entry will be repeated on a loop.")
+		return NewGenericEmbed("Voice", "The now playing entry will now be repeated on a loop.")
 	case 2: //Repeat what's in the now playing slot
 		guildData[env.Guild.ID].VoiceData.RepeatLevel = 0
-		return NewGenericEmbed("Voice", "The queue will play through as normal.")
+		return NewGenericEmbed("Voice", "The queue will now play through as normal.")
 	}
 	return nil
 }
