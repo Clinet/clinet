@@ -450,6 +450,7 @@ func initCommands() {
 	botData.Commands["sp"] = &Command{IsAlternateOf: "sp"}
 	botData.Commands["np"] = &Command{IsAlternateOf: "nowplaying"}
 	botData.Commands["q"] = &Command{IsAlternateOf: "queue"}
+	botData.Commands["loop"] = &Command{IsAlternateOf: "repeat"}
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
