@@ -22,12 +22,18 @@ func page(pageItems []*discordgo.MessageEmbedField, page, maxResults int) (*Embe
 		return nil, 0, fmt.Errorf("Maximum results %d too high.", maxResults)
 	}
 
-	totalPages := int(math.Ceil(float64(len(pageItems) / maxResults)))
+	totalPages := int(math.Ceil(float64(len(pageItems)) / float64(maxResults)))
 	if page > totalPages {
 		return nil, totalPages, fmt.Errorf("Page number %d too high.", page)
 	}
 
-	pageItems = pageItems[(page-1)*maxResults : page*maxResults]
+	low := (page - 1) * maxResults
+	high := page * maxResults
+	if high > len(pageItems) {
+		high = len(pageItems)
+	}
+
+	pageItems = pageItems[low:high]
 	pageEmbed := NewEmbed()
 	pageEmbed.Fields = pageItems
 	return pageEmbed, totalPages, nil
