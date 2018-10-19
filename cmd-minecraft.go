@@ -61,7 +61,7 @@ func commandMinecraft(args []string, env *CommandEnvironment) *discordgo.Message
 			host += ":25565"
 		}
 
-		server, _, err := minepong.Ping(host)
+		server, err := minepong.Ping(host)
 		if err != nil {
 			return NewErrorEmbed("Minecraft Error", "Invalid or unknown server ``"+args[1]+"``.")
 		}
