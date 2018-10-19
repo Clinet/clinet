@@ -46,7 +46,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		return //The message was empty
 	}
 
-	contentReplaced, _ := message.ContentWithMoreMentionsReplaced(session)
+	contentReplaced, err := message.ContentWithMoreMentionsReplaced(session)
+	if err != nil {
+		contentReplaced = content
+	}
 	eventType := "[New]"
 	if updatedMessageEvent {
 		eventType = "[Updated]"
@@ -92,7 +95,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 	if guildSettings[guild.ID].BotPrefix != "" {
 		if strings.HasPrefix(content, guildSettings[guild.ID].BotPrefix) {
-			cmdMsg := strings.TrimPrefix(content, guildSettings[guild.ID].BotPrefix)
+			cmdMsg := strings.TrimPrefix(contentReplaced, guildSettings[guild.ID].BotPrefix)
 
 			cmd := strings.Split(cmdMsg, " ")
 

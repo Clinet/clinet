@@ -65,8 +65,12 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	if !foundVoiceChannel {
 		return NewErrorEmbed("Voice Error", "You must join the voice channel to use before using the play command.")
 	}
+
 	//Prevent other play commands in this voice session from messing up this process
 	guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
+
+	//Update channel ID to send voice messages to
+	guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
 	if len(args) >= 1 { //Query or URL was specified
 		_, err := url.ParseRequestURI(args[0]) //Check to see if the first parameter is a URL
@@ -390,6 +394,12 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("YouTube Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 		}
 
+		//Prevent other play commands in this voice session from messing up this process
+		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
+
+		//Update channel ID to send voice messages to
+		guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+
 		result := results[selection-1]
 		resultURL := "https://youtube.com/watch?v=" + result.Id.VideoId
 
@@ -538,6 +548,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 		switch args[1] {
 		case "all", "*":
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
+			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -550,9 +563,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
 
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
+			//Prevent other play commands in this voice session from messing up this process
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
+
+			//Update channel ID to send voice messages to
+			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
 			waitEmbed := NewEmbed().
 				SetTitle("Spotify").
@@ -606,6 +621,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.TotalResults)+" results to the queue.", 0x1DB954)
 		case "view":
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
+			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -618,9 +636,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
 
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
+			//Prevent other play commands in this voice session from messing up this process
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
+
+			//Update channel ID to send voice messages to
+			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
 			waitEmbed := NewEmbed().
 				SetTitle("Spotify").
@@ -682,6 +702,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				return NewErrorEmbed("Spotify Error", "An invalid selection was specified.")
 			}
 
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playback command to finish
+			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -694,9 +717,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
 
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playback command to finish
-			}
+			//Prevent other play commands in this voice session from messing up this process
+			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
+
+			//Update channel ID to send voice messages to
+			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
 			result := results[selection-1]
 			resultURL := "https://open.spotify.com/track/" + result.ID

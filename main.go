@@ -208,6 +208,10 @@ func main() {
 		for guildID, guildDataRow := range guildData {
 			if guildDataRow.VoiceData.VoiceConnection != nil {
 				if voiceIsStreaming(guildID) {
+					if botData.Updating {
+						//Notify users that an update is occuring
+						botData.DiscordSession.ChannelMessageSendEmbed(guildDataRow.VoiceData.ChannelIDJoinedFrom, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
+					}
 					debugLog("> Stopping stream in voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
 					voiceStop(guildID)
 				}
@@ -494,7 +498,7 @@ func spawnBot() int {
 				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == filepath.Base(os.Args[0]) {
 					oldProcess, err := os.FindProcess(process.Pid())
 					if err == nil {
-						oldProcess.Signal(syscall.SIGKILL)
+						oldProcess.Signal(syscall.SIGINT)
 					}
 				}
 			}

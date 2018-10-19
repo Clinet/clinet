@@ -46,6 +46,8 @@ type BotData struct {
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
+
+	Updating bool
 }
 type BotKeys struct {
 	DuckDuckGoAppName    string `json:"ddgAppName"`

@@ -169,6 +169,27 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	//Save the state so it's not lost
 	stateSave()
 
+	//Mark updating flag as true so interrupted events (such as voice playback) will notify users that an update interrupted the event
+	botData.Updating = true
+
+	//Leave all voice channels
+	for guildID, guildDataRow := range guildData {
+		if guildDataRow.VoiceData.VoiceConnection != nil {
+			if voiceIsStreaming(guildID) {
+				//Notify users that an update is occuring
+				botData.DiscordSession.ChannelMessageSendEmbed(guildDataRow.VoiceData.ChannelIDJoinedFrom, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
+
+				debugLog("> Stopping stream in voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
+				voiceStop(guildID)
+			}
+			debugLog("> Closing connection to voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
+			guildDataRow.VoiceData.VoiceConnection.Close()
+		}
+	}
+
+	debugLog("> Disconnecting from Discord...", true)
+	botData.DiscordSession.Close()
+
 	//Spawn a new bot process that will kill this one
 	botProcess := exec.Command(os.Args[0], "-killold", "true")
 	botProcess.Stdout = os.Stdout

@@ -19,7 +19,7 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 	}
 
-	return NewEmbed().
+	botEmbed := NewEmbed().
 		SetAuthor(botData.BotName, botData.DiscordSession.State.User.AvatarURL("2048")).
 		AddField("Bot Owner", "<@!"+botData.BotOwnerID+">").
 		AddField("Guild Count", strconv.Itoa(guildCount)).
@@ -28,7 +28,41 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		AddField("Disabled Wolfram|Alpha Pods", strings.Join(botData.BotOptions.WolframDeniedPods, ", ")).
 		AddField("Debug Mode", strconv.FormatBool(botData.DebugMode)).
 		InlineAllFields().
-		SetColor(0x1C1C1C).MessageEmbed
+		SetColor(0x1C1C1C)
+
+	enabledFeatures := make([]string, 0)
+	if botData.BotOptions.UseCustomResponses {
+		enabledFeatures = append(enabledFeatures, "**Custom Responses**")
+	}
+	if botData.BotOptions.UseDuckDuckGo {
+		enabledFeatures = append(enabledFeatures, "**DuckDuckGo**")
+	}
+	if botData.BotOptions.UseGitHub {
+		enabledFeatures = append(enabledFeatures, "**GitHub**")
+	}
+	if botData.BotOptions.UseImgur {
+		enabledFeatures = append(enabledFeatures, "**Imgur**")
+	}
+	if botData.BotOptions.UseSoundCloud {
+		enabledFeatures = append(enabledFeatures, "**SoundCloud**")
+	}
+	if botData.BotOptions.UseSpotify {
+		enabledFeatures = append(enabledFeatures, "**Spotify**")
+	}
+	if botData.BotOptions.UseWolframAlpha {
+		enabledFeatures = append(enabledFeatures, "**Wolfram|Alpha**")
+	}
+	if botData.BotOptions.UseXKCD {
+		enabledFeatures = append(enabledFeatures, "**xkcd**")
+	}
+	if botData.BotOptions.UseYouTube {
+		enabledFeatures = append(enabledFeatures, "**YouTube**")
+	}
+	if len(enabledFeatures) > 0 {
+		botEmbed.AddField("Enabled Features", strings.Join(enabledFeatures, ", "))
+	}
+
+	return botEmbed.MessageEmbed
 }
 
 func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -84,6 +118,33 @@ func commandServerInfo(args []string, env *CommandEnvironment) *discordgo.Messag
 }
 
 func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	user := env.User
+	member := env.Member
+	memberFound := true
+	if len(env.Message.Mentions) > 0 {
+		user = env.Message.Mentions[0]
+
+		memberMention, err := botData.DiscordSession.GuildMember(env.Guild.ID, user.ID)
+		if err != nil {
+			memberFound = false
+		}
+		member = memberMention
+	} else if len(args) > 0 {
+		mention := args[0]
+
+		userMention, err := botData.DiscordSession.User(mention)
+		if err != nil {
+			return NewErrorEmbed("User Info Error", "Invalid user ``"+mention+"``.")
+		}
+		user = userMention
+
+		memberMention, err := botData.DiscordSession.GuildMember(env.Guild.ID, user.ID)
+		if err != nil {
+			memberFound = false
+		}
+		member = memberMention
+	}
+
 	timezone := userSettings[env.User.ID].Timezone
 	if timezone == "" {
 		return NewErrorEmbed("User Info Error", "Please set a timezone first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
@@ -91,13 +152,6 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 	location, err := tz.LoadLocation(timezone)
 	if err != nil {
 		return NewErrorEmbed("User Info Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
-	}
-
-	user := env.User
-	member := env.Member
-	if len(env.Message.Mentions) > 0 {
-		user = env.Message.Mentions[0]
-		member, _ = botData.DiscordSession.GuildMember(env.Guild.ID, user.ID)
 	}
 
 	creationDate := ""
@@ -114,62 +168,70 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 
 	author := user.Username + "#" + user.Discriminator
 
-	if member.Nick != "" {
-		author += " AKA " + member.Nick
+	if memberFound {
+		if member.Nick != "" {
+			author += " AKA " + member.Nick
+		}
 	}
 
 	userInfoEmbed.SetAuthor(author, user.AvatarURL("2048")).
 		AddField("Creation Date", creationDate)
 
-	joinedAtTime, err := member.JoinedAt.Parse()
-	if err == nil {
-		userInfoEmbed.AddField("Guild Join Date", joinedAtTime.In(location).Format("01/02/2006 15:04:05 MST"))
+	if memberFound {
+		joinedAtTime, err := member.JoinedAt.Parse()
+		if err == nil {
+			userInfoEmbed.AddField("Guild Join Date", joinedAtTime.In(location).Format("01/02/2006 15:04:05 MST"))
+		}
 	}
 
 	userInfoEmbed.AddField("Bot", strconv.FormatBool(user.Bot))
 
-	if len(member.Roles) > 0 {
-		roles := make([]string, 0)
-		for _, roleID := range member.Roles {
-			role, err := botData.DiscordSession.State.Role(env.Guild.ID, roleID)
-			if err == nil {
-				roles = append(roles, role.Name)
+	if memberFound {
+		if len(member.Roles) > 0 {
+			roles := make([]string, 0)
+			for _, roleID := range member.Roles {
+				role, err := botData.DiscordSession.State.Role(env.Guild.ID, roleID)
+				if err == nil {
+					roles = append(roles, role.Name)
+				}
 			}
+			userInfoEmbed.AddField("Roles", strings.Join(roles, ", "))
 		}
-		userInfoEmbed.AddField("Roles", strings.Join(roles, ", "))
 	}
 
-	presence, err := botData.DiscordSession.State.Presence(env.Guild.ID, user.ID)
-	if err == nil {
-		status := ""
-		switch presence.Status {
-		case discordgo.StatusOnline:
-			status = "Online"
-		case discordgo.StatusOffline:
-			status = "Offline"
-		case discordgo.StatusIdle:
-			status = "Idle"
-		case discordgo.StatusDoNotDisturb:
-			status = "Do Not Disturb"
-		case discordgo.StatusInvisible:
-			status = "Invisible"
+	if memberFound {
+		presence, err := botData.DiscordSession.State.Presence(env.Guild.ID, user.ID)
+		if err == nil {
+			status := ""
+			switch presence.Status {
+			case discordgo.StatusOnline:
+				status = "Online"
+			case discordgo.StatusOffline:
+				status = "Offline"
+			case discordgo.StatusIdle:
+				status = "Idle"
+			case discordgo.StatusDoNotDisturb:
+				status = "Do Not Disturb"
+			case discordgo.StatusInvisible:
+				status = "Invisible"
+			}
+			if presence.Game != nil {
+				gameName := presence.Game.Name
+				if presence.Game.URL != "" {
+					gameName = "[" + presence.Game.Name + "](" + presence.Game.URL + ")"
+				}
+				switch presence.Game.Type {
+				case discordgo.GameTypeGame:
+					status += ", playing " + gameName
+				case discordgo.GameTypeStreaming:
+					status += ", streaming " + gameName
+				}
+				if presence.Game.TimeStamps.StartTimestamp != 0 {
+					status += " as of " + humanize.Time(time.Unix(presence.Game.TimeStamps.StartTimestamp, 0).In(location))
+				}
+			}
+			userInfoEmbed.AddField("Presence", status)
 		}
-		if presence.Game != nil {
-			gameName := presence.Game.Name
-			if presence.Game.URL != "" {
-				gameName = "[" + presence.Game.Name + "](" + presence.Game.URL + ")"
-			}
-			switch presence.Game.Type {
-			case discordgo.GameTypeGame:
-				status += ", playing " + gameName
-			case discordgo.GameTypeStreaming:
-				status += ", streaming " + gameName
-			}
-			if presence.Game.TimeStamps.StartTimestamp != 0 {
-				status += " as of " + humanize.Time(time.Unix(presence.Game.TimeStamps.StartTimestamp, 0).In(location))
-			}
-		}
-		userInfoEmbed.AddField("Presence", status)
 	}
 
 	if userSettings, found := userSettings[user.ID]; found {
