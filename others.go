@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"math"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -190,4 +192,10 @@ func GetStringInBetween(str string, start string, end string) (result string) {
 	str = str[s:]
 	e := strings.Index(str, end)
 	return str[:e]
+}
+
+// Gets the JSON from the API and assigns the data to the target
+func unmarshal(body *http.Response, target interface{}) error {
+	defer body.Body.Close()
+	return json.NewDecoder(body.Body).Decode(target)
 }

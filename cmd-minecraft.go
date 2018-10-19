@@ -2,12 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"4d63.com/tz"
 	"github.com/Syfaro/minepong"
 	"github.com/bwmarrin/discordgo"
+	"github.com/dustin/go-humanize"
 	"github.com/minotar/minecraft"
 )
 
@@ -24,15 +29,90 @@ type MCServerDescriptionExtra struct {
 	Underline     bool   `json:"underline"`
 	Italic        bool   `json:"italic"`
 }
+type MCOriginalUser struct {
+	ID       string `json:"id"`
+	Username string `json:"name"`
+}
+type MCUsernameHistory struct {
+	Username    string `json:"name"`
+	TimeChanged int64  `json:"changedToAt"`
+}
+
+func GetAPIOldProfile(mc *minecraft.Minecraft, username string) (*minecraft.APIProfileResponse, error) {
+	originalUser := &MCOriginalUser{}
+
+	url := fmt.Sprintf("https://api.mojang.com/users/profiles/minecraft/%s?at=0", username)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", mc.UserAgent)
+
+	res, err := mc.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(res, originalUser)
+	if err != nil {
+		return nil, err
+	}
+
+	if originalUser.ID == "" || originalUser.Username == "" {
+		return nil, errors.New("not found")
+	}
+
+	profile, err := mc.GetAPIProfile(originalUser.Username)
+	return &profile, err
+}
+func GetAPIUsernameHistory(mc *minecraft.Minecraft, uuid string) ([]MCUsernameHistory, error) {
+	history := make([]MCUsernameHistory, 0)
+
+	url := fmt.Sprintf("https://api.mojang.com/user/profiles/%s/names", uuid)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", mc.UserAgent)
+
+	res, err := mc.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = unmarshal(res, &history)
+	if err != nil {
+		return nil, err
+	}
+
+	return history, nil
+}
 
 func commandMinecraft(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	timezone := userSettings[env.User.ID].Timezone
+	if timezone == "" {
+		return NewErrorEmbed("Minecraft Error", "Please set a timezone first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
+	}
+	location, err := tz.LoadLocation(timezone)
+	if err != nil {
+		return NewErrorEmbed("Minecraft Error", "You have an invalid timezone set, please set a new one first!\n\nEx: ``"+env.BotPrefix+"user timezone America/New_York``")
+	}
+
 	switch args[0] {
 	case "user", "player", "avatar", "skin", "uuid":
 		minecraftAPI := minecraft.NewMinecraft()
 
 		profileAPI, err := minecraftAPI.GetAPIProfile(args[1])
 		if err != nil {
-			return NewErrorEmbed("Minecraft Error", "Invalid or unknown username ``"+args[1]+"``.")
+			oldProfileAPI, err := GetAPIOldProfile(minecraftAPI, args[1])
+			if err != nil {
+				return NewErrorEmbed("Minecraft Error", "Invalid or unknown username ``"+args[1]+"``.")
+			}
+			profileAPI = *oldProfileAPI
 		}
 
 		minecraftEmbed := NewEmbed().
@@ -47,9 +127,29 @@ func commandMinecraft(args []string, env *CommandEnvironment) *discordgo.Message
 			minecraftEmbed.AddField("Account Type", "Demo")
 		}
 
+		usernameHistory, _ := GetAPIUsernameHistory(minecraftAPI, profileAPI.User.UUID)
+		if len(usernameHistory) > 0 {
+			history := make([]string, 0)
+			for _, username := range usernameHistory {
+				if username.TimeChanged != 0 {
+					timeChanged := time.Unix(username.TimeChanged, 0).In(location)
+					history = append(history, username.Username+" (changed "+humanize.Time(timeChanged.In(location))+" at ``"+timeChanged.In(location).String()+"``)")
+				} else {
+					history = append(history, username.Username)
+				}
+			}
+			if len(history) > 0 {
+				minecraftEmbed.AddField("Username History", strings.Join(history, "\n"))
+			}
+		}
+
 		profileSession, err := minecraftAPI.GetSessionProfile(profileAPI.User.UUID)
 		if err == nil {
 			for _, property := range profileSession.Properties {
+				switch property.Name {
+				case "textures":
+					continue
+				}
 				minecraftEmbed.AddField("Property: "+property.Name, property.Value)
 			}
 		}
