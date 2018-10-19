@@ -548,9 +548,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 		switch args[1] {
 		case "all", "*":
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -561,6 +558,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
 			}
 
 			//Prevent other play commands in this voice session from messing up this process
@@ -621,9 +621,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.TotalResults)+" results to the queue.", 0x1DB954)
 		case "view":
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -634,6 +631,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playbck command to finish
 			}
 
 			//Prevent other play commands in this voice session from messing up this process
@@ -702,9 +702,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				return NewErrorEmbed("Spotify Error", "An invalid selection was specified.")
 			}
 
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playback command to finish
-			}
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
@@ -715,6 +712,9 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
+			}
+			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
+				//Wait for the handling of a previous playback command to finish
 			}
 
 			//Prevent other play commands in this voice session from messing up this process

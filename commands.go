@@ -73,7 +73,7 @@ func initCommands() {
 		Function: commandUserInfo,
 		HelpText: "Displays info about the current or specified user.",
 		Arguments: []CommandArgument{
-			{Name: "user", Description: "The user to view info about", ArgType: "mention"},
+			{Name: "user", Description: "The user to view info about", ArgType: "mention/user ID"},
 		},
 	}
 
@@ -104,6 +104,18 @@ func initCommands() {
 		},
 		Arguments: []CommandArgument{
 			{Name: "message", Description: "The text to translate to Hewwo", ArgType: "string"},
+		},
+	}
+	botData.Commands["minecraft"] = &Command{
+		Function: commandMinecraft,
+		HelpText: "Displays information about a specified user or server.",
+		RequiredArguments: []string{
+			"user/server",
+			"name/host",
+		},
+		Arguments: []CommandArgument{
+			{Name: "user", Description: "Displays information about the specified user", ArgType: "string"},
+			{Name: "server", Description: "Displays infromation about the specified server", ArgType: "ip(:port)"},
 		},
 	}
 	botData.Commands["zalgo"] = &Command{
@@ -428,20 +440,6 @@ func initCommands() {
 		},
 	}
 
-	/*
-		botData.Commands["user"] = &Command{
-			Function: commandSettingsUser,
-			HelpText: "Changes settings pertaining to you.",
-			RequiredArguments: []string{
-				"setting",
-				"(value)",
-			},
-			Arguments: []CommandArgument{
-				{Name: "description", Description: "Sets your user description", ArgType: "string"},
-			},
-		}
-	*/
-
 	//Alternate commands for pre-established commands
 	botData.Commands["?"] = &Command{IsAlternateOf: "help"}
 	botData.Commands["commands"] = &Command{IsAlternateOf: "help"}
@@ -459,6 +457,7 @@ func initCommands() {
 	botData.Commands["ud"] = &Command{IsAlternateOf: "urbandictionary"}
 	botData.Commands["owo"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
+	botData.Commands["mc"] = &Command{IsAlternateOf: "minecraft"}
 	botData.Commands["guildinfo"] = &Command{IsAlternateOf: "serverinfo"}
 
 	//Administrative commands for bot owners
