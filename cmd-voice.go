@@ -742,19 +742,18 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
 		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
+	if (page.PageNumber - 1) > 0 {
+		commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the previous page"
+	}
+	if (page.PageNumber + 1) <= page.TotalPages {
+		commandList += "\n" + env.BotPrefix + env.Command + " next - Displays the next page"
+	}
 
 	if page.IsPlaylist {
 		spotifyEmbed.SetTitle("Spotify Playlist - Page " + strconv.Itoa(page.PageNumber)).
 			SetDescription(strconv.Itoa(page.TotalResults) + " results for [" + page.Query + "](https://open.spotify.com/user/" + page.PlaylistUserID + "/playlist/" + page.PlaylistID + ")")
-
-		if ((page.PageNumber-1)*page.MaxResults) < page.TotalResults && ((page.PageNumber-1)*page.MaxResults) > 0 {
-			commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the previous page"
-		}
-		if ((page.PageNumber+1)*page.MaxResults) < page.TotalResults && ((page.PageNumber+1)*page.MaxResults) > 0 {
-			commandList += "\n" + env.BotPrefix + env.Command + " next - Displays the next page"
-		}
 	} else {
-		spotifyEmbed.SetTitle("Spotify Search Results").
+		spotifyEmbed.SetTitle("Spotify Search Results - Page " + strconv.Itoa(page.PageNumber)).
 			SetDescription(strconv.Itoa(page.TotalResults) + " results for \"" + page.Query + "\"")
 	}
 

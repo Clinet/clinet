@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net/url"
 	"regexp"
@@ -83,6 +84,7 @@ type SpotifyResultNav struct {
 
 	PageNumber int
 	MaxResults int
+	TotalPages int
 
 	AddingAll  bool
 	AddedSoFar int
@@ -98,19 +100,36 @@ func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
 	return page.Results, nil
 }
 func (page *SpotifyResultNav) Search(query string) error {
+	if page.MaxResults == 0 {
+		page.MaxResults = botData.BotOptions.SpotifyMaxResults
+	}
+
 	page.Query = ""
 	page.TotalResults = 0
+	page.AllResults = nil
 	page.Results = nil
+	page.PageNumber = 0
 	page.IsPlaylist = false
+	page.PlaylistID = ""
+	page.PlaylistUserID = ""
+	page.TotalPages = 0
 
 	trackResults, err := botData.BotClients.Spotify.SearchTracks(query)
 	if err != nil {
 		return err
 	}
 
+	maxResults := page.MaxResults
+	if len(trackResults.Hits) < page.MaxResults {
+		maxResults = len(trackResults.Hits)
+	}
+
+	page.PageNumber = 1
 	page.Query = query
-	page.TotalResults = len(trackResults.Hits)
-	page.Results = trackResults.Hits
+	page.AllResults = trackResults.Hits
+	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*maxResults]
+	page.TotalResults = len(page.AllResults)
+	page.TotalPages = int(math.Ceil(float64(page.TotalResults) / float64(page.MaxResults)))
 
 	return nil
 }
@@ -121,9 +140,13 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 
 	page.Query = ""
 	page.TotalResults = 0
+	page.AllResults = nil
 	page.Results = nil
 	page.PageNumber = 0
 	page.IsPlaylist = false
+	page.PlaylistID = ""
+	page.PlaylistUserID = ""
+	page.TotalPages = 0
 
 	playlist, err := botData.BotClients.Spotify.GetPlaylist(url)
 	if err != nil {
@@ -182,6 +205,7 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 	page.TotalResults = len(page.AllResults)
 	page.PlaylistID = playlist.PlaylistID
 	page.PlaylistUserID = playlist.UserID
+	page.TotalPages = int(math.Ceil(float64(page.TotalResults) / float64(page.MaxResults)))
 
 	return nil
 }
@@ -189,7 +213,7 @@ func (page *SpotifyResultNav) Prev() error {
 	if page.PageNumber == 0 {
 		return errors.New("No pages found")
 	}
-	if ((page.PageNumber-1)*page.MaxResults) > page.TotalResults || ((page.PageNumber-1)*page.MaxResults) <= 0 {
+	if (page.PageNumber - 1) <= 0 {
 		return errors.New("Page not available")
 	}
 
@@ -202,7 +226,7 @@ func (page *SpotifyResultNav) Next() error {
 	if page.PageNumber == 0 {
 		return errors.New("No pages found")
 	}
-	if ((page.PageNumber+1)*page.MaxResults) > page.TotalResults || ((page.PageNumber+1)*page.MaxResults) <= 0 {
+	if (page.PageNumber + 1) > page.TotalPages {
 		return errors.New("Page not available")
 	}
 
