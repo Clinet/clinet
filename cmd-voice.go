@@ -394,9 +394,6 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("YouTube Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 		}
 
-		//Prevent other play commands in this voice session from messing up this process
-		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
-
 		//Update channel ID to send voice messages to
 		guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
@@ -563,9 +560,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				//Wait for the handling of a previous playbck command to finish
 			}
 
-			//Prevent other play commands in this voice session from messing up this process
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
-
 			//Update channel ID to send voice messages to
 			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
@@ -635,9 +629,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
 				//Wait for the handling of a previous playbck command to finish
 			}
-
-			//Prevent other play commands in this voice session from messing up this process
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
 
 			//Update channel ID to send voice messages to
 			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
@@ -716,9 +707,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
 				//Wait for the handling of a previous playback command to finish
 			}
-
-			//Prevent other play commands in this voice session from messing up this process
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
 
 			//Update channel ID to send voice messages to
 			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
