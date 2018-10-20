@@ -35,6 +35,9 @@ func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo
 			interpolation := gift.NearestNeighborInterpolation
 			resampling := gift.NearestNeighborResampling
 
+			width := srcImage.Bounds().Max.X
+			height := srcImage.Bounds().Max.Y
+
 			for _, effect := range args {
 				switch effect.Name {
 				case "bg", "bgcolor", "bgcolour", "backgroundcolor", "backgroundcolour":
@@ -90,11 +93,11 @@ func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo
 				case "grayscale", "greyscale":
 					g.Add(gift.Grayscale())
 				case "height":
-					height, err := strconv.Atoi(effect.Value)
+					newHeight, err := strconv.Atoi(effect.Value)
 					if err != nil {
 						return NewErrorEmbed("Image Error", "Invalid height integer ``"+effect.Value+"``.")
 					}
-					g.Add(gift.Resize(0, height, resampling))
+					height = newHeight
 				case "interpolation":
 					switch effect.Value {
 					case "c", "cubic":
@@ -161,15 +164,17 @@ func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo
 				case "transverse":
 					g.Add(gift.Transverse())
 				case "width":
-					width, err := strconv.Atoi(effect.Value)
+					newWidth, err := strconv.Atoi(effect.Value)
 					if err != nil {
 						return NewErrorEmbed("Image Error", "Invalid width integer ``"+effect.Value+"``.")
 					}
-					g.Add(gift.Resize(width, 0, resampling))
+					width = newWidth
 				default:
 					return NewErrorEmbed("Image Error", "Unknown effect ``"+effect.Name+"``.")
 				}
 			}
+
+			g.Add(gift.Resize(width, height, resampling))
 
 			dstImage := image.NewRGBA(g.Bounds(srcImage.Bounds()))
 			g.Draw(dstImage, srcImage)
