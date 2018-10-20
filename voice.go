@@ -218,7 +218,12 @@ func (page *SpotifyResultNav) Prev() error {
 	}
 
 	page.PageNumber--
-	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
+	low := (page.PageNumber - 1) * page.MaxResults
+	high := page.PageNumber * page.MaxResults
+	if high > len(page.AllResults) {
+		high = len(page.AllResults)
+	}
+	page.Results = page.AllResults[low:high]
 
 	return nil
 }
@@ -231,7 +236,30 @@ func (page *SpotifyResultNav) Next() error {
 	}
 
 	page.PageNumber++
-	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*page.MaxResults]
+	low := (page.PageNumber - 1) * page.MaxResults
+	high := page.PageNumber * page.MaxResults
+	if high > len(page.AllResults) {
+		high = len(page.AllResults)
+	}
+	page.Results = page.AllResults[low:high]
+
+	return nil
+}
+func (page *SpotifyResultNav) Jump(pageNumber int) error {
+	if page.PageNumber == 0 {
+		return errors.New("No pages found")
+	}
+	if pageNumber > page.TotalPages || pageNumber < 1 {
+		return errors.New("Page not available")
+	}
+
+	page.PageNumber = pageNumber
+	low := (page.PageNumber - 1) * page.MaxResults
+	high := page.PageNumber * page.MaxResults
+	if high > len(page.AllResults) {
+		high = len(page.AllResults)
+	}
+	page.Results = page.AllResults[low:high]
 
 	return nil
 }

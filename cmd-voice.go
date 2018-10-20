@@ -516,6 +516,21 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			return NewErrorEmbed("Spotify Error", "There was an error finding the previous page.")
 		}
+	case "jump", "page":
+		if guildData[env.Guild.ID].SpotifyResults == nil {
+			return NewErrorEmbed("Spotify Error", "No search session is in progress.")
+		}
+
+		pageNumber, err := strconv.Atoi(args[1])
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "Invalid page number ``"+args[1]+"``.")
+		}
+
+		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
+		err = page.Jump(pageNumber)
+		if err != nil {
+			return NewErrorEmbed("Spotify Error", "There was an error finding page ``"+args[1]+"``.")
+		}
 	case "cancel", "c":
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		if page == nil {
@@ -738,6 +753,8 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		SetColor(0x1DB954)
 
 	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
+		"\n" + env.BotPrefix + env.Command + " play all - Plays all results" +
+		"\n" + env.BotPrefix + env.Command + " play view - Plays all results on this page" +
 		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
 	if (page.PageNumber - 1) > 0 {
 		commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the previous page"
@@ -745,12 +762,13 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	if (page.PageNumber + 1) <= page.TotalPages {
 		commandList += "\n" + env.BotPrefix + env.Command + " next - Displays the next page"
 	}
+	commandList += "\n" + env.BotPrefix + env.Command + " page N - Jumps to page N"
 
 	if page.IsPlaylist {
-		spotifyEmbed.SetTitle("Spotify Playlist - Page " + strconv.Itoa(page.PageNumber)).
+		spotifyEmbed.SetTitle("Spotify Playlist - Page " + strconv.Itoa(page.PageNumber) + "/" + strconv.Itoa(page.TotalPages)).
 			SetDescription(strconv.Itoa(page.TotalResults) + " results for [" + page.Query + "](https://open.spotify.com/user/" + page.PlaylistUserID + "/playlist/" + page.PlaylistID + ")")
 	} else {
-		spotifyEmbed.SetTitle("Spotify Search Results - Page " + strconv.Itoa(page.PageNumber)).
+		spotifyEmbed.SetTitle("Spotify Search Results - Page " + strconv.Itoa(page.PageNumber) + "/" + strconv.Itoa(page.TotalPages)).
 			SetDescription(strconv.Itoa(page.TotalResults) + " results for \"" + page.Query + "\"")
 	}
 
@@ -969,13 +987,14 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		queueColor = int(queueColorR + queueColorG + queueColorB)
 	}
 
-	queueEmbed := pagedQueueList.
+	queueEmbed := NewEmbed().
 		SetTitle("Queue for " + env.Guild.Name + " - Page " + strconv.Itoa(pageNumber) + "/" + strconv.Itoa(totalPages)).
 		SetDescription("There are " + strconv.Itoa(len(queueList)) + " entries in the queue.").
 		SetColor(queueColor).
 		SetThumbnail(nowPlaying.ThumbnailURL)
 
 	queueEmbed.Fields = append(queueEmbed.Fields, nowPlayingField)
+	queueEmbed.Fields = append(queueEmbed.Fields, pagedQueueList.Fields...)
 
 	return queueEmbed.MessageEmbed
 }

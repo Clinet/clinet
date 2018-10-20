@@ -321,6 +321,7 @@ func initCommands() {
 			{Name: "playlist", Description: "Displays track results for the specified playlist", ArgType: "playlist"},
 			{Name: "next", Description: "Navigates forward in a playlist's pages", ArgType: "this"},
 			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: "this"},
+			{Name: "page/jump", Description: "Jumps to the specified page", ArgType: "number"},
 			{Name: "cancel", Description: "Cancels the search/playlist session", ArgType: "this"},
 			{Name: "play", Description: "Plays the chosen result", ArgType: "number"},
 			{Name: "play all", Description: "Plays every result", ArgType: "this"},
