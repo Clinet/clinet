@@ -4,9 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"image"
+	"image/gif"
+	"image/png"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kortschak/zalgo"
@@ -63,4 +69,71 @@ func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	zalgo := buf.String()
 
 	return NewGenericEmbed("Zalgo", string(zalgo))
+}
+
+func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	timeout := time.Duration(1 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	_, err := client.Get(args[0])
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
+	}
+
+	website := url.QueryEscape(args[0])
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://image.thum.io/get/auth/%s/%s", botData.BotKeys.ThumIOAPIKey, website), nil)
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
+	}
+	req.Header.Set("User-Agent", "Clinet/"+GitCommitFull)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
+	}
+
+	var screenshotImage image.Image
+
+	switch resp.Header.Get("content-type") {
+	case "image/gif":
+		gifAnim, err := gif.DecodeAll(resp.Body)
+		if err != nil {
+			return NewErrorEmbed("Screenshot Error", "The API failed to respond with a valid screenshot.")
+		}
+		screenshotImage = gifAnim.Image[len(gifAnim.Image)-1]
+	case "image/png", "image/jpeg":
+		srcImage, _, err := image.Decode(resp.Body)
+		if err != nil {
+			return NewErrorEmbed("Screenshot Error", "The API failed to respond with a valid screenshot.")
+		}
+		screenshotImage = srcImage
+	default:
+		return NewErrorEmbed("Screenshot Error - DEBUG", fmt.Sprintf("%v", resp))
+		return NewErrorEmbed("Screenshot Error", "The API failed to respond in an expected way.")
+	}
+
+	var outImage bytes.Buffer
+	err = png.Encode(&outImage, screenshotImage)
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "Unexpected error processing screenshot.")
+	}
+
+	_, err = botData.DiscordSession.ChannelMessageSendComplex(env.Channel.ID, &discordgo.MessageSend{
+		File: &discordgo.File{
+			Name:   "clinet-screenshot.png",
+			Reader: &outImage,
+		},
+		Embed: &discordgo.MessageEmbed{
+			Title:       "Screenshot",
+			Description: "The below screenshot is of the website ``" + args[0] + "``.",
+			Image: &discordgo.MessageEmbedImage{
+				URL: "attachment://clinet-screenshot.png",
+			},
+		},
+	})
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "Unexpected error uploading screenshot.")
+	}
+	return nil
 }

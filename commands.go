@@ -168,6 +168,16 @@ func initCommands() {
 			{Name: "width", Description: "Sets the width", ArgType: "number"},
 		},
 	}
+	botData.Commands["screenshot"] = &Command{
+		Function: commandScreenshot,
+		HelpText: "Takes a screenshot of a website.",
+		RequiredArguments: []string{
+			"url",
+		},
+		Arguments: []CommandArgument{
+			{Name: "url", Description: "The URL to take a screenshot of", ArgType: "url"},
+		},
+	}
 	botData.Commands["cve"] = &Command{
 		Function: commandCVE,
 		HelpText: "Fetches information about a specified CVE.",

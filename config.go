@@ -56,6 +56,7 @@ type BotKeys struct {
 	SoundCloudClientID   string `json:"soundcloudClientID"`
 	SpotifyHost          string `json:"spotifyHost"`
 	SpotifyPass          string `json:"spotifyPass"`
+	ThumIOAPIKey         string `json:"thum.IOAPIKey"`
 	WolframAppID         string `json:"wolframAppID"`
 	YouTubeAPIKey        string `json:"youtubeAPIKey"`
 }
