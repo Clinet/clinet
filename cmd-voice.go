@@ -115,41 +115,38 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		return queueData.GetNowPlayingEmbed()
 	}
 
-	if voiceIsStreaming(env.Guild.ID) {
-		if len(env.Message.Attachments) > 0 {
-			for _, attachment := range env.Message.Attachments {
-				queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: env.Message.Author}
-				errEmbed := queueData.FillMetadata()
-				if errEmbed != nil {
-					guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
-					return errEmbed
-				}
-				guildData[env.Guild.ID].QueueAdd(queueData)
-			}
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-			return NewGenericEmbed("Voice", "Added the attached files to the guild queue.")
-		}
-		isPaused, _ := voiceGetPauseState(env.Guild.ID)
-		if isPaused {
-			_, _ = voiceResume(env.Guild.ID)
-			guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-			return NewGenericEmbed("Voice", "Resumed the audio playback.")
-		}
-		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-		return NewErrorEmbed("Voice Error", "Already playing audio.")
-	}
 	if len(env.Message.Attachments) > 0 {
-		for _, attachment := range env.Message.Attachments {
+		waitEmbed := NewEmbed().
+			SetTitle("Voice").
+			SetDescription("Please wait a moment as we add all " + strconv.Itoa(len(env.Message.Attachments)) + " attachments to the queue...\n\nThe first result added will automatically begin playing. During this process, it may feel as if other commands are slow or don't work; give them some time to process.").
+			SetColor(0x1DB954).MessageEmbed
+		botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
+
+		for i, attachment := range env.Message.Attachments {
+			//Give a chance for other commands waiting in line to execute
+			guildData[env.Guild.ID].Unlock()
+			guildData[env.Guild.ID].Lock()
+
 			queueData := AudioQueueEntry{MediaURL: attachment.URL, Requester: env.Message.Author}
 			errEmbed := queueData.FillMetadata()
 			if errEmbed != nil {
-				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-				return errEmbed
+				botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewErrorEmbed("Voice Error", "Error finding track info for attachment "+strconv.Itoa(i+1)+"."))
 			}
-			guildData[env.Guild.ID].QueueAdd(queueData)
+
+			if voiceIsStreaming(env.Guild.ID) {
+				guildData[env.Guild.ID].QueueAdd(queueData)
+				continue
+			}
+
+			guildData[env.Guild.ID].AudioNowPlaying = queueData
+			go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+
+			botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, queueData.GetNowPlayingEmbed())
 		}
+
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
-		return NewGenericEmbed("Voice", "Added the attached files to the guild queue. Use ``"+env.BotPrefix+"play`` to begin playback from the beginning of the queue.")
+
+		return NewGenericEmbedAdvanced("Voice", "Finished adding all "+strconv.Itoa(len(env.Message.Attachments))+" attachments to the queue.", 0x1DB954)
 	}
 	if guildData[env.Guild.ID].AudioNowPlaying.MediaURL != "" {
 		queueData := guildData[env.Guild.ID].AudioNowPlaying
@@ -160,7 +157,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		}
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueData.MediaURL)
-		return queueData.GetQueueAddedEmbed()
+		return queueData.GetNowPlayingEmbed()
 	}
 	if len(guildData[env.Guild.ID].AudioQueue) > 0 {
 		queueData := guildData[env.Guild.ID].AudioQueue[0]
@@ -172,7 +169,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		guildData[env.Guild.ID].QueueRemove(0)
 		guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueData.MediaURL)
-		return queueData.GetQueueAddedEmbed()
+		return queueData.GetNowPlayingEmbed()
 	}
 
 	guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false //We're done so we should allow the next play command to run
