@@ -43,27 +43,30 @@ func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDe
 
 	message := event //Make it easier to keep track of what's happening
 
-	debugLog("[D] ID: "+message.ID, false)
-
 	guildChannel, err := session.Channel(message.ChannelID)
 	if err == nil {
 		guildID := guildChannel.GuildID
 
-		_, guildFound := guildData[guildID]
-		if guildFound {
-			guildData[guildID].Lock()
-			defer guildData[guildID].Unlock()
+		guild, err := session.Guild(guildID)
+		if err == nil {
+			debugLog("[Deleted]["+guild.Name+" - #"+guildChannel.Name+"]: (Guild: "+guildID+", Channel: "+message.ChannelID+", Message: "+message.ID+")", false)
 
-			_, messageFound := guildData[guildID].Queries[message.ID]
-			if messageFound {
-				debugLog("> Deleting message...", false)
-				session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
-				guildData[guildID].Queries[message.ID] = nil                                                              //Remove the message from the query list
+			_, guildFound := guildData[guildID]
+			if guildFound {
+				guildData[guildID].Lock()
+				defer guildData[guildID].Unlock()
+
+				_, messageFound := guildData[guildID].Queries[message.ID]
+				if messageFound {
+					debugLog("> Deleting message...", false)
+					session.ChannelMessageDelete(message.ChannelID, guildData[guildID].Queries[message.ID].ResponseMessageID) //Delete the query response message
+					guildData[guildID].Queries[message.ID] = nil                                                              //Remove the message from the query list
+				} else {
+					debugLog("> Error finding deleted message in queries list", false)
+				}
 			} else {
-				debugLog("> Error finding deleted message in queries list", false)
+				debugLog("> Error finding guild for deleted message", false)
 			}
-		} else {
-			debugLog("> Error finding guild for deleted message", false)
 		}
 	} else {
 		debugLog("> Error finding channel for deleted message", false)

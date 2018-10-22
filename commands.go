@@ -323,9 +323,9 @@ func initCommands() {
 			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: "this"},
 			{Name: "page/jump", Description: "Jumps to the specified page", ArgType: "number"},
 			{Name: "cancel", Description: "Cancels the search/playlist session", ArgType: "this"},
-			{Name: "play", Description: "Plays the chosen result", ArgType: "number"},
-			{Name: "play all", Description: "Plays every result", ArgType: "this"},
-			{Name: "play view", Description: "Plays every result on the current page", ArgType: "this"},
+			{Name: "play", Description: "Plays the chosen result (single track, 10 popular artist tracks, full album, or list a playlist)", ArgType: "number"},
+			{Name: "play all", Description: "Plays every track result", ArgType: "this"},
+			{Name: "play view", Description: "Plays every track result on the current page", ArgType: "this"},
 		},
 	}
 	botData.Commands["queue"] = &Command{

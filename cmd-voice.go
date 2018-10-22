@@ -593,6 +593,10 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					return nil
 				}
 
+				if result.GetType() != "track" {
+					continue
+				}
+
 				resultURL := "https://open.spotify.com/track/" + result.ID
 
 				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
@@ -625,7 +629,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 			page.AddingAll = false
 
-			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.TotalResults)+" results to the queue.", 0x1DB954)
+			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks to the queue.", 0x1DB954)
 		case "view":
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
@@ -663,6 +667,10 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					return nil
 				}
 
+				if result.GetType() != "track" {
+					continue
+				}
+
 				resultURL := "https://open.spotify.com/track/" + result.ID
 
 				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
@@ -695,7 +703,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 			page.AddingAll = false
 
-			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(len(page.Results))+" results to the queue.", 0x1DB954)
+			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks to the queue.", 0x1DB954)
 		default:
 			selection, err := strconv.Atoi(args[1])
 			if err != nil {
@@ -724,21 +732,124 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
 
 			result := results[selection-1]
-			resultURL := "https://open.spotify.com/track/" + result.ID
+			switch result.GetType() {
+			case "track":
+				resultURL := "https://open.spotify.com/track/" + result.ID
 
-			queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
-			errEmbed := queueData.FillMetadata()
-			if errEmbed != nil {
-				guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
-				return errEmbed
+				queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
+				errEmbed := queueData.FillMetadata()
+				if errEmbed != nil {
+					guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+					return errEmbed
+				}
+				if voiceIsStreaming(env.Guild.ID) {
+					guildData[env.Guild.ID].QueueAdd(queueData)
+					return queueData.GetQueueAddedEmbed()
+				}
+				guildData[env.Guild.ID].AudioNowPlaying = queueData
+				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+				return queueData.GetNowPlayingEmbed()
+			case "artist":
+				artistInfo, err := botData.BotClients.Spotify.GetArtistInfo(result.URI)
+				if err != nil {
+					return NewErrorEmbed("Spotify Error", "Error fetching info for the specified result.")
+				}
+
+				waitEmbed := NewEmbed().
+					SetTitle("Spotify").
+					SetDescription("Please wait a moment as we add the top " + strconv.Itoa(len(artistInfo.TopTracks)) + " tracks to the queue...\n\nThe first result added will automatically begin playing. During this process, it may feel as if other commands are slow or don't work; give them some time to process.\nYou may cancel at any moment with ``" + env.BotPrefix + env.Command + " cancel``. Cancelling will not remove any results added to the queue during this process.").
+					SetColor(0x1DB954).MessageEmbed
+				botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
+
+				page.AddingAll = true
+
+				for _, topTrack := range artistInfo.TopTracks {
+					guildData[env.Guild.ID].Unlock()
+					guildData[env.Guild.ID].Lock()
+
+					if page.Cancelled {
+						page.AddingAll = false
+						return nil
+					}
+
+					resultURL := "https://open.spotify.com/track/" + topTrack.TrackID
+
+					queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
+					errEmbed := queueData.FillMetadata()
+					if errEmbed != nil {
+						guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+						return errEmbed
+					}
+					if voiceIsStreaming(env.Guild.ID) {
+						guildData[env.Guild.ID].QueueAdd(queueData)
+						page.AddedSoFar++
+						continue
+					}
+					guildData[env.Guild.ID].AudioNowPlaying = queueData
+					go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+					botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, queueData.GetNowPlayingEmbed())
+					page.AddedSoFar++
+				}
+
+				page.AddingAll = false
+
+				return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks to the queue.", 0x1DB954)
+			case "album":
+				albumInfo, err := botData.BotClients.Spotify.GetAlbumInfo(result.URI)
+				if err != nil {
+					return NewErrorEmbed("Spotify Error", "Error fetching info for the specified result.")
+				}
+
+				totalTracks := 0
+				for _, disc := range albumInfo.Discs {
+					totalTracks += len(disc.Tracks)
+				}
+
+				waitEmbed := NewEmbed().
+					SetTitle("Spotify").
+					SetDescription("Please wait a moment as we add all " + strconv.Itoa(totalTracks) + " tracks to the queue...\n\nThe first result added will automatically begin playing. During this process, it may feel as if other commands are slow or don't work; give them some time to process.\nYou may cancel at any moment with ``" + env.BotPrefix + env.Command + " cancel``. Cancelling will not remove any results added to the queue during this process.").
+					SetColor(0x1DB954).MessageEmbed
+				botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, waitEmbed)
+
+				page.AddingAll = true
+
+				for _, disc := range albumInfo.Discs {
+					for _, track := range disc.Tracks {
+						guildData[env.Guild.ID].Unlock()
+						guildData[env.Guild.ID].Lock()
+
+						if page.Cancelled {
+							page.AddingAll = false
+							return nil
+						}
+
+						resultURL := "https://open.spotify.com/track/" + track.TrackID
+
+						queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
+						errEmbed := queueData.FillMetadata()
+						if errEmbed != nil {
+							guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = false
+							return errEmbed
+						}
+						if voiceIsStreaming(env.Guild.ID) {
+							guildData[env.Guild.ID].QueueAdd(queueData)
+							page.AddedSoFar++
+							continue
+						}
+						guildData[env.Guild.ID].AudioNowPlaying = queueData
+						go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
+						botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, queueData.GetNowPlayingEmbed())
+						page.AddedSoFar++
+					}
+				}
+
+				page.AddingAll = false
+
+				return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks to the queue.", 0x1DB954)
+			case "user":
+				playlistURI := result.GetID()
+				return commandSpotify([]string{"playlist", "spotify:user:" + playlistURI[0] + ":playlist:" + playlistURI[1]}, env)
 			}
-			if voiceIsStreaming(env.Guild.ID) {
-				guildData[env.Guild.ID].QueueAdd(queueData)
-				return queueData.GetQueueAddedEmbed()
-			}
-			guildData[env.Guild.ID].AudioNowPlaying = queueData
-			go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueData.MediaURL)
-			return queueData.GetNowPlayingEmbed()
 		}
 	default:
 		return NewErrorEmbed("Spotify Error", "Unknown command ``"+args[0]+"``.")
@@ -750,11 +861,12 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	}
 
 	spotifyEmbed := NewEmbed().
+		SetThumbnail(results[0].ImageURL).
 		SetColor(0x1DB954)
 
-	commandList := env.BotPrefix + env.Command + " play N - Plays result N" +
-		"\n" + env.BotPrefix + env.Command + " play all - Plays all results" +
-		"\n" + env.BotPrefix + env.Command + " play view - Plays all results on this page" +
+	commandList := env.BotPrefix + env.Command + " play N - Plays result N (single track, 10 popular artist tracks, full album, or list a playlist)" +
+		"\n" + env.BotPrefix + env.Command + " play all - Plays all track results" +
+		"\n" + env.BotPrefix + env.Command + " play view - Plays all track results on this page" +
 		"\n" + env.BotPrefix + env.Command + " cancel - Cancels the search session"
 	if (page.PageNumber - 1) > 0 {
 		commandList += "\n" + env.BotPrefix + env.Command + " prev - Displays the previous page"
@@ -778,14 +890,73 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 	fields := []*discordgo.MessageEmbedField{}
 	for i := 0; i < len(results); i++ {
-		trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(results[i].URI)
-		if err != nil {
-			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this track](https://open.spotify.com/track/" + results[i].ID + ")"})
-		} else {
-			artist := trackInfo.Artist
-			title := trackInfo.Title
+		switch results[i].GetType() {
+		case "artist":
+			artistInfo, err := botData.BotClients.Spotify.GetArtistInfo(results[i].URI)
+			if err != nil {
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Artist", Value: "Error fetching info for [this artist](https://open.spotify.com/artist/" + results[i].ID + ")"})
+			} else {
+				artist := artistInfo.Title
 
-			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://open.spotify.com/track/" + results[i].ID + ") by **" + artist + "**"})
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Artist", Value: "[" + artist + "](https://open.spotify.com/artist/" + results[i].ID + ")"})
+			}
+		case "track":
+			trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(results[i].URI)
+			if err != nil {
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Track", Value: "Error fetching info for [this track](https://open.spotify.com/track/" + results[i].ID + ")"})
+			} else {
+				artist := "[" + trackInfo.Artists[0].Title + "](https://open.spotify.com/artist/" + trackInfo.Artists[0].ArtistID + ")"
+				if len(trackInfo.Artists) > 1 {
+					artist += " ft. " + "[" + trackInfo.Artists[1].Title + "](https://open.spotify.com/artist/" + trackInfo.Artists[1].ArtistID + ")"
+					if len(trackInfo.Artist) > 2 {
+						for i, trackArtist := range trackInfo.Artists[2:] {
+							artist += ", "
+							if (i + 3) == len(trackInfo.Artists) {
+								artist += " and "
+							}
+							artist += "[" + trackArtist.Title + "](https://open.spotify.com/artist/" + trackArtist.ArtistID + ")"
+						}
+					}
+				}
+				title := trackInfo.Title
+
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Track", Value: "[" + title + "](https://open.spotify.com/track/" + results[i].ID + ") by " + artist})
+			}
+		case "album":
+			albumInfo, err := botData.BotClients.Spotify.GetAlbumInfo(results[i].URI)
+			if err != nil {
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Album", Value: "Error fetching info for [this album](https://open.spotify.com/album/" + results[i].ID + ")"})
+			} else {
+				artist := "[" + albumInfo.Artists[0].Title + "](https://open.spotify.com/artist/" + albumInfo.Artists[0].ArtistID + ")"
+				if len(albumInfo.Artists) > 1 {
+					artist += " ft. " + "[" + albumInfo.Artists[1].Title + "](https://open.spotify.com/artist/" + albumInfo.Artists[1].ArtistID + ")"
+					if len(albumInfo.Artist) > 2 {
+						for i, albumArtist := range albumInfo.Artists[2:] {
+							artist += ", "
+							if (i + 3) == len(albumInfo.Artists) {
+								artist += " and "
+							}
+							artist += "[" + albumArtist.Title + "](https://open.spotify.com/artist/" + albumArtist.ArtistID + ")"
+						}
+					}
+				}
+				title := albumInfo.Title
+
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Album", Value: "[" + title + "](https://open.spotify.com/album/" + results[i].ID + ") by " + artist})
+			}
+		case "user":
+			playlistURI := results[i].GetID()
+			playlistInfo, err := botData.BotClients.Spotify.GetPlaylist("spotify:user:" + url.QueryEscape(playlistURI[0]) + ":playlist:" + playlistURI[1])
+			if err != nil {
+				//fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Playlist", Value: "Error fetching info for [this playlist](https://open.spotify.com/user/" + playlistURI[0] + "/playlist/" + playlistURI[1] + ")"})
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Playlist", Value: "Error fetching info for playlist debug: " + fmt.Sprintf("%v", err)})
+			} else {
+				creator := "[" + playlistInfo.UserID + "](https://open.spotify.com/user/" + playlistInfo.UserID + ")"
+				length := strconv.Itoa(playlistInfo.Length)
+				title := playlistInfo.Attributes.Name
+
+				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Playlist", Value: "[" + title + "](https://open.spotify.com/user/" + playlistURI[0] + "/playlist/" + playlistURI[1] + ") by " + creator + " with " + length + " tracks"})
+			}
 		}
 	}
 	fields = append(fields, commandListField)

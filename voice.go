@@ -114,19 +114,32 @@ func (page *SpotifyResultNav) Search(query string) error {
 	page.PlaylistUserID = ""
 	page.TotalPages = 0
 
-	trackResults, err := botData.BotClients.Spotify.SearchTracks(query)
+	searchResults, err := botData.BotClients.Spotify.Search(query)
 	if err != nil {
 		return err
 	}
 
-	maxResults := page.MaxResults
-	if len(trackResults.Hits) < page.MaxResults {
-		maxResults = len(trackResults.Hits)
-	}
-
 	page.PageNumber = 1
 	page.Query = query
-	page.AllResults = trackResults.Hits
+
+	if len(searchResults.Results.Artists.Hits) > 0 {
+		page.AllResults = append(page.AllResults, searchResults.Results.Artists.Hits...)
+	}
+	if len(searchResults.Results.Tracks.Hits) > 0 {
+		page.AllResults = append(page.AllResults, searchResults.Results.Tracks.Hits...)
+	}
+	if len(searchResults.Results.Albums.Hits) > 0 {
+		page.AllResults = append(page.AllResults, searchResults.Results.Albums.Hits...)
+	}
+	if len(searchResults.Results.Playlists.Hits) > 0 {
+		page.AllResults = append(page.AllResults, searchResults.Results.Playlists.Hits...)
+	}
+
+	maxResults := page.MaxResults
+	if len(page.AllResults) < page.MaxResults {
+		maxResults = len(page.AllResults)
+	}
+
 	page.Results = page.AllResults[(page.PageNumber-1)*page.MaxResults : page.PageNumber*maxResults]
 	page.TotalResults = len(page.AllResults)
 	page.TotalPages = int(math.Ceil(float64(page.TotalResults) / float64(page.MaxResults)))
