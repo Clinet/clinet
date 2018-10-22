@@ -597,7 +597,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					continue
 				}
 
-				resultURL := "https://open.spotify.com/track/" + result.ID
+				resultURL := result.URI
 
 				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
 				if err != nil {
@@ -671,7 +671,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					continue
 				}
 
-				resultURL := "https://open.spotify.com/track/" + result.ID
+				resultURL := result.URI
 
 				trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(result.URI)
 				if err != nil {
@@ -734,7 +734,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			result := results[selection-1]
 			switch result.GetType() {
 			case "track":
-				resultURL := "https://open.spotify.com/track/" + result.ID
+				resultURL := result.URI
 
 				queueData := AudioQueueEntry{MediaURL: resultURL, Requester: env.Message.Author, Type: "spotify"}
 				errEmbed := queueData.FillMetadata()
