@@ -498,7 +498,7 @@ func spawnBot() int {
 				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == filepath.Base(os.Args[0]) {
 					oldProcess, err := os.FindProcess(process.Pid())
 					if err == nil {
-						oldProcess.Signal(syscall.SIGINT)
+						oldProcess.Signal(syscall.SIGKILL)
 					}
 				}
 			}
