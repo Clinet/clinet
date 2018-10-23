@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/JoshuaDoes/goprobe"
 	"github.com/JoshuaDoes/spotigo"
@@ -183,20 +184,23 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 		item := playlist.Contents.Items[i]
 		hit := spotigo.SpotigoSearchHit{}
 
-		trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(item.TrackURI)
-		if err != nil {
-			continue
+		if i < page.MaxResults {
+			trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(item.TrackURI)
+			if err != nil {
+				continue
+			}
+
+			artists := make([]spotigo.SpotigoSearchHitArtist, 0)
+			artists = append(artists, spotigo.SpotigoSearchHitArtist{Name: trackInfo.Artist})
+
+			hit.ID = trackInfo.TrackID
+			hit.Name = trackInfo.Title
+			hit.ImageURL = trackInfo.ArtURL
+			hit.Duration = trackInfo.Duration
+			hit.Artists = artists
 		}
 
-		artists := make([]spotigo.SpotigoSearchHitArtist, 0)
-		artists = append(artists, spotigo.SpotigoSearchHitArtist{Name: trackInfo.Artist})
-
 		hit.URI = item.TrackURI
-		hit.ID = trackInfo.TrackID
-		hit.Name = trackInfo.Title
-		hit.ImageURL = trackInfo.ArtURL
-		hit.Duration = trackInfo.Duration
-		hit.Artists = artists
 
 		playlistItems = append(playlistItems, hit)
 	}
@@ -238,6 +242,24 @@ func (page *SpotifyResultNav) Prev() error {
 	}
 	page.Results = page.AllResults[low:high]
 
+	for i := 0; i < len(page.Results); i++ {
+		if strings.HasPrefix(page.Results[i].URI, "spotify:track:") {
+			trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(page.Results[i].URI)
+			if err != nil {
+				continue
+			}
+
+			artists := make([]spotigo.SpotigoSearchHitArtist, 0)
+			artists = append(artists, spotigo.SpotigoSearchHitArtist{Name: trackInfo.Artist})
+
+			page.Results[i].ID = trackInfo.TrackID
+			page.Results[i].Name = trackInfo.Title
+			page.Results[i].ImageURL = trackInfo.ArtURL
+			page.Results[i].Duration = trackInfo.Duration
+			page.Results[i].Artists = artists
+		}
+	}
+
 	return nil
 }
 func (page *SpotifyResultNav) Next() error {
@@ -255,6 +277,24 @@ func (page *SpotifyResultNav) Next() error {
 		high = len(page.AllResults)
 	}
 	page.Results = page.AllResults[low:high]
+
+	for i := 0; i < len(page.Results); i++ {
+		if strings.HasPrefix(page.Results[i].URI, "spotify:track:") {
+			trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(page.Results[i].URI)
+			if err != nil {
+				continue
+			}
+
+			artists := make([]spotigo.SpotigoSearchHitArtist, 0)
+			artists = append(artists, spotigo.SpotigoSearchHitArtist{Name: trackInfo.Artist})
+
+			page.Results[i].ID = trackInfo.TrackID
+			page.Results[i].Name = trackInfo.Title
+			page.Results[i].ImageURL = trackInfo.ArtURL
+			page.Results[i].Duration = trackInfo.Duration
+			page.Results[i].Artists = artists
+		}
+	}
 
 	return nil
 }
@@ -1008,7 +1048,7 @@ func isSpotifyTrackURLURI(url string) bool {
 	return false
 }
 func isSpotifyPlaylistURLURI(url string) bool {
-	regexHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/user\\/|spotify:user:)([a-zA-Z0-9]+)(\\/playlist\\/|:playlist:)([a-zA-Z0-9]+)(.*)$", url)
+	regexHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/user\\/|spotify:user:)(\\w\\S+)(\\/playlist\\/|:playlist:)(\\w\\S+)(.*)$", url)
 	if regexHasSpotify {
 		return true
 	}
