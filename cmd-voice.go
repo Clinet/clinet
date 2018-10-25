@@ -149,6 +149,9 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		return NewGenericEmbedAdvanced("Voice", "Finished adding all "+strconv.Itoa(len(env.Message.Attachments))+" attachments to the queue.", 0x1DB954)
 	}
 	if guildData[env.Guild.ID].AudioNowPlaying.MediaURL != "" {
+		if voiceIsStreaming(env.Guild.ID) {
+			return NewErrorEmbed("Voice Error", "Fuck you <@!146019453291855872>, you smallee")
+		}
 		queueData := guildData[env.Guild.ID].AudioNowPlaying
 		errEmbed := queueData.FillMetadata()
 		if errEmbed != nil {
@@ -160,6 +163,9 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		return queueData.GetNowPlayingEmbed()
 	}
 	if len(guildData[env.Guild.ID].AudioQueue) > 0 {
+		if voiceIsStreaming(env.Guild.ID) {
+			return NewErrorEmbed("Voice Error", "There is already audio playing.")
+		}
 		queueData := guildData[env.Guild.ID].AudioQueue[0]
 		errEmbed := queueData.FillMetadata()
 		if errEmbed != nil {
