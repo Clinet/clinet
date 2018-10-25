@@ -16,18 +16,66 @@ import (
 )
 
 func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo.MessageEmbed {
+	images := make([]image.Image, 0)
+
 	if len(env.Message.Attachments) > 0 {
-		for _, attachment := range env.Message.Attachments {
+		for i, attachment := range env.Message.Attachments {
 			srcImageURL := attachment.URL
 			srcImageHTTP, err := http.Get(srcImageURL)
 			if err != nil {
-				return NewErrorEmbed("Image Error", "Unable to fetch image.")
+				return NewErrorEmbed("Image Error", "Unable to fetch attachment %d.", i+1)
 			}
 			srcImage, _, err := image.Decode(srcImageHTTP.Body)
 			if err != nil {
-				return NewErrorEmbed("Image Error", "Unable to decode image.")
+				return NewErrorEmbed("Image Error", "Unable to decode attachment %d as an image.", i+1)
 			}
+			images = append(images, srcImage)
+		}
+	} else {
+		channelMessages, err := botData.DiscordSession.ChannelMessages(env.Channel.ID, 100, "", "", "")
+		if err == nil {
+			for i := 0; i < len(channelMessages); i++ {
+				if len(channelMessages[i].Embeds) > 0 {
+					for _, embed := range channelMessages[i].Embeds {
+						if embed.Image != nil {
+							if embed.Image.URL != "" {
+								srcImageURL := embed.Image.URL
+								srcImageHTTP, err := http.Get(srcImageURL)
+								if err != nil {
+									continue
+								}
+								srcImage, _, err := image.Decode(srcImageHTTP.Body)
+								if err != nil {
+									continue
+								}
+								images = append(images, srcImage)
+							}
+						}
+					}
+				}
+				if len(channelMessages[i].Attachments) > 0 {
+					for _, attachment := range channelMessages[i].Attachments {
+						srcImageURL := attachment.URL
+						srcImageHTTP, err := http.Get(srcImageURL)
+						if err != nil {
+							continue
+						}
+						srcImage, _, err := image.Decode(srcImageHTTP.Body)
+						if err != nil {
+							continue
+						}
+						images = append(images, srcImage)
+					}
+				}
+				if len(images) > 0 {
+					break
+				}
+			}
+		}
+	}
 
+	if len(images) > 0 {
+		for i, srcImage := range images {
 			g := gift.New()
 			var outImage bytes.Buffer
 
@@ -179,7 +227,7 @@ func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo
 			dstImage := image.NewRGBA(g.Bounds(srcImage.Bounds()))
 			g.Draw(dstImage, srcImage)
 
-			err = png.Encode(&outImage, dstImage)
+			err := png.Encode(&outImage, dstImage)
 			if err != nil {
 				return NewErrorEmbed("Image Error", "Unable to encode processed image.")
 			}
@@ -196,10 +244,11 @@ func commandImageAdv(args []CommandArgument, env *CommandEnvironment) *discordgo
 				},
 			})
 			if err != nil {
-				return NewErrorEmbed("Image Error", "Unable to upload processed image.")
+				return NewErrorEmbed("Image Error", "Unable to upload processed image %d.", i)
 			}
-			return nil
 		}
+		return nil
 	}
-	return NewErrorEmbed("Image Error", "You must upload an image to process.")
+
+	return NewErrorEmbed("Image Error", "Unable to find any attached images or any images in the past 100 messages.")
 }

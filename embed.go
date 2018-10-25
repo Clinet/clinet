@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -273,10 +275,10 @@ func (e *Embed) TruncateFooter() *Embed {
 }
 
 // NewGenericEmbed creates a new generic embed
-func NewGenericEmbed(embedTitle, embedMsg string) *discordgo.MessageEmbed {
+func NewGenericEmbed(embedTitle, embedMsg string, replacements ...interface{}) *discordgo.MessageEmbed {
 	genericEmbed := NewEmbed().
 		SetTitle(embedTitle).
-		SetDescription(embedMsg).
+		SetDescription(fmt.Sprintf(embedMsg, replacements...)).
 		SetColor(0x1c1c1c).MessageEmbed
 	return genericEmbed
 }
@@ -291,10 +293,10 @@ func NewGenericEmbedAdvanced(embedTitle, embedMsg string, embedColor int) *disco
 }
 
 // NewErrorEmbed creates a new error embed
-func NewErrorEmbed(errorTitle, errorMsg string) *discordgo.MessageEmbed {
+func NewErrorEmbed(errorTitle, errorMsg string, replacements ...interface{}) *discordgo.MessageEmbed {
 	errorEmbed := NewEmbed().
 		SetTitle(errorTitle).
-		SetDescription(errorMsg).
+		SetDescription(fmt.Sprintf(errorMsg, replacements...)).
 		SetColor(0xb40000).MessageEmbed
 	return errorEmbed
 }
