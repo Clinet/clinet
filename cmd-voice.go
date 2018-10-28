@@ -691,6 +691,8 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					queueEntry.Requester = env.User
 
 					go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+
+					page.AddedSoFar++
 				}
 
 				page.AddingAll = false
@@ -734,6 +736,8 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 						queueEntry.Requester = env.User
 
 						go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+
+						page.AddedSoFar++
 					}
 				}
 
