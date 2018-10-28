@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"strings"
 )
 
 // Spotify exports the methods required to access the Spotify service
@@ -29,6 +30,10 @@ func (*Spotify) TestURL(url string) (bool, error) {
 
 // GetMetadata returns the metadata for a given Spotify track URL
 func (*Spotify) GetMetadata(url string) (*Metadata, error) {
+	if strings.HasPrefix(url, "spotify:track:") {
+		url = "https://open.spotify.com/track/" + strings.TrimPrefix(url, "spotify:track:")
+	}
+
 	trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(url)
 	if err != nil {
 		return nil, err
