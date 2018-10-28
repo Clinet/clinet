@@ -887,7 +887,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				}
 				queueEntryNumber--
 
-				if queueEntryNumber > len(guildData[env.Guild.ID].AudioQueue) || queueEntryNumber < 0 {
+				if queueEntryNumber >= len(guildData[env.Guild.ID].AudioQueue) || queueEntryNumber < 0 {
 					return NewErrorEmbed("Queue Error", "``"+queueEntry+"`` is not a valid queue entry.")
 				}
 			}

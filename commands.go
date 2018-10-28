@@ -90,10 +90,12 @@ func initCommands() {
 		Function: commandRemind,
 		HelpText: "Reminds you with the written message at the specified time.",
 		RequiredArguments: []string{
-			"message and time",
+			"(message and time)/other",
 		},
 		Arguments: []CommandArgument{
 			{Name: "message and time", Description: "The message to remind you with, including what time to remind you at", ArgType: "string"},
+			{Name: "list", Description: "Lists your remind entries on an optionally specified page", ArgType: "this/page"},
+			{Name: "remove", Description: "Deletes the specified remind entry or entries", ArgType: "number(s)"},
 		},
 	}
 	botData.Commands["hewwo"] = &Command{
