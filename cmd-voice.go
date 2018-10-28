@@ -658,6 +658,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				queueEntry.Requester = env.User
 
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
+				return nil
 			case "artist":
 				artistInfo, err := botData.BotClients.Spotify.GetArtistInfo(result.URI)
 				if err != nil {
