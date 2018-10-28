@@ -16,17 +16,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-//Bot data structs
-type BotClients struct {
-	DuckDuckGo *duckduckgo.Client
-	GitHub     *github.Client
-	Imgur      imgur.Client
-	SoundCloud *soundcloud.Client
-	Spotify    *spotigo.Client
-	Wolfram    *wolfram.Client
-	XKCD       *xkcd.Client
-	YouTube    *youtube.Service
-}
+// BotData stores all data for the bot
 type BotData struct {
 	BotClients           BotClients
 	BotKeys              BotKeys               `json:"botKeys"`
@@ -46,9 +36,24 @@ type BotData struct {
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
+	VoiceServices  []VoiceService
 
 	Updating bool
 }
+
+// BotClients stores available clients for the bot
+type BotClients struct {
+	DuckDuckGo *duckduckgo.Client
+	GitHub     *github.Client
+	Imgur      imgur.Client
+	SoundCloud *soundcloud.Client
+	Spotify    *spotigo.Client
+	Wolfram    *wolfram.Client
+	XKCD       *xkcd.Client
+	YouTube    *youtube.Service
+}
+
+// BotKeys stores all bot keys for using external services
 type BotKeys struct {
 	DuckDuckGoAppName    string `json:"ddgAppName"`
 	ImgurClientID        string `json:"imgurClientID"`
@@ -60,6 +65,8 @@ type BotKeys struct {
 	WolframAppID         string `json:"wolframAppID"`
 	YouTubeAPIKey        string `json:"youtubeAPIKey"`
 }
+
+// BotOptions stores all bot options
 type BotOptions struct {
 	MaxPingCount       int      `json:"maxPingCount"` //How many pings to test to determine the average ping
 	HelpMaxResults     int      `json:"helpMaxResults"`
@@ -77,25 +84,34 @@ type BotOptions struct {
 	YouTubeMaxResults  int      `json:"youtubeMaxResults"`
 	SpotifyMaxResults  int      `json:"spotifyMaxResults"`
 }
+
+// CustomResponseQuery stores a custom response
 type CustomResponseQuery struct {
 	Expression   string `json:"expression"`
 	Regexp       *regexp.Regexp
 	Responses    []CustomResponseReply    `json:"responses"`
 	CmdResponses []CustomResponseReplyCmd `json:"cmdResponses"`
 }
+
+// CustomResponseReply stores a custom response's reply
 type CustomResponseReply struct {
 	ResponseEmbed *discordgo.MessageEmbed `json:"responseEmbed"`
 }
+
+// CustomResponseReplyCmd stores a custom response's command to execute
 type CustomResponseReplyCmd struct {
 	CommandName string   `json:"commandName"`
 	Arguments   []string `json:"args"`
 }
+
+// CustomStatus stores a custom status for the bot's presence status
 type CustomStatus struct {
 	Type   int    `json:"type"`
 	Status string `json:"status"`
 	URL    string `json:"url,omitempty"`
 }
 
+// PrepConfig checks the configuration for consistency and invalid errors
 func (configData *BotData) PrepConfig() error {
 	//Bot config checks
 	if configData.BotToken == "" {

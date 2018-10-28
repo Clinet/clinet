@@ -253,6 +253,9 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	debugLog("> Preparing command list...", false)
 	initCommands()
 
+	debugLog("> Preparing voice services...", false)
+	initVoiceServices()
+
 	debugLog("> Setting random status...", false)
 	updateRandomStatus(session, 0)
 
