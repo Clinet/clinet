@@ -94,7 +94,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 				if err != nil {
 					botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewErrorEmbed("Voice Error", "Error finding audio info for attachment "+strconv.Itoa(i+1)+"."))
 				}
-				queueEntry.Requester = env.User
+				queueEntry.Requester = env.Member.User
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
 			}
 
@@ -124,7 +124,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		if err != nil {
 			return NewErrorEmbed("Voice Error", "There was an error getting info for the result.")
 		}
-		queueEntry.Requester = env.User
+		queueEntry.Requester = env.Member.User
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
 		return nil
 	}
@@ -357,7 +357,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			return NewErrorEmbed("YouTube Error", "There was an error getting info for the result.")
 		}
-		queueEntry.Requester = env.User
+		queueEntry.Requester = env.Member.User
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
 	default:
 		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
@@ -552,7 +552,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				if err != nil {
 					return NewErrorEmbed("Voice Error", "There was an error getting info for result "+strconv.Itoa(i)+".")
 				}
-				queueEntry.Requester = env.User
+				queueEntry.Requester = env.Member.User
 
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
 
@@ -609,7 +609,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				if err != nil {
 					return NewErrorEmbed("Voice Error", "There was an error getting info for result "+strconv.Itoa(i)+".")
 				}
-				queueEntry.Requester = env.User
+				queueEntry.Requester = env.Member.User
 
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
 
@@ -655,7 +655,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				if err != nil {
 					return NewErrorEmbed("Voice Error", "There was an error getting info for the result.")
 				}
-				queueEntry.Requester = env.User
+				queueEntry.Requester = env.Member.User
 
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
 				return nil
@@ -688,7 +688,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					if err != nil {
 						return NewErrorEmbed("Voice Error", "There was an error getting info for the result.")
 					}
-					queueEntry.Requester = env.User
+					queueEntry.Requester = env.Member.User
 
 					go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
 
@@ -733,7 +733,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 						if err != nil {
 							return NewErrorEmbed("Voice Error", "There was an error getting info for the result.")
 						}
-						queueEntry.Requester = env.User
+						queueEntry.Requester = env.Member.User
 
 						go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
 
