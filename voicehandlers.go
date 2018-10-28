@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -50,4 +52,26 @@ func initVoiceServices() {
 	botData.VoiceServices = append(botData.VoiceServices, &SoundCloud{})
 	botData.VoiceServices = append(botData.VoiceServices, &Spotify{})
 	botData.VoiceServices = append(botData.VoiceServices, &Direct{})
+}
+
+func createQueueEntry(url string) (*QueueEntry, error) {
+	for _, service := range botData.VoiceServices {
+		test, err := service.TestURL(url)
+		if err != nil {
+			return nil, err
+		}
+		if test {
+			metadata, err := service.GetMetadata(url)
+			if err != nil {
+				return nil, err
+			}
+			queueEntry := &QueueEntry{
+				Metadata:     metadata,
+				ServiceName:  service.GetName(),
+				ServiceColor: service.GetColor(),
+			}
+			return queueEntry, nil
+		}
+	}
+	return nil, errors.New("error finding service to handle url")
 }

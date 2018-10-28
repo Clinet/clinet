@@ -7,15 +7,11 @@ import (
 	"math/rand"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
-	"github.com/JoshuaDoes/goprobe"
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
-	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/jonas747/dca"
-	"github.com/rylio/ytdl"
 	youtube "google.golang.org/api/youtube/v3"
 )
 
@@ -33,19 +29,8 @@ var encodeOptionsPresetHigh = &dca.EncodeOptions{
 	RawOutput:        true,
 }
 
-func (guild *GuildData) QueueAddData(author, imageURL, title, thumbnailURL, mediaURL, sourceType string, requester *discordgo.User) {
-	var queueData AudioQueueEntry
-	queueData.Author = author
-	queueData.ImageURL = imageURL
-	queueData.MediaURL = mediaURL
-	queueData.Requester = requester
-	queueData.ThumbnailURL = thumbnailURL
-	queueData.Title = title
-	queueData.Type = sourceType
-	guild.AudioQueue = append(guild.AudioQueue, queueData)
-}
-func (guild *GuildData) QueueAdd(audioQueueEntry AudioQueueEntry) {
-	guild.AudioQueue = append(guild.AudioQueue, audioQueueEntry)
+func (guild *GuildData) QueueAdd(queueEntry *QueueEntry) {
+	guild.AudioQueue = append(guild.AudioQueue, queueEntry)
 }
 func (guild *GuildData) QueueRemove(entry int) {
 	guild.AudioQueue = append(guild.AudioQueue[:entry], guild.AudioQueue[entry+1:]...)
@@ -58,18 +43,18 @@ func (guild *GuildData) QueueRemoveRange(start int, end int) {
 func (guild *GuildData) QueueClear() {
 	guild.AudioQueue = nil
 }
-func (guild *GuildData) QueueGet(guildID string, entry int) AudioQueueEntry {
+func (guild *GuildData) QueueGet(guildID string, entry int) *QueueEntry {
 	if len(guildData[guildID].AudioQueue) >= entry {
 		return guildData[guildID].AudioQueue[entry]
 	} else {
-		return AudioQueueEntry{}
+		return nil
 	}
 }
-func (guild *GuildData) QueueGetNext(guildID string) AudioQueueEntry {
+func (guild *GuildData) QueueGetNext(guildID string) *QueueEntry {
 	if len(guildData[guildID].AudioQueue) > 0 {
 		return guildData[guildID].AudioQueue[0]
 	} else {
-		return AudioQueueEntry{}
+		return nil
 	}
 }
 
@@ -423,249 +408,80 @@ func (page *YouTubeResultNav) Search(query string) error {
 	return nil
 }
 
-type AudioQueueEntry struct {
-	Author           string
-	ImageURL         string
-	MediaURL         string
-	Requester        *discordgo.User
-	RequestMessageID string //Used for if someone edits their request
-	ThumbnailURL     string
-	Title            string
-	Type             string
-	Duration         float64
-	TrackID          string //Used for instances like Spotify where the media URL is not allowed to be directly served
-}
-
-func (audioQueueEntry *AudioQueueEntry) GetNowPlayingEmbed() *discordgo.MessageEmbed {
-	switch audioQueueEntry.Type {
-	case "youtube":
-		return NewEmbed().
-			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF0000).MessageEmbed
-	case "soundcloud":
-		return NewEmbed().
-			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF7700).MessageEmbed
-	case "spotify":
-		return NewEmbed().
-			AddField("Now Playing from Spotify", "["+audioQueueEntry.Title+"](https://open.spotify.com/track/"+audioQueueEntry.TrackID+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0x1DB954).MessageEmbed
-	default:
-		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
-			return NewEmbed().
-				AddField("Now Playing", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-				AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-				SetColor(0x1C1C1C).MessageEmbed
-		}
-		return NewEmbed().
-			SetTitle("Now Playing").
-			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetColor(0x1C1C1C).MessageEmbed
-	}
-}
-func (audioQueueEntry *AudioQueueEntry) GetNowPlayingDurationEmbed(stream *dca.StreamingSession) *discordgo.MessageEmbed {
-	//Get the current duration
-	playbackPosition := secondsToHuman(stream.PlaybackPosition().Seconds())
-	fullDuration := secondsToHuman(audioQueueEntry.Duration)
-
-	switch audioQueueEntry.Type {
-	case "youtube":
-		return NewEmbed().
-			AddField("Now Playing from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Time", playbackPosition+" / "+fullDuration).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF0000).MessageEmbed
-	case "soundcloud":
-		return NewEmbed().
-			AddField("Now Playing from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Time", playbackPosition+" / "+fullDuration).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF7700).MessageEmbed
-	case "spotify":
-		return NewEmbed().
-			AddField("Now Playing from Spotify", "["+audioQueueEntry.Title+"](https://open.spotify.com/track/"+audioQueueEntry.TrackID+") by **"+audioQueueEntry.Author+"**").
-			AddField("Time", playbackPosition+" / "+fullDuration).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0x1DB954).MessageEmbed
-	default:
-		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
-			return NewEmbed().
-				AddField("Now Playing", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-				AddField("Time", playbackPosition+" / "+fullDuration).
-				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-				SetColor(0x1C1C1C).MessageEmbed
-		}
-		return NewEmbed().
-			SetTitle("Now Playing").
-			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Time", playbackPosition+" / "+fullDuration).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetColor(0x1C1C1C).MessageEmbed
-	}
-}
-func (audioQueueEntry *AudioQueueEntry) GetQueueAddedEmbed() *discordgo.MessageEmbed {
-	if audioQueueEntry.Type == "" {
-		if isYouTubeURL(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "youtube"
-		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "soundcloud"
-		} else if isSpotifyTrackURLURI(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "spotify"
-		} else {
-			audioQueueEntry.Type = "direct"
-		}
-	}
-
-	switch audioQueueEntry.Type {
-	case "youtube":
-		return NewEmbed().
-			AddField("Added to Queue from YouTube", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF0000).MessageEmbed
-	case "soundcloud":
-		return NewEmbed().
-			AddField("Added to Queue from SoundCloud", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0xFF7700).MessageEmbed
-	case "spotify":
-		return NewEmbed().
-			AddField("Added to Queue from Spotify", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetThumbnail(audioQueueEntry.ThumbnailURL).
-			SetColor(0x1DB954).MessageEmbed
-	default:
-		if audioQueueEntry.Author != "" && audioQueueEntry.Title != "" {
-			return NewEmbed().
-				AddField("Added to Queue", "["+audioQueueEntry.Title+"]("+audioQueueEntry.MediaURL+") by **"+audioQueueEntry.Author+"**").
-				AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-				AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-				SetColor(0x1C1C1C).MessageEmbed
-		}
-		return NewEmbed().
-			SetTitle("Added to Queue").
-			AddField("Duration", secondsToHuman(audioQueueEntry.Duration)).
-			AddField("URL", audioQueueEntry.MediaURL).
-			AddField("Requester", "<@"+audioQueueEntry.Requester.ID+">").
-			SetColor(0x1C1C1C).MessageEmbed
-	}
-}
-func (audioQueueEntry *AudioQueueEntry) FillMetadata() *discordgo.MessageEmbed {
-	if audioQueueEntry.Type == "" {
-		if isYouTubeURL(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "youtube"
-		} else if isSoundCloudURL(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "soundcloud"
-		} else if isSpotifyTrackURLURI(audioQueueEntry.MediaURL) {
-			audioQueueEntry.Type = "spotify"
-		} else {
-			audioQueueEntry.Type = "direct"
-		}
-	}
-
-	probe := &goprobe.Probe{}
-	audioStream := 0
-
-	if audioQueueEntry.Type != "spotify" {
-		probeURL, err := getMediaURL(audioQueueEntry.MediaURL)
-		if err != nil {
-			return NewErrorEmbed("Voice Error", "Error probing media for audio: Could not find the media URL. Err: "+fmt.Sprintf("%v", err))
-		}
-
-		probe, err = goprobe.ProbeMedia(probeURL)
-		if err != nil {
-			return NewErrorEmbed("Voice Error", "Error probing the media for audio.")
-		}
-		if len(probe.Streams) == 0 {
-			return NewErrorEmbed("Voice Error", "Error probing the media for audio: No streams were found.")
-		}
-
-		hasAudio := false
-		audioStream = 0
-		for i, stream := range probe.Streams {
-			if stream.CodecType == "audio" {
-				hasAudio = true
-				audioStream = i
-				break
+func (queueEntry *QueueEntry) GetNowPlayingEmbed() *discordgo.MessageEmbed {
+	track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
+	if len(queueEntry.Metadata.Artists) > 0 {
+		track += " by [" + queueEntry.Metadata.Artists[0].Name + "](" + queueEntry.Metadata.Artists[0].URL + ")"
+		if len(queueEntry.Metadata.Artists) > 1 {
+			track += " ft. " + "[" + queueEntry.Metadata.Artists[1].Name + "](" + queueEntry.Metadata.Artists[1].URL + ")"
+			if len(queueEntry.Metadata.Artists) > 2 {
+				for i, artist := range queueEntry.Metadata.Artists[2:] {
+					track += ", "
+					if (i + 3) == len(queueEntry.Metadata.Artists) {
+						track += " and "
+					}
+					track += "[" + artist.Name + "](" + artist.URL + ")"
+				}
 			}
 		}
-		if !hasAudio {
-			return NewErrorEmbed("Voice Error", "Error probing the media for audio: Media does not have audio.")
+	}
+	return NewEmbed().
+		AddField("Now Playing from "+queueEntry.ServiceName, track).
+		AddField("Duration", secondsToHuman(queueEntry.Metadata.Duration)).
+		AddField("Requester", "<@!"+queueEntry.Requester.ID+">").
+		SetThumbnail(queueEntry.Metadata.ThumbnailURL).
+		SetColor(queueEntry.ServiceColor).MessageEmbed
+}
+func (queueEntry *QueueEntry) GetNowPlayingDurationEmbed(stream *dca.StreamingSession) *discordgo.MessageEmbed {
+	playbackPosition := secondsToHuman(stream.PlaybackPosition().Seconds())
+	fullDuration := secondsToHuman(queueEntry.Metadata.Duration)
+
+	track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
+	if len(queueEntry.Metadata.Artists) > 0 {
+		track += " by [" + queueEntry.Metadata.Artists[0].Name + "](" + queueEntry.Metadata.Artists[0].URL + ")"
+		if len(queueEntry.Metadata.Artists) > 1 {
+			track += " ft. " + "[" + queueEntry.Metadata.Artists[1].Name + "](" + queueEntry.Metadata.Artists[1].URL + ")"
+			if len(queueEntry.Metadata.Artists) > 2 {
+				for i, artist := range queueEntry.Metadata.Artists[2:] {
+					track += ", "
+					if (i + 3) == len(queueEntry.Metadata.Artists) {
+						track += " and "
+					}
+					track += "[" + artist.Name + "](" + artist.URL + ")"
+				}
+			}
 		}
 	}
-
-	switch audioQueueEntry.Type {
-	case "youtube":
-		videoInfo, err := ytdl.GetVideoInfo(audioQueueEntry.MediaURL)
-		if err != nil {
-			return NewErrorEmbed("Voice Error", "Error getting info about the YouTube video.")
+	return NewEmbed().
+		AddField("Now Playing from "+queueEntry.ServiceName, track).
+		AddField("Time", playbackPosition+" / "+fullDuration).
+		AddField("Requester", "<@!"+queueEntry.Requester.ID+">").
+		SetThumbnail(queueEntry.Metadata.ThumbnailURL).
+		SetColor(queueEntry.ServiceColor).MessageEmbed
+}
+func (queueEntry *QueueEntry) GetQueueAddedEmbed() *discordgo.MessageEmbed {
+	track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
+	if len(queueEntry.Metadata.Artists) > 0 {
+		track += " by [" + queueEntry.Metadata.Artists[0].Name + "](" + queueEntry.Metadata.Artists[0].URL + ")"
+		if len(queueEntry.Metadata.Artists) > 1 {
+			track += " ft. " + "[" + queueEntry.Metadata.Artists[1].Name + "](" + queueEntry.Metadata.Artists[1].URL + ")"
+			if len(queueEntry.Metadata.Artists) > 2 {
+				for i, artist := range queueEntry.Metadata.Artists[2:] {
+					track += ", "
+					if (i + 3) == len(queueEntry.Metadata.Artists) {
+						track += " and "
+					}
+					track += "[" + artist.Name + "](" + artist.URL + ")"
+				}
+			}
 		}
-		audioQueueEntry.Author = videoInfo.Author
-		audioQueueEntry.ImageURL = videoInfo.GetThumbnailURL("maxresdefault").String()
-		audioQueueEntry.ThumbnailURL = videoInfo.GetThumbnailURL("default").String()
-		audioQueueEntry.Title = videoInfo.Title
-
-		call := youtube.NewVideosService(botData.BotClients.YouTube).
-			List("contentDetails").
-			Id(videoInfo.ID)
-
-		response, err := call.Do()
-		if err != nil {
-			return nil
-		}
-
-		duration, err := isoduration.FromString(response.Items[0].ContentDetails.Duration)
-		if err != nil {
-			return nil
-		}
-		audioQueueEntry.Duration = duration.ToDuration().Seconds()
-	case "soundcloud":
-		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(audioQueueEntry.MediaURL)
-		if err != nil {
-			return NewErrorEmbed("Voice Error", "Error getting info about the SoundCloud track.")
-		}
-		audioQueueEntry.Author = audioInfo.Artist
-		audioQueueEntry.ImageURL = audioInfo.ArtURL
-		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
-		audioQueueEntry.Title = audioInfo.Title
-		audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
-	case "spotify":
-		audioInfo, err := botData.BotClients.Spotify.GetTrackInfo(audioQueueEntry.MediaURL)
-		if err != nil {
-			return NewErrorEmbed("Voice Error", "Error getting info about the Spotify track.")
-		}
-		audioQueueEntry.Author = audioInfo.Artist
-		audioQueueEntry.ImageURL = audioInfo.ArtURL
-		audioQueueEntry.ThumbnailURL = audioInfo.ArtURL
-		audioQueueEntry.Title = audioInfo.Title
-		audioQueueEntry.Duration = float64(audioInfo.Duration / 1000)
-		audioQueueEntry.TrackID = audioInfo.TrackID
-	default:
-		audioQueueEntry.Author = probe.Format.Tags.Artist
-		audioQueueEntry.Title = probe.Format.Tags.Title
-		audioQueueEntry.Duration, _ = strconv.ParseFloat(probe.Streams[audioStream].Duration, 64)
 	}
-
-	return nil
+	return NewEmbed().
+		AddField("Added to Queue from "+queueEntry.ServiceName, track).
+		AddField("Duration", secondsToHuman(queueEntry.Metadata.Duration)).
+		AddField("Requester", "<@!"+queueEntry.Requester.ID+">").
+		SetThumbnail(queueEntry.Metadata.ThumbnailURL).
+		SetColor(queueEntry.ServiceColor).MessageEmbed
 }
 
 // VoiceData contains data about the current voice session
@@ -743,11 +559,6 @@ func voicePlay(guildID, mediaURL string) error {
 		return errors.New("Specified URL is invalid.")
 	}
 
-	mediaURL, err = getMediaURL(mediaURL)
-	if err != nil {
-		return err
-	}
-
 	//Setup pointers to guild data for local usage
 	//var voiceConnection *discordgo.VoiceConnection = guildData[guildID].VoiceData.VoiceConnection
 	//var encodingSession *dca.EncodeSession = guildData[guildID].VoiceData.EncodingSession
@@ -815,15 +626,25 @@ func voicePlay(guildID, mediaURL string) error {
 	return nil
 }
 
-func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL string) {
-	err := voicePlay(guildID, mediaURL)
+func voicePlayWrapper(session *discordgo.Session, guildID, channelID string, queueEntry *QueueEntry, announceQueueAdded bool) {
+	if voiceIsStreaming(guildID) {
+		guildData[guildID].QueueAdd(queueEntry)
+		if announceQueueAdded {
+			session.ChannelMessageSendEmbed(channelID, queueEntry.GetQueueAddedEmbed())
+		}
+		return
+	}
+
+	guildData[guildID].AudioNowPlaying = queueEntry
+	session.ChannelMessageSendEmbed(channelID, queueEntry.GetNowPlayingEmbed())
+	err := voicePlay(guildID, queueEntry.Metadata.StreamURL)
 	if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
 		for guildData[guildID].VoiceData.RepeatLevel == 2 {
-			err = voicePlay(guildID, mediaURL)
+			session.ChannelMessageSendEmbed(channelID, queueEntry.GetNowPlayingEmbed())
+			err = voicePlay(guildID, queueEntry.Metadata.StreamURL)
 			if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-				errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
-				session.ChannelMessageSendEmbed(channelID, errorEmbed)
+				guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
+				session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
 				return
 			}
 		}
@@ -831,10 +652,9 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 	if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
 		guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 	}
-	guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
+	guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
 	if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-		errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
-		session.ChannelMessageSendEmbed(channelID, errorEmbed)
+		session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
 		return
 	} else {
 		if guildData[guildID].VoiceData.WasStoppedManually {
@@ -861,18 +681,17 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 				}
 
 				//Create and display now playing embed
-				nowPlayingEmbed := guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed()
-				session.ChannelMessageSendEmbed(channelID, nowPlayingEmbed)
+				session.ChannelMessageSendEmbed(channelID, guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed())
 
 				//Play audio
-				err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
+				err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
 				if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
 					for guildData[guildID].VoiceData.RepeatLevel == 2 {
-						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.MediaURL)
+						session.ChannelMessageSendEmbed(channelID, guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed())
+						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
 						if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-							guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
-							errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
-							session.ChannelMessageSendEmbed(channelID, errorEmbed)
+							guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
+							session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
 							return
 						}
 					}
@@ -880,10 +699,9 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 				if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
 					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
 				}
-				guildData[guildID].AudioNowPlaying = AudioQueueEntry{} //Clear now playing slot
+				guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
 				if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-					errorEmbed := NewErrorEmbed("Voice Error", "There was an error playing the specified audio.")
-					session.ChannelMessageSendEmbed(channelID, errorEmbed)
+					session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
 					return //Prevent next guild queue entry from playing
 				} else {
 					if guildData[guildID].VoiceData.WasStoppedManually {
@@ -895,8 +713,7 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID, mediaURL s
 
 			if guildData[guildID].VoiceData.WasStoppedManually == false {
 				voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
-				leaveEmbed := NewGenericEmbed("Voice", "Finished playing the queue.")
-				session.ChannelMessageSendEmbed(channelID, leaveEmbed)
+				session.ChannelMessageSendEmbed(channelID, NewGenericEmbed("Voice", "Finished playing the queue."))
 			}
 		}
 	}
@@ -929,6 +746,10 @@ func voiceIsStreaming(guildID string) bool {
 		return false
 	}
 	return guildData[guildID].VoiceData.IsPlaybackRunning
+}
+
+func stopPlaybackPreparing(guildID string) {
+	guildData[guildID].VoiceData.IsPlaybackPreparing = false
 }
 
 func voiceGetPauseState(guildID string) (bool, error) {
@@ -988,65 +809,6 @@ func voiceGetQuery(query string) (string, error) {
 	return "", errors.New("Could not find a video result for the specified query.")
 }
 
-func getMediaURL(url string) (string, error) {
-	if isYouTubeURL(url) {
-		videoInfo, err := ytdl.GetVideoInfo(url)
-		if err != nil {
-			return url, err
-		}
-
-		format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
-
-		mediaURL, err := videoInfo.GetDownloadURL(format)
-		if err != nil {
-			return url, err
-		}
-
-		return mediaURL.String(), nil
-	}
-
-	if isSoundCloudURL(url) {
-		audioInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(url)
-		if err != nil {
-			return url, err
-		}
-
-		return audioInfo.DownloadURL, nil
-	}
-
-	if isSpotifyTrackURLURI(url) {
-		audioInfo, err := botData.BotClients.Spotify.GetTrackInfo(url)
-		if err != nil {
-			return url, err
-		}
-
-		return audioInfo.StreamURL, nil
-	}
-
-	return url, nil
-}
-
-func isYouTubeURL(url string) bool {
-	regexpHasYouTube, _ := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-	if regexpHasYouTube {
-		return true
-	}
-	return false
-}
-func isSoundCloudURL(url string) bool {
-	regexpHasSoundCloud, _ := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
-	if regexpHasSoundCloud {
-		return true
-	}
-	return false
-}
-func isSpotifyTrackURLURI(url string) bool {
-	regexpHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/track\\/|spotify:track:)([a-zA-Z0-9]+)(.*)$", url)
-	if regexpHasSpotify {
-		return true
-	}
-	return false
-}
 func isSpotifyPlaylistURLURI(url string) bool {
 	regexHasSpotify, _ := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/user\\/|spotify:user:)(\\w\\S+)(\\/playlist\\/|:playlist:)(\\w\\S+)(.*)$", url)
 	if regexHasSpotify {

@@ -46,7 +46,7 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 	}
 
 	ytCall := youtube.NewVideosService(botData.BotClients.YouTube).
-		List("contentDetails").
+		List("snippet,contentDetails").
 		Id(videoInfo.ID)
 
 	ytResponse, err := ytCall.Do()
@@ -67,6 +67,12 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 		ArtworkURL:   videoInfo.GetThumbnailURL("maxresdefault").String(),
 		ThumbnailURL: videoInfo.GetThumbnailURL("default").String(),
 	}
+
+	videoAuthor := &MetadataArtist{
+		Name: ytResponse.Items[0].Snippet.ChannelTitle,
+		URL:  "https://youtube.com/channel/" + ytResponse.Items[0].Snippet.ChannelId,
+	}
+	metadata.Artists = append(metadata.Artists, *videoAuthor)
 
 	return metadata, nil
 }

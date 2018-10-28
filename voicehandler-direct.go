@@ -69,17 +69,27 @@ func (*Direct) GetMetadata(url string) (*Metadata, error) {
 	}
 
 	metadata := &Metadata{
+		Title:      url,
 		DisplayURL: url,
 		StreamURL:  url,
 		Duration:   duration,
 	}
 
 	if audioStream.Tags != nil {
+		if audioStream.Tags.Artist != "" && audioStream.Tags.Title != "" {
+			trackArtist := &MetadataArtist{
+				Name: audioStream.Tags.Artist,
+				URL:  url,
+			}
+			metadata.Artists = append(metadata.Artists, *trackArtist)
+			metadata.Title = audioStream.Tags.Title
+		}
+	} else {
 		trackArtist := &MetadataArtist{
-			Name: audioStream.Tags.Artist,
+			Name: "Unknown",
+			URL:  url,
 		}
 		metadata.Artists = append(metadata.Artists, *trackArtist)
-		metadata.Title = audioStream.Tags.Title
 	}
 
 	return metadata, nil

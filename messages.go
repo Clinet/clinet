@@ -15,8 +15,8 @@ import (
 type GuildData struct {
 	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
 
-	AudioQueue      []AudioQueueEntry
-	AudioNowPlaying AudioQueueEntry
+	AudioQueue      []*QueueEntry
+	AudioNowPlaying *QueueEntry
 	VoiceData       VoiceData
 	Queries         map[string]*Query
 	YouTubeResults  map[string]*YouTubeResultNav

@@ -76,6 +76,7 @@ func (*SoundCloud) GetMetadata(url string) (*Metadata, error) {
 
 	trackArtist := &MetadataArtist{
 		Name: trackInfo.Artist,
+		URL:  "https://soundcloud.com/" + trackInfo.Artist,
 	}
 	metadata.Artists = append(metadata.Artists, *trackArtist)
 
