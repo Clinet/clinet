@@ -22,10 +22,7 @@ func (*Spotify) GetColor() int {
 // TestURL tests if the given URL is a Spotify track URL
 func (*Spotify) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/track\\/|spotify:track:)([a-zA-Z0-9]+)(.*)$", url)
-	if test {
-		return true, err
-	}
-	return false, err
+	return test, err
 }
 
 // GetMetadata returns the metadata for a given Spotify track URL

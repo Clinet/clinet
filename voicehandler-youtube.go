@@ -25,10 +25,7 @@ func (*YouTube) GetColor() int {
 // TestURL tests if the given URL is a YouTube video URL
 func (*YouTube) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
-	if test {
-		return true, err
-	}
-	return false, err
+	return test, err
 }
 
 // GetMetadata returns the metadata for a given YouTube video URL

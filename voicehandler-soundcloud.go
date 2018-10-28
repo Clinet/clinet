@@ -25,10 +25,7 @@ func (*SoundCloud) GetColor() int {
 // TestURL tests if the given URL is a SoundCloud track URL
 func (*SoundCloud) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
-	if test {
-		return true, err
-	}
-	return false, err
+	return test, err
 }
 
 // GetMetadata returns the metadata for a given SoundCloud track URL
