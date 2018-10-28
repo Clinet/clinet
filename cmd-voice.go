@@ -93,6 +93,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 				queueEntry, err := createQueueEntry(attachment.URL)
 				if err != nil {
 					botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewErrorEmbed("Voice Error", "Error finding audio info for attachment "+strconv.Itoa(i+1)+"."))
+					continue
 				}
 				queueEntry.Requester = env.Member.User
 				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
