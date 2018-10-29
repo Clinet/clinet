@@ -20,6 +20,7 @@ type GuildSettings struct { //By default this will only be configurable for user
 	CustomResponses         []CustomResponseQuery `json:"customResponses"`         //An array of custom responses specific to the guild
 	LogSettings             LogSettings           `json:"logSettings"`             //Logging settings
 	SwearFilter             SwearFilter           `json:"swearFilter"`             //The swear filter settings specific to this guild
+	TipsChannel             string                `json:"tipsChannel"`             //The channel to post tip messages to
 	UserJoinMessage         string                `json:"userJoinMessage"`         //A message to send when a user joins
 	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  //The channel to send the user join message to
 	UserLeaveMessage        string                `json:"userLeaveMessage"`        //A message to send when a user leaves
@@ -116,6 +117,16 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 		guildSettings[env.Guild.ID].UserLeaveMessage = strings.Join(args[1:], " ")
 		guildSettings[env.Guild.ID].UserLeaveMessageChannel = env.Channel.ID
 		return NewGenericEmbed("Server Settings - Leave Message", "Successfully set the leave message to this channel.")
+	case "tips":
+		switch args[1] {
+		case "enable":
+			guildSettings[env.Guild.ID].TipsChannel = env.Channel.ID
+			return NewGenericEmbed("Server Settings - Tips", "Successfully enabled hourly tips for this channel.")
+		case "disable":
+			guildSettings[env.Guild.ID].TipsChannel = ""
+			return NewGenericEmbed("Server Settings - Tips", "Successfully disabled hourly tips for this channel.")
+		}
+		return NewErrorEmbed("Server Settings - Tips Error", "Unknown tips command ``"+args[1]+"``.")
 	case "filter":
 		if len(args) < 2 {
 			filterHelpCmd := &Command{

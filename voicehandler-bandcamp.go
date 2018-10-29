@@ -17,28 +17,28 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
-// BandCamp exports the methods required to access the BandCamp service
-type BandCamp struct {
+// Bandcamp exports the methods required to access the Bandcamp service
+type Bandcamp struct {
 }
 
-// GetName returns "BandCamp"
-func (*BandCamp) GetName() string {
-	return "BandCamp"
+// GetName returns "Bandcamp"
+func (*Bandcamp) GetName() string {
+	return "Bandcamp"
 }
 
 // GetColor returns 0x629AA9
-func (*BandCamp) GetColor() int {
+func (*Bandcamp) GetColor() int {
 	return 0x629AA9
 }
 
-// TestURL tests if the given URL is a BandCamp album or track URL
-func (*BandCamp) TestURL(url string) (bool, error) {
+// TestURL tests if the given URL is a Bandcamp album or track URL
+func (*Bandcamp) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^https://[a-z0-9\\\\-]+?\\.bandcamp\\.com/(track|album)/[a-z0-9\\\\-]+?/?$", url)
 	return test, err
 }
 
-// GetMetadata returns the metadata for a given BandCamp track URL
-func (*BandCamp) GetMetadata(url string) (*Metadata, error) {
+// GetMetadata returns the metadata for a given Bandcamp track URL
+func (*Bandcamp) GetMetadata(url string) (*Metadata, error) {
 	album, err := bandcampGetAlbum(url)
 	if err != nil {
 		return nil, err

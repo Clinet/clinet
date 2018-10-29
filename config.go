@@ -31,12 +31,14 @@ type BotData struct {
 	CommandPrefix        string                `json:"cmdPrefix"`
 	CustomResponses      []CustomResponseQuery `json:"customResponses"`
 	CustomStatuses       []CustomStatus        `json:"customStatuses"`
+	TipMessages          []TipMessage          `json:"tipMessages"`
 	DebugMode            bool                  `json:"debugMode"`
 	SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
 	VoiceServices  []VoiceService
+	LastTipMessage int
 
 	Updating bool
 }
@@ -109,6 +111,14 @@ type CustomStatus struct {
 	Type   int    `json:"type"`
 	Status string `json:"status"`
 	URL    string `json:"url,omitempty"`
+}
+
+// TipMessage stores a tip message for how to use a specific feature in the bot
+type TipMessage struct {
+	FeatureName string   `json:"featureName"`
+	DidYouKnow  string   `json:"didYouKnow"`
+	HowTo       string   `json:"howTo"`
+	Examples    []string `json:"examples"`
 }
 
 // PrepConfig checks the configuration for consistency and invalid errors

@@ -51,7 +51,7 @@ func initVoiceServices() {
 	botData.VoiceServices = append(botData.VoiceServices, &YouTube{})
 	botData.VoiceServices = append(botData.VoiceServices, &SoundCloud{})
 	botData.VoiceServices = append(botData.VoiceServices, &Spotify{})
-	botData.VoiceServices = append(botData.VoiceServices, &BandCamp{})
+	botData.VoiceServices = append(botData.VoiceServices, &Bandcamp{})
 	botData.VoiceServices = append(botData.VoiceServices, &Direct{})
 }
 

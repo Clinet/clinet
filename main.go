@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -259,9 +260,19 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	debugLog("> Setting random status...", false)
 	updateRandomStatus(session, 0)
 
-	debugLog("> Creating random status update cronjob...", false)
+	debugLog("> Sending tip messages...", false)
+	sendTipMessages()
+
+	debugLog("> Creating cronjob session...", false)
 	cronjob := cron.New()
+
+	debugLog("> Creating random status update cronjob...", false)
 	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, 0) })
+
+	debugLog("> Creating tip message cronjob...", false)
+	cronjob.AddFunc("@every 1h", func() { sendTipMessages() })
+
+	debugLog("> Starting cronjobs...", false)
 	cronjob.Start()
 
 	debugLog("> Preparing saved remind entries...", false)
@@ -286,6 +297,34 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	case 2:
 		session.UpdateStreamingStatus(0, botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
 	}
+}
+
+func sendTipMessages() {
+	tipMessageN := -1
+	for {
+		tipMessageN = rand.Intn(len(botData.TipMessages)) - 1
+		if tipMessageN != botData.LastTipMessage {
+			break
+		}
+	}
+	tipMessage := botData.TipMessages[tipMessageN]
+	tipMessageEmbed := NewEmbed().
+		AddField("Did You Know?", tipMessage.DidYouKnow).
+		AddField("How To Use", tipMessage.HowTo).
+		SetFooter("Feature: " + tipMessage.FeatureName).
+		SetColor(0x1C1C1C)
+
+	if len(tipMessage.Examples) > 0 {
+		tipMessageEmbed.AddField("Examples", strings.Join(tipMessage.Examples, "\n"))
+	}
+
+	for _, guild := range guildSettings {
+		if guild.TipsChannel != "" {
+			botData.DiscordSession.ChannelMessageSendEmbed(guild.TipsChannel, tipMessageEmbed.MessageEmbed)
+		}
+	}
+
+	botData.LastTipMessage = tipMessageN
 }
 
 func typingEvent(session *discordgo.Session, channelID string) {
