@@ -81,6 +81,10 @@ func main() {
 	debugLog("", true)
 
 	if configIsBot == "true" {
+		numCPU := runtime.NumCPU()
+		runtime.GOMAXPROCS(numCPU * 2)
+		debugLog(fmt.Sprintf("> CPU Core Count: %d / Max Process Count: %d", numCPU, numCPU*2), true)
+
 		debugLog("> Loading settings...", true)
 		configFileHandle, err := os.Open(configFile)
 		defer configFileHandle.Close()
