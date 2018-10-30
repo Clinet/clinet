@@ -264,9 +264,6 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	debugLog("> Setting random status...", false)
 	updateRandomStatus(session, 0)
 
-	debugLog("> Sending tip messages...", false)
-	sendTipMessages()
-
 	debugLog("> Creating cronjob session...", false)
 	cronjob := cron.New()
 

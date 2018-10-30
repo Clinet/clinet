@@ -102,7 +102,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			return NewGenericEmbed("Voice", "Finished adding all "+strconv.Itoa(len(env.Message.Attachments))+" attachments to the queue.")
 		}
 
-		if guildData[env.Guild.ID].AudioNowPlaying.Metadata.StreamURL != "" {
+		if guildData[env.Guild.ID].AudioNowPlaying != nil {
 			if voiceIsStreaming(env.Guild.ID) {
 				return NewErrorEmbed("Voice Error", "There is already audio playing.")
 			}
