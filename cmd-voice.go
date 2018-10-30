@@ -102,7 +102,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			return NewGenericEmbed("Voice", "Finished adding all "+strconv.Itoa(len(env.Message.Attachments))+" attachments to the queue.")
 		}
 
-		if guildData[env.Guild.ID].AudioNowPlaying != nil {
+		if guildData[env.Guild.ID].AudioNowPlaying.Metadata.StreamURL != "" {
 			if voiceIsStreaming(env.Guild.ID) {
 				return NewErrorEmbed("Voice Error", "There is already audio playing.")
 			}
@@ -1022,7 +1022,8 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	if len(queueList) <= 0 {
 		queueEmbed := NewEmbed().
 			SetTitle("Queue Error").
-			SetDescription("No queue entries found.")
+			SetDescription("No queue entries found.").
+			SetColor(0x1C1C1C)
 
 		if nowPlaying.Metadata != nil {
 			queueEmbed.SetThumbnail(nowPlaying.Metadata.ThumbnailURL)
@@ -1046,8 +1047,11 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	queueEmbed := NewEmbed().
 		SetTitle("Queue for " + env.Guild.Name + " - Page " + strconv.Itoa(pageNumber) + "/" + strconv.Itoa(totalPages)).
 		SetDescription("There are " + strconv.Itoa(len(queueList)) + " entries in the queue.").
-		SetColor(queueColor).
-		SetThumbnail(nowPlaying.Metadata.ThumbnailURL)
+		SetColor(queueColor)
+
+	if nowPlaying.Metadata != nil {
+		queueEmbed.SetThumbnail(nowPlaying.Metadata.ThumbnailURL)
+	}
 
 	queueEmbed.Fields = append(queueEmbed.Fields, nowPlayingField)
 	queueEmbed.Fields = append(queueEmbed.Fields, pagedQueueList.Fields...)
