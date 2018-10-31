@@ -25,11 +25,11 @@ func (*Direct) GetColor() int {
 func (*Direct) TestURL(url string) (bool, error) {
 	probe, err := goprobe.ProbeMedia(url)
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
 	if len(probe.Streams) == 0 {
-		return false, errors.New("goprobe: no media streams found")
+		return false, nil
 	}
 
 	for _, stream := range probe.Streams {
