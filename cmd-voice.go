@@ -945,7 +945,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 						}
 
 						guildState, _ := botData.DiscordSession.State.Guild(guildID)
-						copiedGuilds = append(copiedGuilds, "**"+guildState.Name+"**")
+						copiedGuilds = append(copiedGuilds, guildState.Name)
 					}
 				}
 			}
@@ -953,7 +953,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 			if len(copiedGuilds) == 1 {
 				return NewGenericEmbed("Queue", "Successfully copied the queue from "+copiedGuilds[0]+".")
 			}
-			return NewGenericEmbed("Queue", "Successfully copied the queue from the following guilds:\n"+strings.Join(copiedGuilds, "\n"))
+			return NewGenericEmbed("Queue", "Successfully copied the queue from the following guilds:\n\n"+strings.Join(copiedGuilds, "\n"))
 		}
 	}
 
