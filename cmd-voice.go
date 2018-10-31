@@ -123,7 +123,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	if mediaURL != "" {
 		queueEntry, err := createQueueEntry(mediaURL)
 		if err != nil {
-			return NewErrorEmbed("Voice Error", "There was an error getting info for the result.")
+			return NewErrorEmbed("Voice Error", "There was an error finding a service to handle the specified URL.")
 		}
 		queueEntry.Requester = env.Member.User
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
