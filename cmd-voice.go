@@ -995,16 +995,11 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		nowPlayingField.Value = fmt.Sprintf("%s\nRequested by <@!%s>", track, nowPlaying.Requester.ID)
 	}
 
-	displayNumber := 0
 	queueList := make([]*discordgo.MessageEmbedField, 0)
-	for _, queueEntry := range guildData[env.Guild.ID].AudioQueue {
-		if queueEntry.Metadata != nil {
-			continue
-		}
+	for queueEntryNumber, queueEntry := range guildData[env.Guild.ID].AudioQueue {
+		displayNumber := strconv.Itoa(queueEntryNumber + 1)
 
-		displayNumber++
-
-		queueEntryFieldName := "Entry #" + strconv.Itoa(displayNumber) + " - " + queueEntry.ServiceName
+		queueEntryFieldName := "Entry #" + displayNumber + " - " + queueEntry.ServiceName
 		queueEntryFieldValue := ""
 
 		track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
