@@ -64,6 +64,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+contentReplaced, false)
 	}
 
+	if message.Author.Bot {
+		return //We don't want bots to interact with our bot
+	}
+
 	_, guildDataExists := guildData[guild.ID]
 	if !guildDataExists {
 		guildData[guild.ID] = &GuildData{}
