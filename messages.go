@@ -93,6 +93,22 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 	var responseEmbed *discordgo.MessageEmbed
 
+	for _, roleMe := range guildSettings[guild.ID].RoleMeList {
+		for _, trigger := range roleMe.Triggers {
+			if roleMe.CaseSensitive {
+				if trigger == content {
+					handleRoleMe(roleMe, guild.ID, channel.ID, message.Author.ID)
+					break
+				}
+			} else {
+				if strings.EqualFold(trigger, content) {
+					handleRoleMe(roleMe, guild.ID, channel.ID, message.Author.ID)
+					break
+				}
+			}
+		}
+	}
+
 	if guildSettings[guild.ID].BotPrefix != "" {
 		if strings.HasPrefix(content, guildSettings[guild.ID].BotPrefix) {
 			cmdMsg := strings.TrimPrefix(contentReplaced, guildSettings[guild.ID].BotPrefix)

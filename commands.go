@@ -412,6 +412,24 @@ func initCommands() {
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
 		},
 	}
+
+	botData.Commands["roleme"] = &Command{
+		IsAdvancedCommand:   true,
+		AdvancedFunction:    commandRoleMe,
+		HelpText:            "Allows you to manage the roleme events list.",
+		RequiredPermissions: discordgo.PermissionAdministrator,
+		RequiredArguments: []string{
+			"-addrole (role)/-removerole (role)",
+			"-trigger (message)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "addrole", Description: "Adds the role to add when this event triggers", ArgType: "role"},
+			{Name: "removerole", Description: "Adds the role to remove when this event triggers", ArgType: "role"},
+			{Name: "casesensitive", Description: "Whehter or not the triggers specified are case-sensitive", ArgType: "boolean"},
+			{Name: "channel", Description: "Adds the channel to the channel whitelist for triggering this event", ArgType: "channel"},
+			{Name: "trigger", Description: "Adds the message used to trigger this event", ArgType: "message"},
+		},
+	}
 	botData.Commands["bot"] = &Command{
 		Function:            commandSettingsBot,
 		HelpText:            "Changes the specified settings for the bot within this server.",
