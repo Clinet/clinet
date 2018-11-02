@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -17,11 +18,31 @@ type RoleMe struct {
 }
 
 func commandRoleMe(args []CommandArgument, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if len(args) == 0 {
+		roleMeList := guildSettings[env.Guild.ID].RoleMeList
+		if len(roleMeList) == 0 {
+			return NewGenericEmbed("RoleMe", "No roleme events found.")
+		}
+
+		listEmbed := NewEmbed().
+			SetTitle("RoleMe List").
+			SetDescription("All available roleme entries.").
+			SetColor(0x1C1C1C)
+
+		for i, roleMe := range roleMeList {
+			listEmbed.AddField("RoleMe Entry #"+strconv.Itoa(i+1), "Triggers: \""+strings.Join(roleMe.Triggers, "\", \"")+"\"")
+		}
+
+		return listEmbed.MessageEmbed
+	}
+
 	rolesToAdd := make([]string, 0)
 	rolesToRemove := make([]string, 0)
 	channelIDs := make([]string, 0)
 	triggers := make([]string, 0)
 	caseSensitive := false
+
+	entriesToDelete := make([]int, 0)
 
 	for _, arg := range args {
 		switch strings.ToLower(arg.Name) {
@@ -82,11 +103,43 @@ func commandRoleMe(args []CommandArgument, env *CommandEnvironment) *discordgo.M
 				return NewErrorEmbed("RoleMe Error", "You cannot specify the same trigger twice.")
 			}
 			triggers = append(triggers, arg.Value)
+		case "delete", "remove":
+			if arg.Value == "" {
+				return NewErrorEmbed("RoleMe Error", "You must supply a value to the delete argument.")
+			}
+			entryToDelete, err := strconv.Atoi(arg.Value)
+			if err != nil {
+				return NewErrorEmbed("RoleMe Error", "Invalid entry number ``%s``.", arg.Value)
+			}
+			if isIntInSlice(entriesToDelete, entryToDelete) {
+				return NewErrorEmbed("RoleMe Error", "You cannot specify the same event to delete twice.")
+			}
+			if entryToDelete <= 0 || entryToDelete > len(guildSettings[env.Guild.ID].RoleMeList) {
+				return NewErrorEmbed("RoleMe Error", "Unknown entry number ``%s``.", arg.Value)
+			}
+			entriesToDelete = append(entriesToDelete, entryToDelete-1)
 		default:
 			return NewErrorEmbed("RoleMe Error", "Unknown argument ``%s``.", arg.Name)
 		}
 	}
 
+	if len(entriesToDelete) > 0 {
+		newRoleMeList := make([]*RoleMe, 0)
+		for i, roleMe := range guildSettings[env.Guild.ID].RoleMeList {
+			keepEntry := true
+			for _, entryToDelete := range entriesToDelete {
+				if entryToDelete == i {
+					keepEntry = false
+					break
+				}
+			}
+			if keepEntry {
+				newRoleMeList = append(newRoleMeList, roleMe)
+			}
+		}
+		guildSettings[env.Guild.ID].RoleMeList = newRoleMeList
+		return NewGenericEmbed("RoleMe", "Deleted the specified roleme entries successfully!")
+	}
 	if len(rolesToAdd) == 0 && len(rolesToRemove) == 0 {
 		return NewErrorEmbed("RoleMe Error", "You must specify either one or more roles to add or one or more roles to remove.")
 	}
@@ -243,6 +296,15 @@ func getChannel(guildID, channel string) (*discordgo.Channel, error) {
 func isStrInSlice(slice []string, str string) bool {
 	for _, value := range slice {
 		if value == str {
+			return true
+		}
+	}
+	return false
+}
+
+func isIntInSlice(slice []int, num int) bool {
+	for _, value := range slice {
+		if value == num {
 			return true
 		}
 	}
