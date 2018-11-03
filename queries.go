@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
+	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -16,56 +18,24 @@ var (
 
 func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
 	debugLog("[Wolfram|Alpha] Getting result for query ["+query+"]...", false)
-	queryResultData, err := botData.BotClients.Wolfram.GetQueryResult(query, nil)
+	queryResult, err := botData.BotClients.Wolfram.GetSpokentAnswerQuery(query, wolfram.Metric, 0)
 	if err != nil {
 		debugLog("[Wolfram|Alpha] Error getting query result: "+fmt.Sprintf("%v", err), false)
-		return nil, errors.New("error getting response from Wolfram|Alpha")
+		return nil, errors.New("error getting spoken answer from Wolfram|Alpha")
 	}
 
-	result := queryResultData.QueryResult
-	pods := result.Pods
-	if len(pods) == 0 {
-		debugLog("[Wolfram|Alpha] Error getting pods from query", false)
-		return nil, errors.New("error getting pods from query")
+	if queryResult == "" || queryResult == "No spoken result available" {
+		return nil, errors.New("no spoken answer found from Wolfram|Alpha")
+	}
+	if !strings.HasSuffix(queryResult, ".") || !strings.HasSuffix(queryResult, "!") || !strings.HasSuffix(queryResult, "?") {
+		queryResult += "."
 	}
 
-	fields := []*discordgo.MessageEmbedField{}
-
-	for _, pod := range pods {
-		podTitle := pod.Title
-		if wolframIsPodDenied(podTitle) {
-			debugLog("[Wolfram|Alpha] Denied pod: "+podTitle, false)
-			continue
-		}
-
-		subPods := pod.SubPods
-		if len(subPods) > 0 { //Skip this pod if no subpods are found
-			for _, subPod := range subPods {
-				plaintext := subPod.Plaintext
-				if plaintext != "" {
-					fields = append(fields, &discordgo.MessageEmbedField{Name: podTitle, Value: plaintext, Inline: true})
-				}
-			}
-		}
-	}
-
-	if len(fields) == 0 { //No results were found
-		debugLog("[Wolfram|Alpha] Error getting legal data from Wolfram|Alpha", false)
-		return nil, errors.New("error getting legal data from Wolfram|Alpha")
-	}
 	wolframEmbed := NewEmbed().
+		AddField(query, queryResult).
 		SetColor(0xDA0E1A).
-		SetFooter("Results from Wolfram|Alpha.", "https://upload.wikimedia.org/wikipedia/en/thumb/8/83/Wolfram_Alpha_December_2016.svg/257px-Wolfram_Alpha_December_2016.svg.png").MessageEmbed
-	wolframEmbed.Fields = fields
-	return wolframEmbed, nil
-}
-func wolframIsPodDenied(podTitle string) bool {
-	for _, deniedPodTitle := range botData.BotOptions.WolframDeniedPods {
-		if deniedPodTitle == podTitle {
-			return true //Pod is denied
-		}
-	}
-	return false //Pod is not denied
+		SetFooter("Results from Wolfram|Alpha.", "https://joshuadoes.com/WolframAlpha.png")
+	return wolframEmbed.MessageEmbed, nil
 }
 
 func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {
