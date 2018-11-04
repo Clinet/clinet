@@ -16,26 +16,28 @@ var (
 	regexCmdPlayComp *regexp.Regexp
 )
 
-func queryWolframAlpha(query string) (*discordgo.MessageEmbed, error) {
+func queryWolframAlpha(query string, lastResponse *wolfram.Conversation) (*discordgo.MessageEmbed, *wolfram.Conversation, error) {
 	debugLog("[Wolfram|Alpha] Getting result for query ["+query+"]...", false)
-	queryResult, err := botData.BotClients.Wolfram.GetSpokentAnswerQuery(query, wolfram.Metric, 0)
+	conversationResult, err := botData.BotClients.Wolfram.GetConversationalQuery(query, wolfram.Metric, lastResponse)
 	if err != nil {
 		debugLog("[Wolfram|Alpha] Error getting query result: "+fmt.Sprintf("%v", err), false)
-		return nil, errors.New("error getting spoken answer from Wolfram|Alpha")
+		return nil, nil, errors.New("error getting spoken answer from Wolfram|Alpha")
 	}
 
-	if queryResult == "" || queryResult == "No spoken result available" {
-		return nil, errors.New("no spoken answer found from Wolfram|Alpha")
+	if conversationResult.ErrorMessage != "" {
+		debugLog("[Wolfram|Alpha] Error getting query result: "+conversationResult.ErrorMessage, false)
+		return nil, conversationResult, errors.New(conversationResult.ErrorMessage)
 	}
-	if !strings.HasSuffix(queryResult, ".") || !strings.HasSuffix(queryResult, "!") || !strings.HasSuffix(queryResult, "?") {
-		queryResult += "."
+
+	if !strings.HasSuffix(conversationResult.Result, ".") {
+		conversationResult.Result += "."
 	}
 
 	wolframEmbed := NewEmbed().
-		AddField(query, queryResult).
+		AddField(query, conversationResult.Result).
 		SetColor(0xDA0E1A).
 		SetFooter("Results from Wolfram|Alpha.", "https://joshuadoes.com/WolframAlpha.png")
-	return wolframEmbed.MessageEmbed, nil
+	return wolframEmbed.MessageEmbed, conversationResult, nil
 }
 
 func queryDuckDuckGo(query string) (*discordgo.MessageEmbed, error) {

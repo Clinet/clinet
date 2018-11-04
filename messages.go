@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -15,12 +16,13 @@ import (
 type GuildData struct {
 	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
 
-	AudioQueue      []*QueueEntry
-	AudioNowPlaying *QueueEntry
-	VoiceData       VoiceData
-	Queries         map[string]*Query
-	YouTubeResults  map[string]*YouTubeResultNav
-	SpotifyResults  map[string]*SpotifyResultNav
+	AudioQueue           []*QueueEntry
+	AudioNowPlaying      *QueueEntry
+	VoiceData            VoiceData
+	Queries              map[string]*Query
+	YouTubeResults       map[string]*YouTubeResultNav
+	SpotifyResults       map[string]*SpotifyResultNav
+	WolframConversations map[string]*wolfram.Conversation
 }
 
 // Query holds data about a query's response message
@@ -288,22 +290,53 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "play", UpdatedMessageEvent: updatedMessageEvent}
 						responseEmbed = commandPlay(match, commandEnvironment)
 					} else { //End experimental
+						var previousConversation *wolfram.Conversation
+
+						_, guildFound := guildData[guild.ID]
+						if guildFound {
+							if guildData[guild.ID].WolframConversations != nil {
+								if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
+									debugLog("> Found previous conversation", false)
+									previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
+								} else {
+									debugLog("> Previous conversation not found, initializing...", false)
+									guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
+								}
+							} else {
+								debugLog("> Conversations not found, initializing...", false)
+								guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
+								debugLog("> Previous conversation not found, initializing...", false)
+								guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
+							}
+						} else {
+							debugLog("> Guild not found, initializing...", false)
+							guildData[guild.ID] = &GuildData{}
+							debugLog("> Conversations not found, initializing...", false)
+							guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
+							debugLog("> Previous conversation not found, initializing...", false)
+							guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
+						}
+
 						if botData.BotOptions.UseDuckDuckGo {
 							responseEmbed, err = queryDuckDuckGo(query)
 							if err != nil {
 								if botData.BotOptions.UseWolframAlpha {
-									responseEmbed, err = queryWolframAlpha(query)
+									responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
 									if err != nil {
 										responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+									} else {
+										guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
 									}
 								} else {
 									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 								}
 							}
 						} else if botData.BotOptions.UseWolframAlpha {
-							responseEmbed, err = queryWolframAlpha(query)
+							responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
 							if err != nil {
 								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+							} else {
+								guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
 							}
 						} else {
 							responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
