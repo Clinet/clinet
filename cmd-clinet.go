@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -140,10 +138,7 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	botData.DiscordSession.ChannelMessageSendEmbed(env.Channel.ID, NewGenericEmbed("Update", "Updating "+botData.BotName+" to commit ``"+commitHash+"`` from commit ``"+GitCommitFull+"``..."))
 
 	//Build the update
-	outputFile := filepath.Dir(repodir)
-	if runtime.GOOS == "windows" {
-		outputFile += ".exe"
-	}
+	outputFile := repodir + "/" + os.Args[0]
 
 	govvvbuild := exec.Command("govvv", "build", "-o", outputFile)
 	govvvbuild.Dir = repodir
