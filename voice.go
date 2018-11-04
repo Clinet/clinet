@@ -21,7 +21,7 @@ var encodeOptionsPresetHigh = &dca.EncodeOptions{
 	FrameRate:        48000,
 	FrameDuration:    20,
 	Bitrate:          128,
-	Application:      "music",
+	Application:      "audio",
 	CompressionLevel: 10,
 	PacketLoss:       0,
 	BufferedFrames:   100,
