@@ -107,7 +107,7 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	}
 
 	//Create a temporary directory to store the git repository in
-	repodir, err := ioutil.TempDir("", "clinet")
+	repodir, err := ioutil.TempDir("", "clinetupdate")
 	if err != nil {
 		return NewErrorEmbed("Update Error", "Error creating a temporary directory to store the Clinet git repository in.")
 	}
