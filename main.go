@@ -230,9 +230,10 @@ func main() {
 	} else {
 		botPid := spawnBot()
 		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+		watchdogTicker := time.Tick(1 * time.Second)
 
 		for {
-			signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 			select {
 			case _, ok := <-sc:
 				if ok {
@@ -240,7 +241,7 @@ func main() {
 					_ = botProcess.Signal(syscall.SIGKILL)
 					os.Exit(0)
 				}
-			default:
+			case <-watchdogTicker:
 				if !isProcessRunning(botPid) {
 					botPid = spawnBot()
 				}
