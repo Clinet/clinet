@@ -125,7 +125,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		if err != nil {
 			return NewErrorEmbed("Voice Error", "There was an error finding a service to handle the specified URL.")
 		}
-		if env.Member == nil && env.Member.User == nil {
+		if env.Member == nil {
 			return NewErrorEmbed("Voice Error", "There was an error figuring out who requested the track.")
 		}
 		queueEntry.Requester = env.Member.User
