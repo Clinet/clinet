@@ -363,6 +363,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 		queueEntry.Requester = env.Member.User
 		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
+		return nil
 	default:
 		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
 	}
