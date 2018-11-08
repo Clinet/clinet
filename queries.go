@@ -26,6 +26,10 @@ func queryWolframAlpha(query string, lastResponse *wolfram.Conversation) (*disco
 
 	if conversationResult.ErrorMessage != "" {
 		debugLog("[Wolfram|Alpha] Error getting query result: "+conversationResult.ErrorMessage, false)
+		if lastResponse != nil {
+			debugLog("[Wolfram|Alpha] Attempting nil last response for query ["+query+"]...", false)
+			return queryWolframAlpha(query, nil)
+		}
 		return nil, conversationResult, errors.New(conversationResult.ErrorMessage)
 	}
 
