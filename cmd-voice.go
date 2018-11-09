@@ -1030,7 +1030,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 
 	if len(queueList) <= 0 {
 		queueEmbed := NewEmbed().
-			SetTitle("Queue Error").
+			SetTitle("Queue for " + env.Guild.Name + " - Empty").
 			SetDescription("No queue entries found.").
 			SetColor(0x1C1C1C)
 
