@@ -25,7 +25,6 @@ import (
 //     channelID  :  channelID of the member who sent the message
 //     permission :  the permission you wish to check for
 func MemberHasPermission(s *discordgo.Session, guildID string, userID string, channelID string, permission int) (bool, error) {
-	debugLog("-- checking guild "+guildID+", user "+userID+", channel "+channelID+", permission "+strconv.Itoa(permission), true)
 	member, err := s.State.Member(guildID, userID)
 	if err != nil {
 		if member, err = s.GuildMember(guildID, userID); err != nil {
@@ -40,45 +39,24 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 		}
 	}
 
-	/*
-		guild, err := s.State.Guild(guildID)
-		if err != nil {
-			if guild, err = s.Guild(guildID); err != nil {
-				return false, err
-			}
-		}
-
-		//Server owners get every permission
-		if guild.OwnerID == userID {
-			debugLog("-- user is guild owner", true)
-			return true, nil
-		}
-	*/
-
 	for _, roleID := range member.Roles {
-		debugLog("-- checking role "+roleID, true)
 		role, err := s.State.Role(guildID, roleID)
 		if err != nil {
 			return false, err
 		}
 		if role.Permissions&discordgo.PermissionAdministrator != 0 {
-			debugLog("-- role has Administrator", true)
 			return true, nil
 		}
 		if role.Permissions&permission != 0 {
-			debugLog("-- role has permission", true)
 			return true, nil
 		}
 
 		for _, permissionOverwrite := range channel.PermissionOverwrites {
 			if permissionOverwrite.Type == "role" || permissionOverwrite.ID == roleID {
-				debugLog("-- checking role permission overwrite "+permissionOverwrite.ID, true)
 				if permissionOverwrite.Allow&permission != 0 {
-					debugLog("-- overwrite allowance allows permission", true)
 					return true, nil
 				}
 				if permissionOverwrite.Deny&permission != 0 {
-					debugLog("-- permission denied", true)
 					return false, nil
 				}
 			}
@@ -87,19 +65,15 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 
 	for _, permissionOverwrite := range channel.PermissionOverwrites {
 		if permissionOverwrite.Type == "member" || permissionOverwrite.ID == userID {
-			debugLog("-- checking member permission overwrite "+permissionOverwrite.ID, true)
 			if permissionOverwrite.Allow&permission != 0 {
-				debugLog("-- overwrite allowance allows permission", true)
 				return true, nil
 			}
 			if permissionOverwrite.Deny&permission != 0 {
-				debugLog("-- permission denied", true)
 				return false, nil
 			}
 		}
 	}
 
-	debugLog("-- permission denied", true)
 	return false, nil
 }
 

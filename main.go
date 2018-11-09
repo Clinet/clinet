@@ -104,48 +104,37 @@ func main() {
 
 		debugLog("> Initializing clients for external services...", true)
 		if botData.BotOptions.UseDuckDuckGo {
-			debugLog("> Initializing DuckDuckGo...", false)
 			botData.BotClients.DuckDuckGo = &duckduckgo.Client{AppName: botData.BotKeys.DuckDuckGoAppName}
 		}
 		if botData.BotOptions.UseImgur {
-			debugLog("> Initializing Imgur HTTP client...", false)
 			botData.BotClients.Imgur.HTTPClient = &http.Client{}
-			debugLog("> Initializing Imgur CLILogger...", false)
 			botData.BotClients.Imgur.Log = &klogger.CLILogger{}
-			debugLog("> Initializing Imgur...", false)
 			botData.BotClients.Imgur.ImgurClientID = botData.BotKeys.ImgurClientID
 		}
 		if botData.BotOptions.UseSoundCloud {
-			debugLog("> Initializing SoundCloud...", false)
 			botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
 		}
 		if botData.BotOptions.UseSpotify {
-			debugLog("> Initializing Spotify...", false)
 			botData.BotClients.Spotify = &spotigo.Client{Host: botData.BotKeys.SpotifyHost, Pass: botData.BotKeys.SpotifyPass}
 		}
 		if botData.BotOptions.UseWolframAlpha {
-			debugLog("> Initializing Wolfram|Alpha...", false)
 			botData.BotClients.Wolfram = &wolfram.Client{AppID: botData.BotKeys.WolframAppID}
 		}
 		if botData.BotOptions.UseXKCD {
-			debugLog("> Initializing XKCD...", false)
 			botData.BotClients.XKCD = xkcd.NewClient()
 		}
 		if botData.BotOptions.UseYouTube {
-			debugLog("> Initializing YouTube...", false)
 			httpClient := &http.Client{
 				Transport: &transport.APIKey{Key: botData.BotKeys.YouTubeAPIKey},
 			}
 			youtubeClient, err := youtube.New(httpClient)
 			if err != nil {
-				debugLog("> Error initializing YouTube", true)
-				debugLog("Error: "+fmt.Sprintf("%v", err), false)
+				debugLog("> Error initializing YouTube: "+fmt.Sprintf("%v", err), true)
 			} else {
 				botData.BotClients.YouTube = youtubeClient
 			}
 		}
 		if botData.BotOptions.UseGitHub {
-			debugLog("> Initializing GitHub...", false)
 			botData.BotClients.GitHub = github.NewClient(nil)
 		}
 
@@ -180,6 +169,7 @@ func main() {
 		discord.AddHandler(discordReady)
 
 		//If a state exists, restore it
+		debugLog("> Restoring state...", false)
 		stateRestore()
 
 		debugLog("> Connecting to Discord...", true)
@@ -200,7 +190,7 @@ func main() {
 		debugLog("> Checking if bot was updated...", false)
 		checkUpdate()
 
-		debugLog("> Halting main until SIGINT, SIGTERM, INTERRUPT, or KILL", false)
+		debugLog("> Halting main() until SIGINT, SIGTERM, INTERRUPT, or KILL", false)
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill, syscall.SIGKILL)
 		<-sc
@@ -342,68 +332,54 @@ func debugLog(msg string, overrideConfig bool) {
 }
 
 func stateSave() {
-	debugLog("> Saving guildData state...", true)
 	guildDataJSON, err := json.MarshalIndent(guildData, "", "\t")
 	if err != nil {
-		debugLog("> Error saving guildData state", true)
-		debugLog(err.Error(), true)
+		debugLog("> Error saving guildData state: "+err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/guildData.json", guildDataJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving guildData state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error saving guildData state: "+err.Error(), true)
 		}
 	}
 
-	debugLog("> Saving guildSettings state...", true)
 	guildSettingsJSON, err := json.MarshalIndent(guildSettings, "", "\t")
 	if err != nil {
-		debugLog("> Error saving guildSettings state", true)
-		debugLog(err.Error(), true)
+		debugLog("> Error saving guildSettings state: "+err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/guildSettings.json", guildSettingsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving guildSettings state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error saving guildSettings state: "+err.Error(), true)
 		}
 	}
 
-	debugLog("> Saving userSettings state...", true)
 	userSettingsJSON, err := json.MarshalIndent(userSettings, "", "\t")
 	if err != nil {
-		debugLog("> Error saving userSettings state", true)
-		debugLog(err.Error(), true)
+		debugLog("> Error saving userSettings state: "+err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/userSettings.json", userSettingsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving userSettings state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error saving userSettings state: "+err.Error(), true)
 		}
 	}
 
-	debugLog("> Saving starboard state...", true)
 	starboardsJSON, err := json.MarshalIndent(starboards, "", "\t")
 	if err != nil {
-		debugLog("> Error saving starboards state", true)
+		debugLog("> Error saving starboards state: "+err.Error(), true)
 		debugLog(err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/starboards.json", starboardsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving starboards state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error saving starboards state: "+err.Error(), true)
 		}
 	}
 
-	debugLog("> Saving remind entries...", true)
 	remindEntriesJSON, err := json.MarshalIndent(remindEntries, "", "\t")
 	if err != nil {
-		debugLog("> Error saving remind entries", true)
-		debugLog(err.Error(), true)
+		debugLog("> Error saving remind entries: "+err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/reminds.json", remindEntriesJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving remind entries", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error saving remind entries: "+err.Error(), true)
 		}
 	}
 }
@@ -411,11 +387,9 @@ func stateSave() {
 func stateRestore() {
 	guildDataJSON, err := ioutil.ReadFile("state/guildData.json")
 	if err == nil {
-		debugLog("> Restoring guildData state...", true)
 		err = json.Unmarshal(guildDataJSON, &guildData)
 		if err != nil {
-			debugLog("> Error restoring state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error restoring guildData state: "+err.Error(), true)
 		}
 	} else {
 		debugLog("> No guildData state was found", true)
@@ -423,11 +397,9 @@ func stateRestore() {
 
 	guildSettingsJSON, err := ioutil.ReadFile("state/guildSettings.json")
 	if err == nil {
-		debugLog("> Restoring guildSettings state...", true)
 		err = json.Unmarshal(guildSettingsJSON, &guildSettings)
 		if err != nil {
-			debugLog("> Error restoring state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error restoring guildSettings state: "+err.Error(), true)
 		}
 	} else {
 		debugLog("> No guildSettings state was found", true)
@@ -435,11 +407,9 @@ func stateRestore() {
 
 	userSettingsJSON, err := ioutil.ReadFile("state/userSettings.json")
 	if err == nil {
-		debugLog("> Restoring userSettings state...", true)
 		err = json.Unmarshal(userSettingsJSON, &userSettings)
 		if err != nil {
-			debugLog("> Error restoring state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error restoring userSettings state: "+err.Error(), true)
 		}
 	} else {
 		debugLog("> No userSettings state was found", true)
@@ -447,11 +417,9 @@ func stateRestore() {
 
 	starboardsJSON, err := ioutil.ReadFile("state/starboards.json")
 	if err == nil {
-		debugLog("> Restoring starboards state...", true)
 		err = json.Unmarshal(starboardsJSON, &starboards)
 		if err != nil {
-			debugLog("> Error restoring state", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error restoring starboards state: "+err.Error(), true)
 		}
 	} else {
 		debugLog("> No starboards state was found", true)
@@ -459,11 +427,9 @@ func stateRestore() {
 
 	remindEntriesJSON, err := ioutil.ReadFile("state/reminds.json")
 	if err == nil {
-		debugLog("> Restoring remind entries...", true)
 		err = json.Unmarshal(remindEntriesJSON, &remindEntries)
 		if err != nil {
-			debugLog("> Error restoring remind entries", true)
-			debugLog(err.Error(), true)
+			debugLog("> Error restoring remind entries: "+err.Error(), true)
 		}
 	} else {
 		debugLog("> No remind entries were found", true)
@@ -504,7 +470,6 @@ func checkPanicRecovery() {
 		if crashErr == nil && stackErr == nil {
 			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Clinet has just recovered from an error that caused a crash.")
 			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Crash:\n```"+string(crash)+"```")
-			//botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, string(stack))
 			botData.DiscordSession.ChannelFileSendWithMessage(ownerPrivChannelID, "Stack trace:", "stacktrace.txt", stack)
 		}
 

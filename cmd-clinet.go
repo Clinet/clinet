@@ -265,10 +265,13 @@ func commandHelp(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			if command.IsAdministrative && env.User.ID != botData.BotOwnerID {
 				continue
 			}
-			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, discordgo.PermissionAdministrator|command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
-				commandField := &discordgo.MessageEmbedField{Name: env.BotPrefix + commandName, Value: command.HelpText, Inline: true}
-				commandFields = append(commandFields, commandField)
+			if command.RequiredPermissions != 0 {
+				if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, command.RequiredPermissions); permissionsAllowed == false {
+					continue
+				}
 			}
+			commandField := &discordgo.MessageEmbedField{Name: env.BotPrefix + commandName, Value: command.HelpText, Inline: true}
+			commandFields = append(commandFields, commandField)
 		}
 	}
 

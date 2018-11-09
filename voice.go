@@ -508,10 +508,8 @@ func voiceJoin(session *discordgo.Session, guildID, channelID, channelIDJoinedFr
 	if guildFound {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
 			if guildData[guildID].VoiceData.VoiceConnection.ChannelID == channelID {
-				debugLog("> Found previous matching voice connection, staying...", false)
 				return nil //We're already in the selected voice channel
 			} else {
-				debugLog("> Found previous mismatch voice connection, leaving...", false)
 				err := voiceLeave(guildID, channelID)
 				if err != nil {
 					return errors.New("Error leaving specified voice channel")
@@ -519,7 +517,6 @@ func voiceJoin(session *discordgo.Session, guildID, channelID, channelIDJoinedFr
 			}
 		}
 	} else {
-		debugLog("> Guild data not found, initializing...", false)
 		guildData[guildID] = &GuildData{}
 		guildData[guildID].VoiceData = VoiceData{}
 	}
@@ -537,7 +534,6 @@ func voiceLeave(guildID, channelID string) error {
 	_, guildFound := guildData[guildID]
 	if guildFound {
 		if guildData[guildID].VoiceData.VoiceConnection != nil {
-			debugLog("> Found previous voice connection, leaving...", false)
 			guildData[guildID].VoiceData.VoiceConnection.Disconnect()
 			guildData[guildID].VoiceData = VoiceData{}
 			return nil

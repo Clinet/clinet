@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -496,12 +495,6 @@ func initCommands() {
 	botData.Commands["debug"] = &Command{Function: commandDebug, HelpText: "Toggles debug mode.", IsAdministrative: true}
 }
 
-func commandAdvArgTest(args []CommandArgument, env *CommandEnvironment) *discordgo.MessageEmbed {
-	return NewEmbed().
-		SetTitle("ADVARGTEST").
-		AddField("ARGS", fmt.Sprintf("%v", args)).MessageEmbed
-}
-
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	if command, exists := botData.Commands[commandName]; exists {
 		if command.IsAlternateOf != "" {
@@ -514,38 +507,40 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 		if command.IsAdministrative && env.User.ID != botData.BotOwnerID {
 			return NewErrorEmbed("Command Error - Not Authorized (NA)", "You are not authorized to use this command.")
 		}
-		if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, command.RequiredPermissions); permissionsAllowed || command.RequiredPermissions == 0 {
-			if len(args) >= len(command.RequiredArguments) {
-				if command.IsAdvancedCommand {
-					advancedArgs := make([]CommandArgument, 0)
-
-					//Make sure each legacy argument value is either an argument identifier or an argument value
-					for i := 0; i < len(args); i++ {
-						if strings.HasPrefix(args[i], "-") {
-							if i+1 < len(args) {
-								if !strings.HasPrefix(args[i+1], "-") {
-									advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: strings.TrimSpace(args[i+1])})
-									i++
-									continue
-								} else {
-									advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
-									continue
-								}
-							}
-							advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
-							continue
-						} else {
-							return getCommandUsage(commandName, "Command Error - Loose Argument Value (LAV)", env)
-						}
-					}
-
-					return command.AdvancedFunction(advancedArgs, env)
-				}
-				return command.Function(args, env)
+		if command.RequiredPermissions != 0 {
+			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, command.RequiredPermissions); permissionsAllowed == false {
+				return NewErrorEmbed("Command Error - No Permissions (NP)", "You do not have the necessary permissions to use this command.")
 			}
-			return getCommandUsage(commandName, "Command Error - Not Enough Parameters (NEP)", env)
 		}
-		return NewErrorEmbed("Command Error - No Permissions (NP)", "You do not have the necessary permissions to use this command.")
+		if len(args) >= len(command.RequiredArguments) {
+			if command.IsAdvancedCommand {
+				advancedArgs := make([]CommandArgument, 0)
+
+				//Make sure each legacy argument value is either an argument identifier or an argument value
+				for i := 0; i < len(args); i++ {
+					if strings.HasPrefix(args[i], "-") {
+						if i+1 < len(args) {
+							if !strings.HasPrefix(args[i+1], "-") {
+								advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: strings.TrimSpace(args[i+1])})
+								i++
+								continue
+							} else {
+								advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
+								continue
+							}
+						}
+						advancedArgs = append(advancedArgs, CommandArgument{Name: strings.TrimSpace(strings.TrimPrefix(args[i], "-")), Value: ""})
+						continue
+					} else {
+						return getCommandUsage(commandName, "Command Error - Loose Argument Value (LAV)", env)
+					}
+				}
+
+				return command.AdvancedFunction(advancedArgs, env)
+			}
+			return command.Function(args, env)
+		}
+		return getCommandUsage(commandName, "Command Error - Not Enough Parameters (NEP)", env)
 	}
 	return nil
 }

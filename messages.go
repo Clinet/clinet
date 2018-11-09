@@ -30,24 +30,11 @@ type Query struct {
 	ResponseMessageID string
 }
 
-func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
-	defer recoverPanic()
-
-	channel, err := session.State.Channel(message.ChannelID)
-	if err != nil {
-		debugLog("> Error finding message channel", false)
-		return //Error finding the channel
-	}
-	guild, err := session.State.Guild(channel.GuildID)
-	if err != nil {
-		debugLog("> Error finding message guild", false)
-		return //Error finding the guild
-	}
+func debugMessage(session *discordgo.Session, message *discordgo.Message, channel *discordgo.Channel, guild *discordgo.Guild, updatedMessageEvent bool) {
 	content := message.Content
 	if content == "" {
 		return //The message was empty
 	}
-
 	contentReplaced, err := message.ContentWithMoreMentionsReplaced(session)
 	if err != nil {
 		contentReplaced = content
@@ -64,6 +51,23 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+":\n"+contentReplaced, false)
 	} else {
 		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+contentReplaced, false)
+	}
+}
+
+func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
+	defer recoverPanic()
+
+	channel, err := session.State.Channel(message.ChannelID)
+	if err != nil {
+		return //Error finding the channel
+	}
+	guild, err := session.State.Guild(channel.GuildID)
+	if err != nil {
+		return //Error finding the guild
+	}
+	content := message.Content
+	if content == "" {
+		return //The message was empty
 	}
 
 	if message.Author.Bot {
@@ -117,7 +121,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 	if guildSettings[guild.ID].BotPrefix != "" {
 		if strings.HasPrefix(content, guildSettings[guild.ID].BotPrefix) {
-			cmdMsg := strings.TrimPrefix(contentReplaced, guildSettings[guild.ID].BotPrefix)
+			debugMessage(session, message, channel, guild, updatedMessageEvent)
+
+			cmdMsg := strings.TrimPrefix(content, guildSettings[guild.ID].BotPrefix)
 
 			cmd := strings.Split(cmdMsg, " ")
 
@@ -150,6 +156,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			responseEmbed = callCommand(cmd[0], cmd[1:], commandEnvironment)
 		}
 	} else if strings.HasPrefix(content, botData.CommandPrefix) {
+		debugMessage(session, message, channel, guild, updatedMessageEvent)
+
 		cmdMsg := strings.TrimPrefix(content, botData.CommandPrefix)
 
 		cmd := strings.Split(cmdMsg, " ")
@@ -296,24 +304,17 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 						if guildFound {
 							if guildData[guild.ID].WolframConversations != nil {
 								if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
-									debugLog("> Found previous conversation", false)
 									previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
 								} else {
-									debugLog("> Previous conversation not found, initializing...", false)
 									guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 								}
 							} else {
-								debugLog("> Conversations not found, initializing...", false)
 								guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
-								debugLog("> Previous conversation not found, initializing...", false)
 								guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 							}
 						} else {
-							debugLog("> Guild not found, initializing...", false)
 							guildData[guild.ID] = &GuildData{}
-							debugLog("> Conversations not found, initializing...", false)
 							guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
-							debugLog("> Previous conversation not found, initializing...", false)
 							guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 						}
 
@@ -359,40 +360,29 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		if guildFound {
 			if guildData[guild.ID].Queries != nil {
 				if guildData[guild.ID].Queries[message.ID] != nil {
-					debugLog("> Found previous response", false)
 					canUpdateMessage = true
 					responseID = guildData[guild.ID].Queries[message.ID].ResponseMessageID
 				} else {
-					debugLog("> Previous response not found, initializing...", false)
 					guildData[guild.ID].Queries[message.ID] = &Query{}
 				}
 			} else {
-				debugLog("> Queries not found, initializing...", false)
 				guildData[guild.ID].Queries = make(map[string]*Query)
-				debugLog("> Previous response not found, initializing...", false)
 				guildData[guild.ID].Queries[message.ID] = &Query{}
 			}
 		} else {
-			debugLog("> Guild not found, initializing...", false)
 			guildData[guild.ID] = &GuildData{}
-			debugLog("> Queries not found, initializing...", false)
 			guildData[guild.ID].Queries = make(map[string]*Query)
-			debugLog("> Previous response not found, initializing...", false)
 			guildData[guild.ID].Queries[message.ID] = &Query{}
 		}
 
 		if canUpdateMessage {
-			debugLog("> Editing response...", false)
 			session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
 		} else {
 			typingEvent(session, message.ChannelID)
 
-			debugLog("> Sending response...", false)
 			responseMessage, err := session.ChannelMessageSendEmbed(message.ChannelID, responseEmbed)
 			if err != nil {
-				debugLog("> Error sending response message", false)
 			} else {
-				debugLog("> Storing response...", false)
 				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID
 			}
 		}
