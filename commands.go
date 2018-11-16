@@ -505,11 +505,11 @@ func callCommand(commandName string, args []string, env *CommandEnvironment) *di
 			}
 		}
 		if command.IsAdministrative && env.User.ID != botData.BotOwnerID {
-			return NewErrorEmbed("Command Error - Not Authorized (NA)", "You are not authorized to use this command.")
+			return NewErrorEmbed("Command Error - Not Authorized (NA)", "I'm sorry Dave, I'm afraid I can't do that.")
 		}
 		if command.RequiredPermissions != 0 {
 			if permissionsAllowed, _ := MemberHasPermission(botData.DiscordSession, env.Guild.ID, env.User.ID, env.Channel.ID, command.RequiredPermissions); permissionsAllowed == false {
-				return NewErrorEmbed("Command Error - No Permissions (NP)", "You do not have the necessary permissions to use this command.")
+				return NewErrorEmbed("Command Error - No Permissions (NP)", "Just what do you think you're doing, Dave?")
 			}
 		}
 		if len(args) >= len(command.RequiredArguments) {
