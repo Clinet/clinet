@@ -294,7 +294,7 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 func sendTipMessages() {
 	tipMessageN := -1
 	for {
-		tipMessageN = rand.Intn(len(botData.TipMessages)) - 1
+		tipMessageN = rand.Intn(len(botData.TipMessages))
 		if tipMessageN != botData.LastTipMessage {
 			break
 		}
