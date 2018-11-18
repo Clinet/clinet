@@ -1074,3 +1074,19 @@ func commandNowPlaying(args []string, env *CommandEnvironment) *discordgo.Messag
 	}
 	return NewErrorEmbed("Now Playing Error", "There is no audio currently playing.")
 }
+
+func commandLyrics(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if !voiceIsStreaming(env.Guild.ID) {
+		return NewErrorEmbed("Lyrics Error", "There is no audio currently playing.")
+	}
+
+	lyrics, err := botData.BotClients.Lyrics.Search(guildData[env.Guild.ID].AudioNowPlaying.Metadata.Title, guildData[env.Guild.ID].AudioNowPlaying.Metadata.Artists[0].Name)
+	if err != nil {
+		return NewErrorEmbed("Lyrics Error", "There was an error fetching the lyrics for the current track.")
+	}
+
+	return NewEmbed().
+		AddField("Lyrics", lyrics).
+		SetThumbnail(guildData[env.Guild.ID].AudioNowPlaying.Metadata.ThumbnailURL).
+		SetColor(guildData[env.Guild.ID].AudioNowPlaying.ServiceColor).MessageEmbed
+}

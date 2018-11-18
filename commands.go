@@ -341,6 +341,10 @@ func initCommands() {
 		Function: commandNowPlaying,
 		HelpText: "Displays the now playing entry.",
 	}
+	botData.Commands["lyrics"] = &Command{
+		Function: commandLyrics,
+		HelpText: "Displays the lyrics for the currently playing track.",
+	}
 
 	//All moderation commands with parameters
 	botData.Commands["purge"] = &Command{

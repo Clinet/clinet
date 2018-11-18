@@ -2,23 +2,23 @@
 
 ### A Discord bot intended for assistance and control within your guilds
 
-[![Discord Bots](https://discordbots.org/api/widget/374546169755598849.svg)](https://discordbots.org/bot/374546169755598849)
 [![Go Report Card](https://goreportcard.com/badge/github.com/JoshuaDoes/clinet)](https://goreportcard.com/report/github.com/JoshuaDoes/clinet)
+
+[![Discord Bots](https://discordbots.org/api/widget/374546169755598849.svg)](https://discordbots.org/bot/374546169755598849)
 
 ----
 
-## Using the official development version of Clinet
+## Using the official up-to-date version of Clinet
 
 1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server.
     1. The `Administrator` permission is not required. The invite link above
-    only requests the permission for when new features arrive that require
-    individual permissions, saving time from going through and adding missing
-    permissions. Should you still wish to manage these permissions yourself,
-    do not grant the bot the `Administrator` permission. At a later date, the
-    bot will give errors for permissions it does not have when asked to do
-    something, and should sending the error message fail it will warn the
-    server owner in a DM.
-2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes Clinet has to offer. It even sports bot testing channels to test-drive the bot before deciding if it's right for your community!
+    only requests the permission to handle all of Clinet's advanced features,
+    saving time from going through and adding missing permissions. Should you
+    still wish to manage these permissions yourself, do not grant the bot the
+    `Administrator` permission. At a later date, the bot will give errors for
+    permissions it does not have when asked to do something, and should sending
+    the error message fail it will warn the server owner in a DM.
+2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes Clinet has to offer, get help with issues you may be having, and even use bot testing channels to test-drive the bot before deciding if it's right for your community!
 3. Enjoy!
 
 ## What does it do?
@@ -67,7 +67,7 @@ For a list of available commands, use the `cli$help` command in a server with Cl
 
 In order to run `Clinet` locally, you must have already installed a working Golang
 environment on your development system. Clinet is currently built using Golang `1.11`,
-and other versions of Go are guaranteed to be supported at this time.
+and other versions of Go are not guaranteed to be supported at this time.
 
 ### Fetching Clinet and dependencies
 

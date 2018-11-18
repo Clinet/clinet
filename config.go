@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
+	"github.com/rhnvrm/lyric-api-go"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -48,6 +49,7 @@ type BotClients struct {
 	DuckDuckGo *duckduckgo.Client
 	GitHub     *github.Client
 	Imgur      imgur.Client
+	Lyrics     lyrics.Lyric
 	SoundCloud *soundcloud.Client
 	Spotify    *spotigo.Client
 	Wolfram    *wolfram.Client
@@ -58,6 +60,7 @@ type BotClients struct {
 // BotKeys stores all bot keys for using external services
 type BotKeys struct {
 	DuckDuckGoAppName    string `json:"ddgAppName"`
+	GeniusAccessToken    string `json:"geniusAccessToken"`
 	ImgurClientID        string `json:"imgurClientID"`
 	SoundCloudAppVersion string `json:"soundcloudAppVersion"`
 	SoundCloudClientID   string `json:"soundcloudClientID"`
@@ -77,6 +80,7 @@ type BotOptions struct {
 	UseDuckDuckGo      bool     `json:"useDuckDuckGo"`
 	UseGitHub          bool     `json:"useGitHub"`
 	UseImgur           bool     `json:"useImgur"`
+	UseLyrics          bool     `json:"useLyrics"`
 	UseSoundCloud      bool     `json:"useSoundCloud"`
 	UseSpotify         bool     `json:"useSpotify"`
 	UseWolframAlpha    bool     `json:"useWolframAlpha"`

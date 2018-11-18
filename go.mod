@@ -16,7 +16,6 @@ require (
 	github.com/PuerkitoBio/goquery v1.4.1
 	github.com/Sirupsen/logrus v1.2.0 // indirect
 	github.com/Syfaro/minepong v0.0.0-20171114202836-f73aadc7bef0
-	github.com/andybalholm/cascadia v1.0.0 // indirect
 	github.com/bwmarrin/discordgo v0.19.0
 	github.com/channelmeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61
 	github.com/deckarep/golang-set v1.7.1 // indirect
@@ -29,7 +28,6 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/jonas747/dca v0.0.0-20180225204759-bf5d11669cdb
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
-	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/koffeinsource/go-imgur v0.1.0
 	github.com/koffeinsource/go-klogger v0.1.0
 	github.com/kortschak/zalgo v0.0.0-20141105224154-8c91a4a457cf
@@ -40,12 +38,10 @@ require (
 	github.com/neurosnap/sentences v1.0.6 // indirect
 	github.com/nishanths/go-xkcd v0.0.0-20160531092901-9497d909de39
 	github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8
+	github.com/rhnvrm/lyric-api-go v0.1.3 // indirect
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
 	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
 	github.com/rylio/ytdl v0.5.1
-	github.com/sirupsen/logrus v1.2.0 // indirect
-	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
-	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
 	golang.org/x/sys v0.0.0-20181031143558-9b800f95dbbc // indirect
 	golang.org/x/text v0.3.0
 	gonum.org/v1/gonum v0.0.0-20181029232933-400065bf7646 // indirect

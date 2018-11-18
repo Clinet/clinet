@@ -26,6 +26,7 @@ import (
 	"github.com/koffeinsource/go-klogger"
 	"github.com/mitchellh/go-ps"
 	"github.com/nishanths/go-xkcd"
+	"github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -136,6 +137,9 @@ func main() {
 		}
 		if botData.BotOptions.UseGitHub {
 			botData.BotClients.GitHub = github.NewClient(nil)
+		}
+		if botData.BotOptions.UseLyrics {
+			botData.BotClients.Lyrics = lyrics.New(lyrics.WithoutProviders(), lyrics.WithLyricsWikia(), lyrics.WithMusixMatch(), lyrics.WithSongLyrics(), lyrics.WithGeniusLyrics(botData.BotKeys.GeniusAccessToken))
 		}
 
 		debugLog("> Creating a Discord session...", true)
