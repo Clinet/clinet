@@ -408,6 +408,7 @@ func initCommands() {
 			{Name: "leavemsg", Description: "Sets the leave message for this channel", ArgType: "string"},
 			{Name: "log", Description: "Manages the logging events", ArgType: "this"},
 			{Name: "tips", Description: "Enables or disables logging events for this channel", ArgType: "enable/disable"},
+			{Name: "autosendnowplaying", Description: "Enables or disables automatically sending now playing embeds without user interaction", ArgType: "enable/disable"},
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
 		},
 	}

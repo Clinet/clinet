@@ -652,65 +652,67 @@ func voicePlayWrapper(session *discordgo.Session, guildID, channelID string, que
 	if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
 		session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
 		return
-	} else {
-		if guildData[guildID].VoiceData.WasStoppedManually {
-			guildData[guildID].VoiceData.WasStoppedManually = false
-		} else if guildData[guildID].VoiceData.IsPlaybackRunning == false || guildData[guildID].VoiceData.WasSkipped == true {
-			guildData[guildID].VoiceData.WasSkipped = false //Reset skip bool in case it was true
+	}
+	if guildData[guildID].VoiceData.WasStoppedManually {
+		guildData[guildID].VoiceData.WasStoppedManually = false
+	} else if guildData[guildID].VoiceData.IsPlaybackRunning == false || guildData[guildID].VoiceData.WasSkipped == true {
+		guildData[guildID].VoiceData.WasSkipped = false //Reset skip bool in case it was true
 
-			//When the song finishes playing, we should run on a loop to make sure the next songs continue playing
-			for len(guildData[guildID].AudioQueue) > 0 {
-				if guildData[guildID].VoiceData.WasStoppedManually {
-					guildData[guildID].VoiceData.WasStoppedManually = false
-					return //Prevent next guild queue entry from playing
-				}
+		//When the song finishes playing, we should run on a loop to make sure the next songs continue playing
+		for len(guildData[guildID].AudioQueue) > 0 {
+			if guildData[guildID].VoiceData.WasStoppedManually {
+				guildData[guildID].VoiceData.WasStoppedManually = false
+				return //Prevent next guild queue entry from playing
+			}
 
-				//Move next guild queue entry into now playing slot
-				if guildData[guildID].VoiceData.Shuffle {
-					//Pseudo-shuffle™, replace with legitimate shuffle method later so user can return to non-shuffled playlist
-					randomEntry := rand.Intn(len(guildData[guildID].AudioQueue))
-					guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[randomEntry]
-					guildData[guildID].QueueRemove(randomEntry)
-				} else {
-					guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[0]
-					guildData[guildID].QueueRemove(0)
-				}
+			//Move next guild queue entry into now playing slot
+			if guildData[guildID].VoiceData.Shuffle {
+				//Pseudo-shuffle™, replace with legitimate shuffle method later so user can return to non-shuffled playlist
+				randomEntry := rand.Intn(len(guildData[guildID].AudioQueue))
+				guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[randomEntry]
+				guildData[guildID].QueueRemove(randomEntry)
+			} else {
+				guildData[guildID].AudioNowPlaying = guildData[guildID].AudioQueue[0]
+				guildData[guildID].QueueRemove(0)
+			}
 
-				//Create and display now playing embed
+			//Create and display now playing embed
+			if guildSettings[guildID].AutoSendNowPlaying {
 				session.ChannelMessageSendEmbed(channelID, guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed())
+			}
 
-				//Play audio
-				err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
-				if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
-					for guildData[guildID].VoiceData.RepeatLevel == 2 {
+			//Play audio
+			err := voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
+			if guildData[guildID].VoiceData.RepeatLevel == 2 { //Repeat Now Playing
+				for guildData[guildID].VoiceData.RepeatLevel == 2 {
+					if guildSettings[guildID].AutoSendNowPlaying {
 						session.ChannelMessageSendEmbed(channelID, guildData[guildID].AudioNowPlaying.GetNowPlayingEmbed())
-						err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
-						if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-							guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
-							session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
-							return
-						}
 					}
-				}
-				if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
-					guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
-				}
-				guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
-				if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
-					session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
-					return //Prevent next guild queue entry from playing
-				} else {
-					if guildData[guildID].VoiceData.WasStoppedManually {
-						guildData[guildID].VoiceData.WasStoppedManually = false
-						return //Prevent next guild queue entry from playing
+					err = voicePlay(guildID, guildData[guildID].AudioNowPlaying.Metadata.StreamURL)
+					if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
+						guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
+						session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
+						return
 					}
 				}
 			}
+			if guildData[guildID].VoiceData.RepeatLevel == 1 { //Repeat Playlist
+				guildData[guildID].QueueAdd(guildData[guildID].AudioNowPlaying) //Shift the now playing entry to the end of the guild queue
+			}
+			guildData[guildID].AudioNowPlaying = nil //Clear now playing slot
+			if err != nil && guildData[guildID].VoiceData.IsPlaybackRunning == false {
+				session.ChannelMessageSendEmbed(channelID, NewErrorEmbed("Voice Error", "There was an error playing the specified audio."))
+				return //Prevent next guild queue entry from playing
+			}
+			if guildData[guildID].VoiceData.WasStoppedManually {
+				guildData[guildID].VoiceData.WasStoppedManually = false
+				return //Prevent next guild queue entry from playing
+			}
+		}
 
-			if guildData[guildID].VoiceData.WasStoppedManually == false {
-				voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
-				session.ChannelMessageSendEmbed(channelID, NewGenericEmbed("Voice", "Finished playing the queue."))
-			}
+		if guildData[guildID].VoiceData.WasStoppedManually == false {
+			voiceLeave(guildID, channelID) //We're done with everything so leave the voice channel
+			session.ChannelMessageSendEmbed(channelID, NewGenericEmbed("Voice", "Finished playing the queue."))
 		}
 	}
 }

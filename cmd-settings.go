@@ -26,6 +26,7 @@ type GuildSettings struct { //By default this will only be configurable for user
 	UserLeaveMessage        string                 `json:"userLeaveMessage"`        //A message to send when a user leaves
 	UserLeaveMessageChannel string                 `json:"userLeaveMessageChannel"` //The channel to send the user leave message to
 	RoleMeList              []*RoleMe              `json:"roleMeList"`              //An array of rolemes specific to this guild
+	AutoSendNowPlaying      bool                   `json:"disableNowPlaying"`       //Whether or not the Now Playing embed should be sent each time a new track is automatically started without user interaction
 }
 
 // UserSettings holds settings specific to a user
@@ -128,6 +129,16 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			return NewGenericEmbed("Server Settings - Tips", "Successfully disabled hourly tips for this channel.")
 		}
 		return NewErrorEmbed("Server Settings - Tips Error", "Unknown tips command ``"+args[1]+"``.")
+	case "autosendnowplaying":
+		switch args[1] {
+		case "enable":
+			guildSettings[env.Guild.ID].AutoSendNowPlaying = true
+			return NewGenericEmbed("Server Settings - Auto Send Now Playing", "Successfully enabled sending now playing messages each time a new track is started without user interaction.")
+		case "disable":
+			guildSettings[env.Guild.ID].AutoSendNowPlaying = false
+			return NewGenericEmbed("Server Settings - Auto Send Now Playing", "Successfully disabled sending now playing messages each time a new track is started without user interaction.")
+		}
+		return NewErrorEmbed("Server Settings - Auto Send Now Playing", "Unknown ASNP command ``"+args[1]+"``.")
 	case "filter":
 		if len(args) < 2 {
 			filterHelpCmd := &Command{
