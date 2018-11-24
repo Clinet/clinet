@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -8,6 +9,10 @@ import (
 	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
 	"github.com/fatih/structs"
+)
+
+var (
+	regexpSwitchFC = regexp.MustCompile(`SW-[0-9]{4}-[0-9]{4}-[0-9]{4}`)
 )
 
 // GuildSettings holds settings specific to a guild
@@ -31,9 +36,23 @@ type GuildSettings struct { //By default this will only be configurable for user
 
 // UserSettings holds settings specific to a user
 type UserSettings struct {
-	Balance  int    `json:"balance"`     //A balance to use as virtual currency for some bot tasks
+	//Unused, WIP later
+	Balance int `json:"balance"` //A balance to use as virtual currency for some bot tasks
+
+	//Basic info
 	AboutMe  string `json:"description"` //An aboutme set by the user
 	Timezone string `json:"timezone"`    //A timezone set by the user to use in other functions
+
+	//Socials
+	Socials Socials `json:"socials"` //Social media, gamertags, etc
+}
+
+// Socials holds socials information
+type Socials struct {
+	SwitchFC string `json:"switchFC"` //Nintendo Switch friend code
+	NNID     string `json:"nintyID"`  //Nintendo Network ID
+	PSN      string `json:"psn"`      //PlayStation Network
+	Xbox     string `json:"xbox"`     //Xbox Live
 }
 
 func commandSettingsBot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -88,6 +107,144 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 		}
 		userSettings[env.User.ID].Timezone = args[1]
 		return NewGenericEmbed("User Settings - Timezone", "Successfully set your timezone to ``"+args[1]+"``.\nYour current time is ``"+time.Now().In(location).String()+"``.")
+	case "social", "socials":
+		/*
+		* cli$user social add switchfc SW-0000-0000-0000
+		* cli$user social list
+		* cli$user social clear switchfc
+		* cli$user social available
+		 */
+
+		socialCommand := &Command{
+			HelpText: "Manages your socials.",
+			RequiredArguments: []string{
+				"setting (value(s))",
+			},
+			Arguments: []CommandArgument{
+				{Name: "set {social}", Description: "Sets a social", ArgType: "social code/name"},
+				{Name: "list", Description: "Lists your socials", ArgType: "this"},
+				{Name: "remove", Description: "Removes a social", ArgType: "number"},
+				{Name: "available", Description: "Lists available socials", ArgType: "this"},
+			},
+		}
+		cmdUsage := getCustomCommandUsage(socialCommand, "user "+args[0], "User Settings - Socials Help", env)
+
+		if len(args) < 2 {
+			return cmdUsage
+		}
+
+		switch args[1] {
+		case "set":
+			if len(args) < 4 {
+				return NewErrorEmbed("User Settings - Social", "You must specify a Switch friend code to add it.")
+			}
+			switch args[2] {
+			case "switchfc":
+				if !regexpSwitchFC.MatchString(args[3]) {
+					return NewErrorEmbed("User Settings - Social", "Invalid Switch friend code.")
+				}
+				if userSettings[env.User.ID].Socials.SwitchFC == args[3] {
+					return NewErrorEmbed("User Settings - Social", "You have already set that Switch friend code.")
+				}
+				userSettings[env.User.ID].Socials.SwitchFC = args[3]
+				return NewGenericEmbed("User Settings - Social", "Successfully set your Switch friend code to ``"+args[3]+"``.")
+			case "nintendoid", "nintyid", "nnid":
+				if userSettings[env.User.ID].Socials.NNID == args[3] {
+					return NewErrorEmbed("User Settings - Social", "You have already set that NNID.")
+				}
+				userSettings[env.User.ID].Socials.NNID = args[3]
+				return NewGenericEmbed("User Settings - Social", "Successfully set your NNID to ``"+args[3]+"``.")
+			case "psn":
+				if userSettings[env.User.ID].Socials.PSN == args[3] {
+					return NewErrorEmbed("User Settings - Social", "You have already set that PSN.")
+				}
+				userSettings[env.User.ID].Socials.PSN = args[3]
+				return NewGenericEmbed("User Settings - Social", "Successfully set your PSN to ``"+args[3]+"``.")
+			case "xbox", "gamertag":
+				if userSettings[env.User.ID].Socials.Xbox == args[3] {
+					return NewErrorEmbed("User Settings - Social", "You have already set that Xbox Live gamertag.")
+				}
+				userSettings[env.User.ID].Socials.Xbox = args[3]
+				return NewGenericEmbed("User Settings - Social", "Successfully set your Xbox Live gamertag to ``"+args[3]+"``.")
+			}
+		case "list":
+			socialsEmbed := NewEmbed().
+				SetTitle("Socials").
+				SetDescription("Below are all of the socials you have added.").MessageEmbed
+
+			socials := userSettings[env.User.ID].Socials
+			socialsFields := make([]*discordgo.MessageEmbedField, 0)
+
+			if socials.SwitchFC != "" {
+				socialsFields = append(socialsFields, &discordgo.MessageEmbedField{
+					Name:  "Switch Friend Code",
+					Value: socials.SwitchFC,
+				})
+			}
+			if socials.NNID != "" {
+				socialsFields = append(socialsFields, &discordgo.MessageEmbedField{
+					Name:  "Nintendo Network ID",
+					Value: socials.NNID,
+				})
+			}
+			if socials.PSN != "" {
+				socialsFields = append(socialsFields, &discordgo.MessageEmbedField{
+					Name:  "PSN",
+					Value: socials.PSN,
+				})
+			}
+			if socials.Xbox != "" {
+				socialsFields = append(socialsFields, &discordgo.MessageEmbedField{
+					Name:  "Xbox Live Gamertag",
+					Value: socials.Xbox,
+				})
+			}
+
+			if len(socialsFields) == 0 {
+				return NewGenericEmbed("Socials", "You don't have any socials yet!")
+			}
+
+			socialsEmbed.Fields = socialsFields
+
+			return socialsEmbed
+		case "clear":
+			if len(args) < 3 {
+				return cmdUsage
+			}
+			switch args[2] {
+			case "switchfc":
+				if userSettings[env.User.ID].Socials.SwitchFC == "" {
+					return NewErrorEmbed("User Settings - Social", "You don't have a Switch friend code set.")
+				}
+				userSettings[env.User.ID].Socials.SwitchFC = ""
+				return NewGenericEmbed("User Settings - Social", "Cleared your Switch friend code.")
+			case "nintendoid", "nintyid", "nnid":
+				if userSettings[env.User.ID].Socials.NNID == "" {
+					return NewErrorEmbed("User Settings - Social", "You don't have an NNID set.")
+				}
+				userSettings[env.User.ID].Socials.NNID = ""
+				return NewGenericEmbed("User Settings - Social", "Cleared your NNID.")
+			case "psn":
+				if userSettings[env.User.ID].Socials.PSN == "" {
+					return NewErrorEmbed("User Settings - Social", "You don't have a PSN set.")
+				}
+				userSettings[env.User.ID].Socials.PSN = ""
+				return NewGenericEmbed("User Settings - Social", "Cleared your PSN.")
+			case "xbox":
+				if userSettings[env.User.ID].Socials.Xbox == "" {
+					return NewErrorEmbed("User Settings - Social", "You don't have an Xbox Live gamertag set.")
+				}
+				userSettings[env.User.ID].Socials.Xbox = ""
+				return NewGenericEmbed("User Settings - Social", "Cleared your Xbox Live gamertag.")
+			}
+		case "available", "types":
+			return NewGenericEmbed("Socials - Types", "These are the available socials you can use:\n\n"+
+				"``switchfc`` - Nintendo Switch friend code\n"+
+				"``nnid`` - Nintendo Network ID\n"+
+				"``psn`` - PlayStation Network\n"+
+				"``xbox`` - Xbox Live Gamertag",
+			)
+		}
 	}
 	return NewErrorEmbed("User Settings Error", "Error finding the setting ``"+args[0]+"``.")
 }

@@ -241,6 +241,25 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 		if userSettings.Timezone != "" {
 			userInfoEmbed.AddField("Timezone", userSettings.Timezone)
 		}
+		if userSettings.Socials.SwitchFC != "" || userSettings.Socials.NNID != "" || userSettings.Socials.PSN != "" || userSettings.Socials.Xbox != "" {
+			socials := userSettings.Socials
+			socialsField := ""
+
+			if socials.SwitchFC != "" {
+				socialsField += "**Switch Friend Code**: " + socials.SwitchFC + "\n"
+			}
+			if socials.NNID != "" {
+				socialsField += "**NNID**: " + socials.NNID + "\n"
+			}
+			if socials.PSN != "" {
+				socialsField += "**PSN**: " + socials.PSN + "\n"
+			}
+			if socials.Xbox != "" {
+				socialsField += "**Xbox Live Gamertag**: " + socials.Xbox + "\n"
+			}
+
+			userInfoEmbed.AddField("Socials", socialsField)
+		}
 	}
 
 	userInfoEmbed.InlineAllFields()
