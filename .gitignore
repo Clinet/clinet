@@ -10,10 +10,13 @@ state/
 crash.txt
 stacktrace.txt
 
-# Output executables (not accounting for Linux builds because fuck file extensions)
+# Output executables
 *.exe
 *.app
 *.old
+
+# Most probable output executables for Linux
+clinet
 
 # OS leftovers
 desktop.ini

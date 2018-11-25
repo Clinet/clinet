@@ -8,9 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,7 +22,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/koffeinsource/go-klogger"
-	"github.com/mitchellh/go-ps"
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
@@ -440,49 +437,6 @@ func stateRestore() {
 	}
 }
 
-func recoverPanic() {
-	if panicReason := recover(); panicReason != nil {
-		fmt.Println("Clinet has encountered an unrecoverable error and has crashed.")
-		fmt.Println("Some information describing this crash: " + panicReason.(error).Error())
-		if botData.SendOwnerStackTraces || configIsBot == "false" {
-			stack := make([]byte, 65536)
-			l := runtime.Stack(stack, true)
-			fmt.Println("Stack trace:\n" + string(stack[:l]))
-			err := ioutil.WriteFile("stacktrace.txt", stack[:l], 0644)
-			if err != nil {
-				fmt.Println("Failed to write stack trace.")
-			}
-			err = ioutil.WriteFile("crash.txt", []byte(panicReason.(error).Error()), 0644)
-			if err != nil {
-				fmt.Println("Failed to write crash error.")
-			}
-		}
-		os.Exit(1)
-	}
-}
-
-func checkPanicRecovery() {
-	ownerPrivChannel, err := botData.DiscordSession.UserChannelCreate(botData.BotOwnerID)
-	if err != nil {
-		debugLog("An error occurred creating a private channel with the bot owner.", false)
-	} else {
-		ownerPrivChannelID := ownerPrivChannel.ID
-
-		crash, crashErr := ioutil.ReadFile("crash.txt")
-		stack, stackErr := os.Open("stacktrace.txt")
-
-		if crashErr == nil && stackErr == nil {
-			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Clinet has just recovered from an error that caused a crash.")
-			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Crash:\n```"+string(crash)+"```")
-			botData.DiscordSession.ChannelFileSendWithMessage(ownerPrivChannelID, "Stack trace:", "stacktrace.txt", stack)
-		}
-
-		stack.Close()
-		os.Remove("crash.txt")
-		os.Remove("stacktrace.txt")
-	}
-}
-
 func checkRestart() {
 	restartChannelID, err := ioutil.ReadFile(".restart")
 	if err == nil && len(restartChannelID) > 0 {
@@ -501,51 +455,4 @@ func checkUpdate() {
 
 		os.Remove(".update")
 	}
-}
-
-func spawnBot() int {
-	if killOldBot == "true" {
-		processList, err := ps.Processes()
-		if err == nil {
-			for _, process := range processList {
-				if process.Pid() != os.Getpid() && process.Pid() != masterPID && process.Executable() == filepath.Base(os.Args[0]) {
-					oldProcess, err := os.FindProcess(process.Pid())
-					if err == nil {
-						oldProcess.Signal(syscall.SIGKILL)
-					}
-				}
-			}
-		}
-	}
-	os.Remove(os.Args[0] + ".old")
-
-	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()))
-	botProcess.Stdout = os.Stdout
-	botProcess.Stderr = os.Stderr
-	err := botProcess.Start()
-	if err != nil {
-		panic(err)
-	}
-	return botProcess.Process.Pid
-}
-
-func isProcessRunning(pid int) bool {
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-
-	if runtime.GOOS != "windows" {
-		return process.Signal(syscall.Signal(0)) == nil
-	}
-
-	processState, err := process.Wait()
-	if err != nil {
-		return false
-	}
-	if processState.Exited() {
-		return false
-	}
-
-	return true
 }
