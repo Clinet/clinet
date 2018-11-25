@@ -208,9 +208,9 @@ func main() {
 		Debug.Println("Checking if bot was updated...")
 		checkUpdate()
 
-		Debug.Println("Halting main() until SIGINT, SIGTERM, INTERRUPT, or KILL")
+		Debug.Println("Waiting for SIGINT syscall signal...")
 		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill, syscall.SIGKILL)
+		signal.Notify(sc, syscall.SIGINT)
 		<-sc
 
 		//Save the current state before shutting down
@@ -238,7 +238,7 @@ func main() {
 	} else {
 		botPid := spawnBot()
 		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+		signal.Notify(sc, syscall.SIGINT)
 		watchdogTicker := time.Tick(1 * time.Second)
 
 		for {
@@ -246,7 +246,8 @@ func main() {
 			case _, ok := <-sc:
 				if ok {
 					botProcess, _ := os.FindProcess(botPid)
-					_ = botProcess.Signal(syscall.SIGKILL)
+					_ = botProcess.Signal(syscall.SIGINT)
+					waitProcess(botPid)
 					os.Exit(0)
 				}
 			case <-watchdogTicker:

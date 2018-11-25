@@ -57,3 +57,11 @@ func isProcessRunning(pid int) bool {
 
 	return true
 }
+
+func waitProcess(pid int) {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return
+	}
+	_, _ = process.Wait()
+}
