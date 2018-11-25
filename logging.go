@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -23,8 +24,11 @@ var (
 	Error *log.Logger
 )
 
-func initLogging(logFile *os.File, processType string) {
-	Debug = log.New(io.MultiWriter(logFile, os.Stdout), "["+processType+"] DEBUG: ", logFlags)
+func initLogging(logFile *os.File, processType, debug string) {
+	Debug = log.New(ioutil.Discard, "["+processType+"] DEBUG: ", logFlags)
+	if debug == "true" {
+		Debug = log.New(io.MultiWriter(logFile, os.Stdout), "["+processType+"] DEBUG: ", logFlags)
+	}
 	Info = log.New(io.MultiWriter(logFile, os.Stdout), "["+processType+"] INFO: ", logFlags)
 	Warning = log.New(io.MultiWriter(logFile, os.Stdout), "["+processType+"] WARNING: ", logFlags)
 	Error = log.New(io.MultiWriter(logFile, os.Stderr), "["+processType+"] ERROR: ", logFlags)

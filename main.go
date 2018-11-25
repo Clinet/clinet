@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -47,6 +46,9 @@ var (
 
 	//Contains all remind entries
 	remindEntries = make([]RemindEntry, 0)
+
+	//Contains a pointer to the current log file
+	logFile *os.File
 )
 
 var (
@@ -54,6 +56,7 @@ var (
 	configIsBot string
 	masterPID   int
 	killOldBot  string
+	debug       string
 )
 
 func init() {
@@ -61,58 +64,60 @@ func init() {
 	flag.StringVar(&configIsBot, "bot", "false", "Whether or not to act as a bot")
 	flag.IntVar(&masterPID, "masterpid", -1, "The bot master's PID")
 	flag.StringVar(&killOldBot, "killold", "false", "Whether or not to kill an old bot process")
-}
-
-func main() {
-	defer recoverPanic()
+	flag.StringVar(&debug, "debug", "false", "Whether or not to output debugging and trace messages")
 	flag.Parse()
 
-	var logFile *os.File
-	var err error
-
 	if configIsBot == "true" {
-		logFile, err = os.OpenFile("clinet.bot.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		logFile, err := os.OpenFile("clinet.bot.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic("Error creating log file: " + err.Error())
 		}
-		initLogging(logFile, "BOT")
+		initLogging(logFile, "BOT", debug)
 	} else {
 		logFile, err := os.OpenFile("clinet.main.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic("Error creating log file: " + err.Error())
 		}
-		initLogging(logFile, "MAIN")
+		initLogging(logFile, "MAIN", debug)
 	}
+}
+
+func main() {
+	defer recoverPanic()
 	defer logFile.Close()
 
 	Info.Println("Clinet © JoshuaDoes: 2017-2018.")
 	Info.Println("Build ID: " + BuildID)
 	Info.Println("Current PID: " + strconv.Itoa(os.Getpid()))
-	debugLog("", true)
 
 	if configIsBot == "true" {
 		numCPU := runtime.NumCPU()
 		runtime.GOMAXPROCS(numCPU * 2)
-		debugLog(fmt.Sprintf("> CPU Core Count: %d / Max Process Count: %d", numCPU, numCPU*2), true)
 
-		debugLog("> Loading settings...", true)
+		Debug.Printf("CPU Core Count: %d\n", numCPU)
+		Debug.Printf("Max Process Count: %d\n", numCPU*2)
+
+		Info.Println("Loading settings...")
 		configFileHandle, err := os.Open(configFile)
 		defer configFileHandle.Close()
 		if err != nil {
-			panic("Error loading configuration file `" + configFile + "`")
+			Error.Println(err)
+			os.Exit(1)
 		} else {
 			configParser := json.NewDecoder(configFileHandle)
 			if err = configParser.Decode(&botData); err != nil {
-				panic(err)
+				Error.Println(err)
+				os.Exit(1)
 			} else {
 				configErr := botData.PrepConfig() //Check the configuration for any errors or inconsistencies, then prepare it for usage
 				if configErr != nil {
-					panic(configErr)
+					Error.Println(configErr)
+					os.Exit(1)
 				}
 			}
 		}
 
-		debugLog("> Initializing clients for external services...", true)
+		Info.Println("Initializing clients for external services...")
 		if botData.BotOptions.UseDuckDuckGo {
 			botData.BotClients.DuckDuckGo = &duckduckgo.Client{AppName: botData.BotKeys.DuckDuckGoAppName}
 		}
@@ -139,7 +144,7 @@ func main() {
 			}
 			youtubeClient, err := youtube.New(httpClient)
 			if err != nil {
-				debugLog("> Error initializing YouTube: "+fmt.Sprintf("%v", err), true)
+				Error.Printf("Error initializing YouTube: %v", err)
 			} else {
 				botData.BotClients.YouTube = youtubeClient
 			}
@@ -151,13 +156,13 @@ func main() {
 			botData.BotClients.Lyrics = lyrics.New(lyrics.WithoutProviders(), lyrics.WithLyricsWikia(), lyrics.WithMusixMatch(), lyrics.WithSongLyrics(), lyrics.WithGeniusLyrics(botData.BotKeys.GeniusAccessToken))
 		}
 
-		debugLog("> Creating a Discord session...", true)
+		Info.Println("Creating a Discord session...")
 		discord, err := discordgo.New("Bot " + botData.BotToken)
 		if err != nil {
 			panic(err)
 		}
 
-		debugLog("> Registering Discord event handlers...", false)
+		Info.Println("Registering Discord event handlers...")
 		discord.AddHandler(discordChannelCreate)
 		discord.AddHandler(discordChannelUpdate)
 		discord.AddHandler(discordChannelDelete)
@@ -181,29 +186,29 @@ func main() {
 		discord.AddHandler(discordMessageReactionRemoveAll)
 		discord.AddHandler(discordReady)
 
-		//If a state exists, restore it
-		debugLog("> Restoring state...", false)
+		//If a state exists, load it
+		Info.Println("Loading state...")
 		stateRestore()
 
-		debugLog("> Connecting to Discord...", true)
+		Info.Println("Connecting to Discord...")
 		err = discord.Open()
 		if err != nil {
 			panic(err)
 		}
-		debugLog("> Connection successful", true)
+		Info.Println("Connected successfully!")
 		botData.DiscordSession = discord
 
 		if botData.SendOwnerStackTraces {
 			checkPanicRecovery()
 		}
 
-		debugLog("> Checking if bot was restarted...", false)
+		Debug.Println("Checking if bot was restarted...")
 		checkRestart()
 
-		debugLog("> Checking if bot was updated...", false)
+		Debug.Println("Checking if bot was updated...")
 		checkUpdate()
 
-		debugLog("> Halting main() until SIGINT, SIGTERM, INTERRUPT, or KILL", false)
+		Debug.Println("Halting main() until SIGINT, SIGTERM, INTERRUPT, or KILL")
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill, syscall.SIGKILL)
 		<-sc
@@ -220,15 +225,15 @@ func main() {
 						//Notify users that an update is occuring
 						botData.DiscordSession.ChannelMessageSendEmbed(guildDataRow.VoiceData.ChannelIDJoinedFrom, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
 					}
-					debugLog("> Stopping stream in voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
+					Debug.Printf("Stopping stream in voice channel %s...\n", guildDataRow.VoiceData.VoiceConnection.ChannelID)
 					voiceStop(guildID)
 				}
-				debugLog("> Closing connection to voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
+				Debug.Printf("Closing connection to voice channel %s...\n", guildDataRow.VoiceData.VoiceConnection.ChannelID)
 				guildDataRow.VoiceData.VoiceConnection.Close()
 			}
 		}
 
-		debugLog("> Disconnecting from Discord...", true)
+		Info.Println("Disconnecting from Discord...")
 		discord.Close()
 	} else {
 		botPid := spawnBot()
@@ -256,36 +261,38 @@ func main() {
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	defer recoverPanic()
 
-	debugLog("> Setting bot username from Discord...", false)
+	Debug.Println("Setting bot username from Discord state...")
 	botData.BotName = session.State.User.Username
 
-	debugLog("> Preparing command list...", false)
+	Debug.Println("Initializing commands...")
 	initCommands()
 
-	debugLog("> Preparing voice services...", false)
+	Debug.Println("Initializing voice service handlers...")
 	initVoiceServices()
 
-	debugLog("> Setting random status...", false)
+	Debug.Println("Setting random presence...")
 	updateRandomStatus(session, 0)
 
-	debugLog("> Creating cronjob session...", false)
+	Debug.Println("Creating cronjob handler...")
 	cronjob := cron.New()
 
-	debugLog("> Creating random status update cronjob...", false)
+	Debug.Println("Creating random presence update cronjob...")
 	cronjob.AddFunc("@every 1m", func() { updateRandomStatus(session, 0) })
 
-	debugLog("> Creating tip message cronjob...", false)
+	Debug.Println("Creating random tip message cronjob...")
 	cronjob.AddFunc("@every 1h", func() { sendTipMessages() })
 
-	debugLog("> Starting cronjobs...", false)
+	Debug.Println("Starting cronjobs...")
 	cronjob.Start()
 
-	debugLog("> Preparing saved remind entries...", false)
+	Debug.Println("Loading active reminders...")
 	oldRemindEntries := remindEntries
 	remindEntries = make([]RemindEntry, 0)
 	for i := range oldRemindEntries {
 		remindWhen(oldRemindEntries[i].UserID, oldRemindEntries[i].GuildID, oldRemindEntries[i].ChannelID, oldRemindEntries[i].Message, oldRemindEntries[i].Added, oldRemindEntries[i].When, time.Now())
 	}
+
+	Info.Println("Discord is ready!")
 }
 
 func updateRandomStatus(session *discordgo.Session, status int) {
@@ -296,10 +303,13 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 
 	switch botData.CustomStatuses[status].Type {
 	case 0:
+		Debug.Printf("Presence: Playing %s\n", botData.CustomStatuses[status].Status)
 		session.UpdateStatus(0, botData.CustomStatuses[status].Status)
 	case 1:
+		Debug.Printf("Presence: Listening to %s\n", botData.CustomStatuses[status].Status)
 		session.UpdateListeningStatus(botData.CustomStatuses[status].Status)
 	case 2:
+		Debug.Printf("Presence: Streaming %s at %s\n", botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
 		session.UpdateStreamingStatus(0, botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
 	}
 }
@@ -334,65 +344,66 @@ func sendTipMessages() {
 
 func typingEvent(session *discordgo.Session, channelID string) {
 	if botData.BotOptions.SendTypingEvent {
+		Debug.Printf("Typing in channel %s...\n", channelID)
 		session.ChannelTyping(channelID)
 	}
 }
 
 func debugLog(msg string, overrideConfig bool) {
 	if botData.DebugMode || overrideConfig {
-		fmt.Println(msg)
+		Debug.Println(msg)
 	}
 }
 
 func stateSave() {
 	guildDataJSON, err := json.MarshalIndent(guildData, "", "\t")
 	if err != nil {
-		debugLog("> Error saving guildData state: "+err.Error(), true)
+		Error.Printf("Error encoding guildData state: %s\n", err)
 	} else {
 		err = ioutil.WriteFile("state/guildData.json", guildDataJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving guildData state: "+err.Error(), true)
+			Error.Printf("Error saving guildData state: %s\n", err)
 		}
 	}
 
 	guildSettingsJSON, err := json.MarshalIndent(guildSettings, "", "\t")
 	if err != nil {
-		debugLog("> Error saving guildSettings state: "+err.Error(), true)
+		Error.Printf("Error encoding guildSettings state: %s\n", err)
 	} else {
 		err = ioutil.WriteFile("state/guildSettings.json", guildSettingsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving guildSettings state: "+err.Error(), true)
+			Error.Printf("Error saving guildSettings state: %s\n", err)
 		}
 	}
 
 	userSettingsJSON, err := json.MarshalIndent(userSettings, "", "\t")
 	if err != nil {
-		debugLog("> Error saving userSettings state: "+err.Error(), true)
+		Error.Printf("Error encoding userSettings state: %s\n", err)
 	} else {
 		err = ioutil.WriteFile("state/userSettings.json", userSettingsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving userSettings state: "+err.Error(), true)
+			Error.Printf("Error saving userSettings state: %s\n", err)
 		}
 	}
 
 	starboardsJSON, err := json.MarshalIndent(starboards, "", "\t")
 	if err != nil {
-		debugLog("> Error saving starboards state: "+err.Error(), true)
+		Error.Printf("Error encoding starboard state: %s\n", err)
 		debugLog(err.Error(), true)
 	} else {
 		err = ioutil.WriteFile("state/starboards.json", starboardsJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving starboards state: "+err.Error(), true)
+			Error.Printf("Error saving starboard state: %s\n", err)
 		}
 	}
 
 	remindEntriesJSON, err := json.MarshalIndent(remindEntries, "", "\t")
 	if err != nil {
-		debugLog("> Error saving remind entries: "+err.Error(), true)
+		Error.Printf("Error encoding reminders: %s\n", err)
 	} else {
 		err = ioutil.WriteFile("state/reminds.json", remindEntriesJSON, 0644)
 		if err != nil {
-			debugLog("> Error saving remind entries: "+err.Error(), true)
+			Error.Printf("Error saving reminders: %s\n", err)
 		}
 	}
 }
@@ -402,56 +413,57 @@ func stateRestore() {
 	if err == nil {
 		err = json.Unmarshal(guildDataJSON, &guildData)
 		if err != nil {
-			debugLog("> Error restoring guildData state: "+err.Error(), true)
+			Error.Printf("Error decoding guildData state: %s\n", err)
 		}
 	} else {
-		debugLog("> No guildData state was found", true)
+		Warning.Println("No guildData state was found")
 	}
 
 	guildSettingsJSON, err := ioutil.ReadFile("state/guildSettings.json")
 	if err == nil {
 		err = json.Unmarshal(guildSettingsJSON, &guildSettings)
 		if err != nil {
-			debugLog("> Error restoring guildSettings state: "+err.Error(), true)
+			Error.Printf("Error decoding guildSettings state: %s\n", err)
 		}
 	} else {
-		debugLog("> No guildSettings state was found", true)
+		Warning.Println("No guildSettings state was found")
 	}
 
 	userSettingsJSON, err := ioutil.ReadFile("state/userSettings.json")
 	if err == nil {
 		err = json.Unmarshal(userSettingsJSON, &userSettings)
 		if err != nil {
-			debugLog("> Error restoring userSettings state: "+err.Error(), true)
+			Error.Printf("Error decoding userSettings state: %s\n", err)
 		}
 	} else {
-		debugLog("> No userSettings state was found", true)
+		Warning.Println("No userSettings state was found")
 	}
 
 	starboardsJSON, err := ioutil.ReadFile("state/starboards.json")
 	if err == nil {
 		err = json.Unmarshal(starboardsJSON, &starboards)
 		if err != nil {
-			debugLog("> Error restoring starboards state: "+err.Error(), true)
+			Error.Printf("Error decoding starboard state: %s\n", err)
 		}
 	} else {
-		debugLog("> No starboards state was found", true)
+		Warning.Println("No starboard state was found")
 	}
 
 	remindEntriesJSON, err := ioutil.ReadFile("state/reminds.json")
 	if err == nil {
 		err = json.Unmarshal(remindEntriesJSON, &remindEntries)
 		if err != nil {
-			debugLog("> Error restoring remind entries: "+err.Error(), true)
+			Error.Printf("Error decoding reminders: %s\n", err)
 		}
 	} else {
-		debugLog("> No remind entries were found", true)
+		Warning.Println("No reminders were found")
 	}
 }
 
 func checkRestart() {
 	restartChannelID, err := ioutil.ReadFile(".restart")
 	if err == nil && len(restartChannelID) > 0 {
+		Info.Println("Restart succeeded!")
 		restartEmbed := NewGenericEmbed("Restart", "Successfully restarted "+botData.BotName+"!")
 		botData.DiscordSession.ChannelMessageSendEmbed(string(restartChannelID), restartEmbed)
 
@@ -462,6 +474,7 @@ func checkRestart() {
 func checkUpdate() {
 	updateChannelID, err := ioutil.ReadFile(".update")
 	if err == nil && len(updateChannelID) > 0 {
+		Info.Println("Update succeeded!")
 		updateEmbed := NewGenericEmbed("Update", "Successfully updated "+botData.BotName+"!")
 		botData.DiscordSession.ChannelMessageSendEmbed(string(updateChannelID), updateEmbed)
 
