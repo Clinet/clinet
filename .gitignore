@@ -18,5 +18,8 @@ stacktrace.txt
 # Most probable output executables for Linux
 clinet
 
+# Log files
+*.log
+
 # OS leftovers
 desktop.ini

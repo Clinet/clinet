@@ -65,17 +65,29 @@ func init() {
 
 func main() {
 	defer recoverPanic()
-	debugLog("Clinet-Discord © JoshuaDoes: 2018.", true)
-	debugLog("Build ID: "+BuildID, true)
-
 	flag.Parse()
-	if configIsBot == "true" {
-		debugLog("Process mode: BOT", true)
-	} else {
-		debugLog("Process mode: MASTER", true)
-	}
 
-	debugLog("Current PID: "+strconv.Itoa(os.Getpid()), true)
+	var logFile *os.File
+	var err error
+
+	if configIsBot == "true" {
+		logFile, err = os.OpenFile("clinet.bot.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic("Error creating log file: " + err.Error())
+		}
+		initLogging(logFile, "BOT")
+	} else {
+		logFile, err := os.OpenFile("clinet.main.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic("Error creating log file: " + err.Error())
+		}
+		initLogging(logFile, "MAIN")
+	}
+	defer logFile.Close()
+
+	Info.Println("Clinet © JoshuaDoes: 2017-2018.")
+	Info.Println("Build ID: " + BuildID)
+	Info.Println("Current PID: " + strconv.Itoa(os.Getpid()))
 	debugLog("", true)
 
 	if configIsBot == "true" {
