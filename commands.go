@@ -228,13 +228,14 @@ func initCommands() {
 	if botData.BotOptions.UseGitHub {
 		botData.Commands["github"] = &Command{
 			Function: commandGitHub,
-			HelpText: "Displays info about the specified GitHub user or repo.",
+			HelpText: "Displays info about the specified GitHub user or repo and fetches trending users and repositories.",
 			RequiredArguments: []string{
-				"username(/repo)",
+				"username(/repo) **OR** trending repo/user today/week/month (language)",
 			},
 			Arguments: []CommandArgument{
 				{Name: "username", Description: "The GitHub user to fetch info about", ArgType: "string"},
 				{Name: "username/repo", Description: "The GitHub repo to fetch info about", ArgType: "string"},
+				{Name: "trending repo/user today/week/month (language)", Description: "The trending type to fetch info about", ArgType: "multiple string"},
 			},
 		}
 	}
