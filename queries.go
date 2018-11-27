@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	regexCmdPlay     = "(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)" //@Clinet Play Raining Tacos
-	regexCmdPlayComp *regexp.Regexp
+	regexpCmdPlay   = regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)")       //@Clinet Play Raining Tacos
+	regexpCmdRemind = regexp.MustCompile("(?i)(.*?)(?:.*?)(remind me|set a reminder)(.*)") //@Clinet Set a reminder to do the dishes in 1 hour
 )
 
 func queryWolframAlpha(query string, lastResponse *wolfram.Conversation) (*discordgo.MessageEmbed, *wolfram.Conversation, error) {

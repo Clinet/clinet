@@ -283,13 +283,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				if usedCustomResponse == false {
 					typingEvent(session, message.ChannelID)
 
-					//Experimental - Use regex for natural language-based commands
-					regexCmdPlayComp, err := regexp.Compile(regexCmdPlay)
-					if err != nil {
-						panic(err)
-					}
-
-					matches := regexCmdPlayComp.FindAllString(query, 1) //Get a slice of the results
+					matches := regexpCmdPlay.FindAllString(query, 1) //Get a slice of the results
 					if len(matches) > 0 {
 						//Remove "Play" from the beginning
 						matchSplit := strings.Split(matches[0], " ")
@@ -297,50 +291,56 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 						commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "play", UpdatedMessageEvent: updatedMessageEvent}
 						responseEmbed = commandPlay(match, commandEnvironment)
-					} else { //End experimental
-						var previousConversation *wolfram.Conversation
+					} else {
+						matches = regexpCmdRemind.FindAllString(query, 1)
+						if len(matches) > 0 {
+							commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "remind", UpdatedMessageEvent: updatedMessageEvent}
+							responseEmbed = commandRemind(matches, commandEnvironment)
+						} else { //End experimental
+							var previousConversation *wolfram.Conversation
 
-						_, guildFound := guildData[guild.ID]
-						if guildFound {
-							if guildData[guild.ID].WolframConversations != nil {
-								if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
-									previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
+							_, guildFound := guildData[guild.ID]
+							if guildFound {
+								if guildData[guild.ID].WolframConversations != nil {
+									if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
+										previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
+									} else {
+										guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
+									}
 								} else {
+									guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
 									guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 								}
 							} else {
+								guildData[guild.ID] = &GuildData{}
 								guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
 								guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 							}
-						} else {
-							guildData[guild.ID] = &GuildData{}
-							guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
-							guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
-						}
 
-						if botData.BotOptions.UseDuckDuckGo {
-							responseEmbed, err = queryDuckDuckGo(query)
-							if err != nil {
-								if botData.BotOptions.UseWolframAlpha {
-									responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
-									if err != nil {
-										responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+							if botData.BotOptions.UseDuckDuckGo {
+								responseEmbed, err = queryDuckDuckGo(query)
+								if err != nil {
+									if botData.BotOptions.UseWolframAlpha {
+										responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
+										if err != nil {
+											responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+										} else {
+											guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+										}
 									} else {
-										guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+										responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 									}
-								} else {
-									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 								}
-							}
-						} else if botData.BotOptions.UseWolframAlpha {
-							responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
-							if err != nil {
-								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+							} else if botData.BotOptions.UseWolframAlpha {
+								responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
+								if err != nil {
+									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+								} else {
+									guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+								}
 							} else {
-								guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 							}
-						} else {
-							responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 						}
 					}
 				}
