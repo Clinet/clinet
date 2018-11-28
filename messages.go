@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -33,25 +34,48 @@ type Query struct {
 func debugMessage(session *discordgo.Session, message *discordgo.Message, channel *discordgo.Channel, guild *discordgo.Guild, updatedMessageEvent bool) {
 	content := message.Content
 	if content == "" {
+		if len(message.Embeds) > 0 {
+			for _, embed := range message.Embeds {
+				debugEmbed(embed, message.Author, channel, guild, updatedMessageEvent)
+			}
+		}
 		return //The message was empty
 	}
 	contentReplaced, err := message.ContentWithMoreMentionsReplaced(session)
 	if err != nil {
 		contentReplaced = content
 	}
-	eventType := "[New]"
+	eventType := "New"
 	if updatedMessageEvent {
-		eventType = "[Updated]"
+		eventType = "Updated"
 	}
 	userType := "@"
 	if message.Author.Bot {
 		userType = "*"
 	}
+
 	if strings.Contains(content, "\n") {
-		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+":\n"+contentReplaced, false)
+		Debug.Printf("[%s][%s - #%s] %s%s#%s:\n%s", eventType, guild.Name, channel.Name, userType, message.Author.Username, message.Author.Discriminator, contentReplaced)
 	} else {
-		debugLog(eventType+"["+guild.Name+" - #"+channel.Name+"] "+userType+message.Author.Username+"#"+message.Author.Discriminator+": "+contentReplaced, false)
+		Debug.Printf("[%s][%s - #%s] %s%s#%s: %s", eventType, guild.Name, channel.Name, userType, message.Author.Username, message.Author.Discriminator, contentReplaced)
 	}
+}
+
+func debugEmbed(embed *discordgo.MessageEmbed, author *discordgo.User, channel *discordgo.Channel, guild *discordgo.Guild, updatedMessageEvent bool) {
+	embedJSON, err := json.MarshalIndent(embed, "", "\t")
+	if err != nil {
+		return
+	}
+	eventType := "New"
+	if updatedMessageEvent {
+		eventType = "Updated"
+	}
+	userType := "@"
+	if author.Bot {
+		userType = "*"
+	}
+
+	Debug.Printf("[%s][%s - #%s] %s%s#%s:\n%s", eventType, guild.Name, channel.Name, userType, author.Username, author.Discriminator, string(embedJSON))
 }
 
 func handleMessage(session *discordgo.Session, message *discordgo.Message, updatedMessageEvent bool) {
@@ -239,6 +263,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
 			regexpBotName, _ := regexp.MatchString("^<(@|@\\!)"+session.State.User.ID+">(.*?)$", content) //Ensure prefix is bot tag
 			if regexpBotName {
+				debugMessage(session, message, channel, guild, updatedMessageEvent)
 				typingEvent(session, message.ChannelID)
 
 				query := content
@@ -265,7 +290,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 								if len(response.CmdResponses) > 0 {
 									randomCmd := rand.Intn(len(response.CmdResponses))
 
-									commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: updatedMessageEvent}
+									member, _ := botData.DiscordSession.GuildMember(guild.ID, message.Author.ID)
+
+									commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: updatedMessageEvent}
 									responseEmbed = callCommand(response.CmdResponses[randomCmd].CommandName, response.CmdResponses[randomCmd].Arguments, commandEnvironment)
 
 									usedCustomResponse = true
@@ -281,66 +308,56 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					}
 				}
 				if usedCustomResponse == false {
-					typingEvent(session, message.ChannelID)
+					member, _ := botData.DiscordSession.GuildMember(guild.ID, message.Author.ID)
+					commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, UpdatedMessageEvent: updatedMessageEvent}
+					responseEmbed = callNLP(query, commandEnvironment)
 
-					matches := regexpCmdPlay.FindAllString(query, 1) //Get a slice of the results
-					if len(matches) > 0 {
-						//Remove "Play" from the beginning
-						matchSplit := strings.Split(matches[0], " ")
-						match := matchSplit[1:]
+					if responseEmbed == nil {
+						typingEvent(session, message.ChannelID)
 
-						commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "play", UpdatedMessageEvent: updatedMessageEvent}
-						responseEmbed = commandPlay(match, commandEnvironment)
-					} else {
-						matches = regexpCmdRemind.FindAllString(query, 1)
-						if len(matches) > 0 {
-							commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Command: "remind", UpdatedMessageEvent: updatedMessageEvent}
-							responseEmbed = commandRemind(matches, commandEnvironment)
-						} else { //End experimental
-							var previousConversation *wolfram.Conversation
+						var previousConversation *wolfram.Conversation
 
-							_, guildFound := guildData[guild.ID]
-							if guildFound {
-								if guildData[guild.ID].WolframConversations != nil {
-									if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
-										previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
-									} else {
-										guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
-									}
+						_, guildFound := guildData[guild.ID]
+						if guildFound {
+							if guildData[guild.ID].WolframConversations != nil {
+								if guildData[guild.ID].WolframConversations[message.Author.ID] != nil {
+									previousConversation = guildData[guild.ID].WolframConversations[message.Author.ID]
 								} else {
-									guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
 									guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 								}
 							} else {
-								guildData[guild.ID] = &GuildData{}
 								guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
 								guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 							}
+						} else {
+							guildData[guild.ID] = &GuildData{}
+							guildData[guild.ID].WolframConversations = make(map[string]*wolfram.Conversation)
+							guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
+						}
 
-							if botData.BotOptions.UseDuckDuckGo {
-								responseEmbed, err = queryDuckDuckGo(query)
-								if err != nil {
-									if botData.BotOptions.UseWolframAlpha {
-										responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
-										if err != nil {
-											responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
-										} else {
-											guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
-										}
-									} else {
+						if botData.BotOptions.UseDuckDuckGo {
+							responseEmbed, err = queryDuckDuckGo(query)
+							if err != nil {
+								if botData.BotOptions.UseWolframAlpha {
+									responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
+									if err != nil {
 										responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+									} else {
+										guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
 									}
-								}
-							} else if botData.BotOptions.UseWolframAlpha {
-								responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
-								if err != nil {
-									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 								} else {
-									guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+									responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 								}
-							} else {
-								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 							}
+						} else if botData.BotOptions.UseWolframAlpha {
+							responseEmbed, previousConversation, err = queryWolframAlpha(query, previousConversation)
+							if err != nil {
+								responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
+							} else {
+								guildData[guild.ID].WolframConversations[message.Author.ID] = previousConversation
+							}
+						} else {
+							responseEmbed = NewErrorEmbed("Query Error", "We couldn't find the data you were looking for.\nMake sure you're using proper grammar and query structure where applicable.")
 						}
 					}
 				}
@@ -377,12 +394,13 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 
 		if canUpdateMessage {
 			session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
+			debugEmbed(responseEmbed, botData.DiscordSession.State.User, channel, guild, updatedMessageEvent)
 		} else {
 			typingEvent(session, message.ChannelID)
 
 			responseMessage, err := session.ChannelMessageSendEmbed(message.ChannelID, responseEmbed)
-			if err != nil {
-			} else {
+			if err == nil {
+				debugEmbed(responseEmbed, botData.DiscordSession.State.User, channel, guild, updatedMessageEvent)
 				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID
 			}
 		}

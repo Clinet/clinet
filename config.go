@@ -38,6 +38,7 @@ type BotData struct {
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command
+	NLPCommands    []*CommandNLP
 	VoiceServices  []VoiceService
 	LastTipMessage int
 

@@ -268,6 +268,9 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	Debug.Println("Initializing commands...")
 	initCommands()
 
+	Debug.Println("Initializing natural language commands...")
+	initNLPCommands()
+
 	Debug.Println("Initializing voice service handlers...")
 	initVoiceServices()
 
