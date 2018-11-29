@@ -37,12 +37,29 @@ type NLP struct {
 }
 
 func initNLPCommands() {
+	//@Clinet Play Dance Gavin Dance on Spotify
 	addNLPCommand(nlpNew("spotify", "search", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "${1}"),
 		nlpNew("spotify", "play", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "1"))
+
+	//@Clinet Play Dance Gavin Dance
 	addNLPCommand(nlpNew("play", "", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)"), nil, nil, ""))
-	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*?)(\\d+)(?:.*?)(?:queue)(?:.*?)"), regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)"), regexp.MustCompile("(\\d+)"), ""))
+
+	//@Clinet Remove the 1st entry from the queue
+	addNLPCommand(nlpNew("queue", "remove", "", regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*)(\\b\\d+)(?:.*)(?:queue)(?:.*)"), nil, regexp.MustCompile("(\\b\\d+)"), ""))
+
+	//@Clinet Can the queue be cleared?
+	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*?)(?:queue)(?:.*?)(?:clear)(?:.*?)"), nil, nil, "${1}"))
+
+	//@Clinet Clear the queue
+	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*?)(?:clear)(?:.*?)(?:queue)(?:.*?)"), nil, nil, "${1}"))
+
+	//@Clinet List the queue entries
 	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*?)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)"), nil, "${1}"))
-	addNLPCommand(nlpNew("queue", "remove", "", regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*)(\\b\\d+)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(\\b\\d+)"), nil, ""))
+
+	//@Clinet List the 1st page of the queue
+	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*?)(\\d+)(?:.*?)(?:queue)(?:.*?)"), regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)"), regexp.MustCompile("(\\d+)"), ""))
+
+	//@Clinet Set a reminder to add some cool stuff in 1 hour
 	addNLPCommand(nlpNew("remind", "", "", regexp.MustCompile("(?i)(.*?)(?:.*?)(remind me|set a reminder)(.*)"), nil, nil, ""))
 }
 
