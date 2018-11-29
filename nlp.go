@@ -23,8 +23,8 @@ type CommandNLP struct {
 // along to the matching command specified.
 //
 /* Examples
-* &CommandNLP{Command: "play", Regex: regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)")}
-* &CommandNLP{Command: "queue", Regex: regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:\\s)queue(.*)"), Replace: "remove (${1})"}
+* &CommandNLP{Command: "play", Regex: regexp.MustCompile("(?i)(?:.*)(?:play|listen to)(?:\\s)(.*)")}
+* &CommandNLP{Command: "queue", Regex: regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:\\s)queue(.*)"), Replace: "remove (${1})"}
  */
 type NLP struct {
 	Command        string         //The name of a command to execute when this NLP command is triggered
@@ -38,47 +38,47 @@ type NLP struct {
 
 func initNLPCommands() {
 	//@Clinet Play Dance Gavin Dance on Spotify
-	addNLPCommand(nlpNew("spotify", "search", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "${1}"),
-		nlpNew("spotify", "play", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "1"))
+	addNLPCommand(nlpNew("spotify", "search", "", regexp.MustCompile("(?i)(?:.*)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "${1}"),
+		nlpNew("spotify", "play", "", regexp.MustCompile("(?i)(?:.*)(?:play|listen to)(?:\\s)(.*)(?:\\s)(?:from Spotify|on Spotify)(?:.*)"), nil, nil, "1"))
 
 	//@Clinet Play Dance Gavin Dance
-	addNLPCommand(nlpNew("play", "", "", regexp.MustCompile("(?i)(?:.*?)(?:play|listen to)(?:\\s)(.*?)"), nil, nil, ""))
+	addNLPCommand(nlpNew("play", "", "", regexp.MustCompile("(?i)(?:.*)(?:play|listen to)(?:\\s)(.*)"), nil, nil, ""))
 
 	//@Clinet Remove the 1st entry from the queue
-	addNLPCommand(nlpNew("queue", "remove", "", regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)(\\b\\d+)(?:.*)(?:queue)(?:.*)"), nil, regexp.MustCompile("(\\b\\d+)"), ""))
+	addNLPCommand(nlpNew("queue", "remove", "", regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)(\\b\\d+)(?:.*)(?:queue)(?:.*)"), nil, regexp.MustCompile("(\\b\\d+)"), ""))
 
 	//@Clinet Can the queue be cleared?
-	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*?)(?:queue)(?:.*?)(?:clear)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*)(?:queue)(?:.*)(?:clear)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet Clear the queue
-	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*?)(?:clear)(?:.*?)(?:queue)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*)(?:clear)(?:.*)(?:queue)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet List the queue entries
-	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*?)(?:queue)(?:.*?)"), regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)"), nil, "${1}"))
+	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)"), nil, "${1}"))
 
 	//@Clinet List the 1st page of the queue
-	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*?)(\\d+)(?:.*?)(?:queue)(?:.*?)"), regexp.MustCompile("(?i)(?:.*?)(?:remove|delete)(?:.*?)"), regexp.MustCompile("(\\d+)"), ""))
+	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*)(\\d+)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)"), regexp.MustCompile("(\\d+)"), ""))
 
 	//@Clinet Skip this song
-	addNLPCommand(nlpNew("skip", "", "", regexp.MustCompile("(?i)(?:.*?)(?:skip|next)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("skip", "", "", regexp.MustCompile("(?i)(?:.*)(?:skip|next)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet Stop the playback
-	addNLPCommand(nlpNew("stop", "", "", regexp.MustCompile("(?i)(?:.*?)(?:stop)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("stop", "", "", regexp.MustCompile("(?i)(?:.*)(?:stop)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet Pause the song
-	addNLPCommand(nlpNew("pause", "", "", regexp.MustCompile("(?i)(?:.*?)(?:pause)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("pause", "", "", regexp.MustCompile("(?i)(?:.*)(?:pause)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet Resume the playback
-	addNLPCommand(nlpNew("resume", "", "", regexp.MustCompile("(?i)(?:.*?)(?:resume)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("resume", "", "", regexp.MustCompile("(?i)(?:.*)(?:resume)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet What are the lyrics for this song?
-	addNLPCommand(nlpNew("lyrics", "", "", regexp.MustCompile("(?i)(?:.*?)(?:lyrics)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("lyrics", "", "", regexp.MustCompile("(?i)(?:.*)(?:lyrics)(?:.*)"), nil, nil, "${1}"))
 
 	//@Clinet Set a reminder to add some cool stuff in 1 hour
-	addNLPCommand(nlpNew("remind", "", "", regexp.MustCompile("(?i)(.*?)(?:.*?)(remind me|set a reminder)(.*?)"), nil, nil, ""))
+	addNLPCommand(nlpNew("remind", "", "", regexp.MustCompile("(?i)(.*)(?:.*)(remind me|set a reminder)(.*)"), nil, nil, ""))
 
 	//@Clinet What are my reminders?
-	addNLPCommand(nlpNew("remind", "list", "", regexp.MustCompile("(?i)(?:.*?)(?:reminders)(?:.*?)"), nil, nil, "${1}"))
+	addNLPCommand(nlpNew("remind", "list", "", regexp.MustCompile("(?i)(?:.*)(?:reminders)(?:.*)"), nil, nil, "${1}"))
 }
 
 func nlpNew(command, argPrefix, argSuffix string, regex, regexBadMatch, regexArguments *regexp.Regexp, regexReplace string) *NLP {
@@ -141,6 +141,10 @@ func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
 				}
 			}
 
+			if len(matches) == 1 && matches[0] == "" {
+				matches = nil
+			}
+
 			if nlp.ArgPrefix != "" {
 				Debug.Println("Prefix:", nlp.ArgPrefix)
 				prefixes := strings.Split(nlp.ArgPrefix, " ")
@@ -152,10 +156,6 @@ func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
 				matches = append(matches, suffixes...)
 			}
 			Debug.Printf("Matches (%d): %v", len(matches), matches)
-
-			if len(matches) == 1 && matches[0] == "" {
-				matches = nil
-			}
 
 			embed := callCommand(nlp.Command, matches, env)
 			if j == (len(command.Commands) - 1) {
