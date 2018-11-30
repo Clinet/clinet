@@ -57,11 +57,11 @@ func initNLPCommands() {
 	//@Clinet Clear the queue
 	addNLPCommand(nlpNew("queue", "clear", "", regexp.MustCompile("(?i)(?:.*)(?:clear)(?:.*)(?:queue)(?:.*)"), nil, nil, "${1}"))
 
-	//@Clinet List the queue entries
-	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)"), nil, "${1}"))
-
 	//@Clinet List the 1st page of the queue
 	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*)(\\d+)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)"), regexp.MustCompile("(\\d+)"), ""))
+
+	//@Clinet List the queue entries
+	addNLPCommand(nlpNew("queue", "", "", regexp.MustCompile("(?i)(?:.*)(?:queue)(?:.*)"), regexp.MustCompile("(?i)(?:.*)(?:remove|delete)(?:.*)"), nil, "${1}"))
 
 	//@Clinet Skip this song
 	addNLPCommand(nlpNew("skip", "", "", regexp.MustCompile("(?i)(?:.*)(?:skip|next)(?:.*)"), nil, nil, "${1}"))
