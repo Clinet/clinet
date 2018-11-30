@@ -7,6 +7,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var (
+	InternalEmbedActionCompleted = NewEmbed().SetFooter("INTERNAL_ACTION_COMPLETED").MessageEmbed
+)
+
 // CommandNLP holds a list of NLP commands to execute in order
 type CommandNLP struct {
 	Commands []*NLP //The slice of commands to execute in order
@@ -159,6 +163,9 @@ func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
 
 			embed := callCommand(nlp.Command, matches, env)
 			if j == (len(command.Commands) - 1) {
+				if embed == nil {
+					return InternalEmbedActionCompleted
+				}
 				return embed
 			} else {
 				if strings.Contains(embed.Title, "Error") {

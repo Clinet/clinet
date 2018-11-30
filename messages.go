@@ -365,6 +365,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		}
 	}
 
+	if responseEmbed == InternalEmbedActionCompleted {
+		return
+	}
+
 	if responseEmbed != nil {
 		fixedEmbed := Embed{responseEmbed}
 		fixedEmbed.Truncate()
