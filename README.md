@@ -18,7 +18,7 @@
     `Administrator` permission. At a later date, the bot will give errors for
     permissions it does not have when asked to do something, and should sending
     the error message fail it will warn the server owner in a DM.
-2. (Optional) Join the official [Clinet Discord server](https://discord.gg/qkbKEWT) to get updates on the latest features and changes Clinet has to offer, get help with issues you may be having, and even use bot testing channels to test-drive the bot before deciding if it's right for your community!
+2. (Optional) Join the official [Clinet Discord server](https://discord.gg/zx2ns2J) to get updates on the latest features and changes Clinet has to offer, get help with issues you may be having, and even use bot testing channels to test-drive the bot before deciding if it's right for your community!
 3. Enjoy!
 
 ## What does it do?
