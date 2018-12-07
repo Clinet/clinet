@@ -161,6 +161,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		if debug == "true" {
+			discord.LogLevel = discordgo.LogInformational
+		}
 
 		Info.Println("Registering Discord event handlers...")
 		discord.AddHandler(discordChannelCreate)
