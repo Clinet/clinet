@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kortschak/zalgo"
@@ -75,10 +76,20 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		return nil
 	}
 
-	client := http.Client{}
+	timeout := time.Duration(10 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
 
-	website := url.QueryEscape(args[0])
-	website = args[0]
+	siteURL, err := url.Parse(args[0])
+	if err != nil {
+		return NewErrorEmbed("Screenshot Error", "Unknown address format ``" + args[0] + "``.")
+	}
+	if siteURL.Scheme == "" {
+		siteURL.Scheme = "http" //By standard, SSL-enabled sites should automatically redirect to https if needed
+	}
+	website := siteURL.String()
+
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://image.thum.io/get/maxAge/0/width/2000/noanimate/fullpage/%s", website), nil)
 	if err != nil {
 		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
@@ -115,16 +126,21 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		return NewErrorEmbed("Screenshot Error", "Unexpected error processing screenshot.")
 	}
 
+	imageName := website
+	imageName = strings.Replace(imageName, "://", "_", -1)
+	imageName = strings.Replace(imageName, "/", "_", -1)
+	imageName += fmt.Sprintf("-%d", time.Now().Unix())
+	imageName = "clinet-screenshot_" + imageName + ".png"
 	_, err = botData.DiscordSession.ChannelMessageSendComplex(env.Channel.ID, &discordgo.MessageSend{
 		File: &discordgo.File{
-			Name:   "clinet-screenshot.png",
+			Name:   imageName,
 			Reader: &outImage,
 		},
 		Embed: &discordgo.MessageEmbed{
 			Title:       "Screenshot",
-			Description: args[0],
+			Description: website,
 			Image: &discordgo.MessageEmbedImage{
-				URL: "attachment://clinet-screenshot.png",
+				URL: "attachment://" + imageName,
 			},
 		},
 	})

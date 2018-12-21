@@ -504,6 +504,7 @@ func initCommands() {
 	botData.Commands["uwu"] = &Command{IsAlternateOf: "hewwo"}
 	botData.Commands["mc"] = &Command{IsAlternateOf: "minecraft"}
 	botData.Commands["guildinfo"] = &Command{IsAlternateOf: "serverinfo"}
+	botData.Commands["ss"] = &Command{IsAlternateOf: "screenshot"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
