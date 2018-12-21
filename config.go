@@ -14,6 +14,7 @@ import (
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
+	"github.com/superwhiskers/libninty"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -56,20 +57,21 @@ type BotClients struct {
 	Wolfram    *wolfram.Client
 	XKCD       *xkcd.Client
 	YouTube    *youtube.Service
+	Ninty      *libninty.Client
 }
 
 // BotKeys stores all bot keys for using external services
 type BotKeys struct {
-	DuckDuckGoAppName    string `json:"ddgAppName"`
-	GeniusAccessToken    string `json:"geniusAccessToken"`
-	ImgurClientID        string `json:"imgurClientID"`
-	SoundCloudAppVersion string `json:"soundcloudAppVersion"`
-	SoundCloudClientID   string `json:"soundcloudClientID"`
-	SpotifyHost          string `json:"spotifyHost"`
-	SpotifyPass          string `json:"spotifyPass"`
-	ThumIOAPIKey         string `json:"thum.IOAPIKey"`
-	WolframAppID         string `json:"wolframAppID"`
-	YouTubeAPIKey        string `json:"youtubeAPIKey"`
+	DuckDuckGoAppName    string                     `json:"ddgAppName"`
+	GeniusAccessToken    string                     `json:"geniusAccessToken"`
+	ImgurClientID        string                     `json:"imgurClientID"`
+	SoundCloudAppVersion string                     `json:"soundcloudAppVersion"`
+	SoundCloudClientID   string                     `json:"soundcloudClientID"`
+	SpotifyHost          string                     `json:"spotifyHost"`
+	SpotifyPass          string                     `json:"spotifyPass"`
+	WolframAppID         string                     `json:"wolframAppID"`
+	YouTubeAPIKey        string                     `json:"youtubeAPIKey"`
+	Ninty                libninty.ClientInformation `json:"ninty"`
 }
 
 // BotOptions stores all bot options
@@ -82,6 +84,7 @@ type BotOptions struct {
 	UseGitHub          bool     `json:"useGitHub"`
 	UseImgur           bool     `json:"useImgur"`
 	UseLyrics          bool     `json:"useLyrics"`
+	UseNinty           bool     `json:"useNinty"`
 	UseSoundCloud      bool     `json:"useSoundCloud"`
 	UseSpotify         bool     `json:"useSpotify"`
 	UseWolframAlpha    bool     `json:"useWolframAlpha"`

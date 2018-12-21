@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kortschak/zalgo"
@@ -72,17 +71,15 @@ func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 }
 
 func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	timeout := time.Duration(1 * time.Second)
-	client := http.Client{
-		Timeout: timeout,
-	}
-	_, err := client.Get(args[0])
-	if err != nil {
-		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
+	if env.UpdatedMessageEvent {
+		return nil
 	}
 
+	client := http.Client{}
+
 	website := url.QueryEscape(args[0])
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://image.thum.io/get/auth/%s/%s", botData.BotKeys.ThumIOAPIKey, website), nil)
+	website = args[0]
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://image.thum.io/get/maxAge/0/width/2000/noanimate/fullpage/%s", website), nil)
 	if err != nil {
 		return NewErrorEmbed("Screenshot Error", "The website ``"+args[0]+"`` does not exist or is currently unreachable.")
 	}
@@ -109,7 +106,6 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		}
 		screenshotImage = srcImage
 	default:
-		return NewErrorEmbed("Screenshot Error - DEBUG", fmt.Sprintf("%v", resp))
 		return NewErrorEmbed("Screenshot Error", "The API failed to respond in an expected way.")
 	}
 
@@ -126,7 +122,7 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		},
 		Embed: &discordgo.MessageEmbed{
 			Title:       "Screenshot",
-			Description: "The below screenshot is of the website ``" + args[0] + "``.",
+			Description: args[0],
 			Image: &discordgo.MessageEmbedImage{
 				URL: "attachment://clinet-screenshot.png",
 			},
@@ -136,4 +132,16 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		return NewErrorEmbed("Screenshot Error", "Unexpected error uploading screenshot.")
 	}
 	return nil
+}
+
+func commandNNID(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	exists, _, err := botData.BotClients.Ninty.DoesUserExist(args[0])
+	if err != nil {
+		return NewErrorEmbed("NNID Error", "Error checking for user `" + args[0] + "`.")
+	}
+
+	if exists {
+		return NewGenericEmbed("NNID", "The user `" + args[0] + "` exists!")
+	}
+	return NewGenericEmbed("NNID", "The user `" + args[0] + "` does not exist.")
 }

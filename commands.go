@@ -85,6 +85,16 @@ func initCommands() {
 			{Name: "command", Description: "The command to view help for", ArgType: "string"},
 		},
 	}
+	botData.Commands["nnid"] = &Command{
+		Function: commandNNID,
+		HelpText: "Checks whether the specified NNID exists or not.",
+		RequiredArguments: []string{
+			"username",
+		},
+		Arguments: []CommandArgument{
+			{Name: "username", Description: "The NNID to check for", ArgType: "string"},
+		},
+	}
 	botData.Commands["remind"] = &Command{
 		Function: commandRemind,
 		HelpText: "Reminds you with the written message at the specified time.",

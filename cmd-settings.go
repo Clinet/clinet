@@ -202,6 +202,13 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 				if userSettings[env.User.ID].Socials.NNID == args[3] {
 					return NewErrorEmbed("User Settings - Social", "You have already set that NNID.")
 				}
+				exists, _, err := botData.BotClients.Ninty.DoesUserExist(args[3])
+				if err != nil {
+					return NewErrorEmbed("User Settings - Social Error", "There was an error checking if that NNID exists.")
+				}
+				if !exists {
+					return NewErrorEmbed("User Settings - Social Error", "That NNID doesn't exist!")
+				}
 				userSettings[env.User.ID].Socials.NNID = args[3]
 				return NewGenericEmbed("User Settings - Social", "Successfully set your NNID to ``"+args[3]+"``.")
 			case "psn":

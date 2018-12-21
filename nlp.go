@@ -83,6 +83,9 @@ func initNLPCommands() {
 
 	//@Clinet What are my reminders?
 	addNLPCommand(nlpNew("remind", "list", "", regexp.MustCompile("(?i)(?:.*)(?:reminders)(?:.*)"), nil, nil, "${1}"))
+
+	//@Clinet Take a screensot of https://google.com/ please
+	addNLPCommand(nlpNew("screenshot", "", "", regexp.MustCompile("(?i)(?:.*)(?:screenshot)(?:.*)"), nil, regexp.MustCompile("((http|https)://([\\w_-]+(?:(?:\\.[\\w_-]+)+)[\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?)"), ""))
 }
 
 func nlpNew(command, argPrefix, argSuffix string, regex, regexBadMatch, regexArguments *regexp.Regexp, regexReplace string) *NLP {
