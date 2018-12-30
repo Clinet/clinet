@@ -36,6 +36,9 @@ var (
 	//Contains guild-specific data in a string map, where key = guild ID
 	guildData = make(map[string]*GuildData)
 
+	//Contains guild-specific voice data in a string map, where key = guild ID
+	voiceData = make(map[string]*Voice)
+
 	//Contains guild-specific settings in a string map, where key = guild ID
 	guildSettings = make(map[string]*GuildSettings)
 

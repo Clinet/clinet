@@ -12,12 +12,12 @@ import (
 type YouTube struct {
 }
 
-// GetName returns "YouTube"
+// GetName returns the service's name
 func (*YouTube) GetName() string {
 	return "YouTube"
 }
 
-// GetColor returns 0xFF0000
+// GetColor returns the service's color
 func (*YouTube) GetColor() int {
 	return 0xFF0000
 }

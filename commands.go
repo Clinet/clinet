@@ -436,7 +436,7 @@ func initCommands() {
 		Arguments: []CommandArgument{
 			{Name: "addrole", Description: "Adds the role to add when this event triggers", ArgType: "role"},
 			{Name: "removerole", Description: "Adds the role to remove when this event triggers", ArgType: "role"},
-			{Name: "casesensitive", Description: "Whehter or not the triggers specified are case-sensitive", ArgType: "boolean"},
+			{Name: "casesensitive", Description: "Whether or not the triggers specified are case-sensitive", ArgType: "boolean"},
 			{Name: "channel", Description: "Adds the channel to the channel whitelist for triggering this event", ArgType: "channel"},
 			{Name: "trigger", Description: "Adds the message used to trigger this event", ArgType: "message"},
 			{Name: "delete", Description: "Deletes the specified roleme entry", ArgType: "number"},

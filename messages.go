@@ -5,25 +5,11 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 )
-
-// GuildData holds data specific to a guild
-type GuildData struct {
-	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
-
-	AudioQueue           []*QueueEntry
-	AudioNowPlaying      *QueueEntry
-	VoiceData            VoiceData
-	Queries              map[string]*Query
-	YouTubeResults       map[string]*YouTubeResultNav
-	SpotifyResults       map[string]*SpotifyResultNav
-	WolframConversations map[string]*wolfram.Conversation
-}
 
 // Query holds data about a query's response message
 type Query struct {

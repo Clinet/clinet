@@ -12,12 +12,12 @@ import (
 type SoundCloud struct {
 }
 
-// GetName returns "SoundCloud"
+// GetName returns the service's name
 func (*SoundCloud) GetName() string {
 	return "SoundCloud"
 }
 
-// GetColor returns 0xFF7700
+// GetColor returns the service's color
 func (*SoundCloud) GetColor() int {
 	return 0xFF7700
 }

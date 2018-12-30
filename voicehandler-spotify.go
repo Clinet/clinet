@@ -9,12 +9,12 @@ import (
 type Spotify struct {
 }
 
-// GetName returns "Spotify"
+// GetName returns the service's name
 func (*Spotify) GetName() string {
 	return "Spotify"
 }
 
-// GetColor returns 0x1DB954
+// GetColor returns the service's color
 func (*Spotify) GetColor() int {
 	return 0x1DB954
 }

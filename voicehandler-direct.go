@@ -11,12 +11,12 @@ import (
 type Direct struct {
 }
 
-// GetName returns "Direct URL"
+// GetName returns the service's name
 func (*Direct) GetName() string {
 	return "Direct URL"
 }
 
-// GetColor returns 0x1C1C1C
+// GetColor returns the service's color
 func (*Direct) GetColor() int {
 	return 0x1C1C1C
 }

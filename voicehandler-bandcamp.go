@@ -21,12 +21,12 @@ import (
 type Bandcamp struct {
 }
 
-// GetName returns "Bandcamp"
+// GetName returns the service's name
 func (*Bandcamp) GetName() string {
 	return "Bandcamp"
 }
 
-// GetColor returns 0x629AA9
+// GetColor returns the service's color
 func (*Bandcamp) GetColor() int {
 	return 0x629AA9
 }

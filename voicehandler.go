@@ -18,31 +18,9 @@ type VoiceService interface {
 	GetColor() int
 	TestURL(url string) (match bool, err error)
 	GetMetadata(url string) (metadata *Metadata, err error)
-}
 
-// Metadata stores the metadata of a queue entry
-type Metadata struct {
-	Artists      []MetadataArtist //List of artists for this queue entry
-	Title        string           //Entry title
-	DisplayURL   string           //Entry page URL to display to users
-	StreamURL    string           //Entry URL for streaming
-	Duration     float64          //Entry duration
-	ArtworkURL   string           //Entry artwork URL
-	ThumbnailURL string           //Entry artwork thumbnail URL
-}
-
-// MetadataArtist stores the data about an artist
-type MetadataArtist struct {
-	Name string //Artist name
-	URL  string //Artist page URL
-}
-
-// QueueEntry stores the data about a queue entry
-type QueueEntry struct {
-	Metadata     *Metadata //Queue entry metadata
-	ServiceName  string    //Name of service used for this queue entry
-	ServiceColor int       //Color of service used for this queue entry
-	Requester    *discordgo.User
+	//Planned for future rewriting of things
+	//Search(query string) (results *SearchResults, err error)
 }
 
 func initVoiceServices() {
@@ -68,8 +46,8 @@ func createQueueEntry(url string) (*QueueEntry, error) {
 			}
 			queueEntry := &QueueEntry{
 				Metadata:     metadata,
-				ServiceName:  service.GetName(),
-				ServiceColor: service.GetColor(),
+				ServiceName:  service.Name,
+				ServiceColor: service.Color,
 			}
 			return queueEntry, nil
 		}
