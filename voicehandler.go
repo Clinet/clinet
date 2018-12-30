@@ -46,8 +46,8 @@ func createQueueEntry(url string) (*QueueEntry, error) {
 			}
 			queueEntry := &QueueEntry{
 				Metadata:     metadata,
-				ServiceName:  service.Name,
-				ServiceColor: service.Color,
+				ServiceName:  service.Name(),
+				ServiceColor: service.Color(),
 			}
 			return queueEntry, nil
 		}
