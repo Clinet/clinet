@@ -283,6 +283,9 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	Debug.Println("Initializing natural language commands...")
 	initNLPCommands()
 
+	Debug.Println("Initializing query service handlers...")
+	initQueryServices()
+
 	Debug.Println("Initializing voice service handlers...")
 	initVoiceServices()
 
@@ -358,8 +361,8 @@ func sendTipMessages() {
 	botData.LastTipMessage = tipMessageN
 }
 
-func typingEvent(session *discordgo.Session, channelID string) {
-	if botData.BotOptions.SendTypingEvent {
+func typingEvent(session *discordgo.Session, channelID string, updatedMessageEvent bool) {
+	if botData.BotOptions.SendTypingEvent && updatedMessageEvent == false {
 		Debug.Printf("Typing in channel %s...\n", channelID)
 		session.ChannelTyping(channelID)
 	}

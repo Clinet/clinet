@@ -74,5 +74,6 @@ func createQueueEntry(url string) (*QueueEntry, error) {
 			return queueEntry, nil
 		}
 	}
+
 	return nil, errors.New("error finding service to handle url")
 }

@@ -41,6 +41,7 @@ type BotData struct {
 	Commands       map[string]*Command
 	NLPCommands    []*CommandNLP
 	VoiceServices  []VoiceService
+	QueryServices  []QueryService
 	LastTipMessage int
 
 	Updating bool
