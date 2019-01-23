@@ -11,6 +11,7 @@ import (
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
+	"github.com/jonas747/dca"
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
@@ -77,23 +78,24 @@ type BotKeys struct {
 
 // BotOptions stores all bot options
 type BotOptions struct {
-	MaxPingCount       int      `json:"maxPingCount"` //How many pings to test to determine the average ping
-	HelpMaxResults     int      `json:"helpMaxResults"`
-	SendTypingEvent    bool     `json:"sendTypingEvent"`
-	UseCustomResponses bool     `json:"useCustomResponses"`
-	UseDuckDuckGo      bool     `json:"useDuckDuckGo"`
-	UseGitHub          bool     `json:"useGitHub"`
-	UseImgur           bool     `json:"useImgur"`
-	UseLyrics          bool     `json:"useLyrics"`
-	UseNinty           bool     `json:"useNinty"`
-	UseSoundCloud      bool     `json:"useSoundCloud"`
-	UseSpotify         bool     `json:"useSpotify"`
-	UseWolframAlpha    bool     `json:"useWolframAlpha"`
-	UseXKCD            bool     `json:"useXKCD"`
-	UseYouTube         bool     `json:"useYouTube"`
-	WolframDeniedPods  []string `json:"wolframDeniedPods"`
-	YouTubeMaxResults  int      `json:"youtubeMaxResults"`
-	SpotifyMaxResults  int      `json:"spotifyMaxResults"`
+	MaxPingCount       int                `json:"maxPingCount"` //How many pings to test to determine the average ping
+	HelpMaxResults     int                `json:"helpMaxResults"`
+	SendTypingEvent    bool               `json:"sendTypingEvent"`
+	UseCustomResponses bool               `json:"useCustomResponses"`
+	UseDuckDuckGo      bool               `json:"useDuckDuckGo"`
+	UseGitHub          bool               `json:"useGitHub"`
+	UseImgur           bool               `json:"useImgur"`
+	UseLyrics          bool               `json:"useLyrics"`
+	UseNinty           bool               `json:"useNinty"`
+	UseSoundCloud      bool               `json:"useSoundCloud"`
+	UseSpotify         bool               `json:"useSpotify"`
+	UseWolframAlpha    bool               `json:"useWolframAlpha"`
+	UseXKCD            bool               `json:"useXKCD"`
+	UseYouTube         bool               `json:"useYouTube"`
+	WolframDeniedPods  []string           `json:"wolframDeniedPods"`
+	YouTubeMaxResults  int                `json:"youtubeMaxResults"`
+	SpotifyMaxResults  int                `json:"spotifyMaxResults"`
+	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`
 }
 
 // CustomResponseQuery stores a custom response

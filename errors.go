@@ -15,8 +15,10 @@ var (
 	errVoiceJoinAlreadyInChannel = errors.New("voice: error joining channel, already in selected voice channel")
 	errVoiceJoinBusy             = errors.New("voice: error joining channel, busy in another channel")
 	errVoiceJoinChannel          = errors.New("voice: error joining channel")
+	errVoiceJoinChangeChannel    = errors.New("voice: error changing channel")
 	errVoiceLeaveChannel         = errors.New("voice: error leaving channel")
 	errVoiceLeaveNotConnected    = errors.New("voice: error leaving channel, not in channel")
+	errVoiceNotStreaming         = errors.New("voice: not streaming")
 )
 
 func getErrorMessage(err error) (errHash, errMsg string) {

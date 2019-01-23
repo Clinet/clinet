@@ -36,9 +36,6 @@ var (
 	//Contains guild-specific data in a string map, where key = guild ID
 	guildData = make(map[string]*GuildData)
 
-	//Contains guild-specific voice data in a string map, where key = guild ID
-	voiceData = make(map[string]*Voice)
-
 	//Contains guild-specific settings in a string map, where key = guild ID
 	guildSettings = make(map[string]*GuildSettings)
 
@@ -50,6 +47,9 @@ var (
 
 	//Contains all remind entries
 	remindEntries = make([]RemindEntry, 0)
+
+	//Contains guild-specific voice data in a string map, where key = guild ID
+	voiceData = make(map[string]*Voice)
 
 	//Contains a pointer to the current log file
 	logFile *os.File
@@ -377,109 +377,86 @@ func debugLog(msg string, overrideConfig bool) {
 	}
 }
 
-func stateSave() {
-	guildDataJSON, err := json.MarshalIndent(guildData, "", "\t")
+func stateSaveAll() {
+	err := stateSaveRaw(guildData, "state/guildData.json")
 	if err != nil {
-		Error.Printf("Error encoding guildData state: %s\n", err)
-	} else {
-		err = ioutil.WriteFile("state/guildData.json", guildDataJSON, 0644)
-		if err != nil {
-			Error.Printf("Error saving guildData state: %s\n", err)
-		}
+		Error.Printf("Error saving guildData state: %s\n", err)
 	}
 
-	guildSettingsJSON, err := json.MarshalIndent(guildSettings, "", "\t")
+	err = stateSaveRaw(guildSettings, "state/guildSettings.json")
 	if err != nil {
-		Error.Printf("Error encoding guildSettings state: %s\n", err)
-	} else {
-		err = ioutil.WriteFile("state/guildSettings.json", guildSettingsJSON, 0644)
-		if err != nil {
-			Error.Printf("Error saving guildSettings state: %s\n", err)
-		}
+		Error.Printf("Error saving guildSettings state: %s\n", err)
 	}
 
-	userSettingsJSON, err := json.MarshalIndent(userSettings, "", "\t")
+	err = stateSaveRaw(userSettings, "state/userSettings.json")
 	if err != nil {
-		Error.Printf("Error encoding userSettings state: %s\n", err)
-	} else {
-		err = ioutil.WriteFile("state/userSettings.json", userSettingsJSON, 0644)
-		if err != nil {
-			Error.Printf("Error saving userSettings state: %s\n", err)
-		}
+		Error.Printf("Error saving userSettings state: %s\n", err)
 	}
 
-	starboardsJSON, err := json.MarshalIndent(starboards, "", "\t")
+	err = stateSaveRaw(starboards, "state/starboards.json")
 	if err != nil {
-		Error.Printf("Error encoding starboard state: %s\n", err)
-		debugLog(err.Error(), true)
-	} else {
-		err = ioutil.WriteFile("state/starboards.json", starboardsJSON, 0644)
-		if err != nil {
-			Error.Printf("Error saving starboard state: %s\n", err)
-		}
+		Error.Printf("Error saving starboards: %s\n", err)
 	}
 
-	remindEntriesJSON, err := json.MarshalIndent(remindEntries, "", "\t")
+	err = stateSaveRaw(remindEntries, "state/reminds.json")
 	if err != nil {
-		Error.Printf("Error encoding reminders: %s\n", err)
-	} else {
-		err = ioutil.WriteFile("state/reminds.json", remindEntriesJSON, 0644)
-		if err != nil {
-			Error.Printf("Error saving reminders: %s\n", err)
-		}
+		Error.Printf("Error saving reminders: %s\n", err)
+	}
+
+	err = stateSaveRaw(voiceData, "state/voiceData.json")
+	if err != nil {
+		Error.Printf("Error saving voiceData state: %s\n", err)
 	}
 }
 
-func stateRestore() {
-	guildDataJSON, err := ioutil.ReadFile("state/guildData.json")
-	if err == nil {
-		err = json.Unmarshal(guildDataJSON, &guildData)
-		if err != nil {
-			Error.Printf("Error decoding guildData state: %s\n", err)
-		}
-	} else {
-		Warning.Println("No guildData state was found")
+func stateSaveRaw(data interface{}, file string) error {
+	dataJSON, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(file, dataJSON, 0644)
+	return err
+}
+
+func stateRestoreAll() {
+	err := stateRestoreRaw("state/guildData.json", &guildData)
+	if err != nil {
+		Error.Printf("Error loading guildData state: %s\n", err)
 	}
 
-	guildSettingsJSON, err := ioutil.ReadFile("state/guildSettings.json")
-	if err == nil {
-		err = json.Unmarshal(guildSettingsJSON, &guildSettings)
-		if err != nil {
-			Error.Printf("Error decoding guildSettings state: %s\n", err)
-		}
-	} else {
-		Warning.Println("No guildSettings state was found")
+	err = stateRestoreRaw("state/guildSettings.json", &guildSettings)
+	if err != nil {
+		Error.Printf("Error loading guildSettings state: %s\n", err)
 	}
 
-	userSettingsJSON, err := ioutil.ReadFile("state/userSettings.json")
-	if err == nil {
-		err = json.Unmarshal(userSettingsJSON, &userSettings)
-		if err != nil {
-			Error.Printf("Error decoding userSettings state: %s\n", err)
-		}
-	} else {
-		Warning.Println("No userSettings state was found")
+	err = stateRestoreRaw("state/userSettings.json", &userSettings)
+	if err != nil {
+		Error.Printf("Error loading userSettings state: %s\n", err)
 	}
 
-	starboardsJSON, err := ioutil.ReadFile("state/starboards.json")
-	if err == nil {
-		err = json.Unmarshal(starboardsJSON, &starboards)
-		if err != nil {
-			Error.Printf("Error decoding starboard state: %s\n", err)
-		}
-	} else {
-		Warning.Println("No starboard state was found")
+	err = stateRestoreRaw("state/starboards.json", &starboards)
+	if err != nil {
+		Error.Printf("Error loading starboards: %s\n", err)
 	}
 
-	remindEntriesJSON, err := ioutil.ReadFile("state/reminds.json")
-	if err == nil {
-		err = json.Unmarshal(remindEntriesJSON, &remindEntries)
-		if err != nil {
-			Error.Printf("Error decoding reminders: %s\n", err)
-		}
-	} else {
-		Warning.Println("No reminders were found")
+	err = stateRestoreRaw("state/reminds.json", &remindEntries)
+	if err != nil {
+		Error.Printf("Error loading reminders: %s\n", err)
 	}
+
+	err = stateRestoreRaw("state/voiceData.json", &voiceData)
+	if err != nil {
+		Error.Printf("Error loading voiceData state: %s\n", err)
+	}
+}
+
+func stateRestoreRaw(file string, data interface{}) error {
+	dataJSON, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(dataJSON, data)
+	return err
 }
 
 func checkRestart() {
