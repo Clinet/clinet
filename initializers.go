@@ -11,7 +11,6 @@ func initializeGuildData(guildID string) {
 	_, guildDataExists := guildData[guildID]
 	if !guildDataExists {
 		guildData[guildID] = &GuildData{}
-		guildData[guildID].VoiceData = VoiceData{}
 		guildData[guildID].Queries = make(map[string]*Query)
 	}
 }

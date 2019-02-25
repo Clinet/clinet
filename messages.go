@@ -296,6 +296,6 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			}
 		}
 
-		stateSave() //Save the state after every interaction
+		stateSaveAll() //Save the state after every interaction
 	}
 }

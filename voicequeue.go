@@ -2,30 +2,33 @@ package main
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-func (voice *VoiceData) Add(entry *QueueEntry) {
+func (voice *Voice) QueueAdd(entry *QueueEntry) {
 	//Add the new queue entry
 	voice.Entries = append(voice.Entries, entry)
 }
-func (voice *VoiceData) Remove(entry int) {
+func (voice *Voice) QueueRemove(entry int) {
 	if voice.Shuffle {
 		//Remove the underlying queue entry
-		voice.removeNormal(voice.ShuffledPointers[entry])
+		voice.queueRemoveNormal(voice.ShuffledPointers[entry])
 		//Remove the pointer from the shuffled queue entries
-		voice.removePointer(entry)
+		voice.queueRemovePointer(entry)
 	} else {
 		//Remove the queue entry
-		voice.removeNormal(entry)
+		voice.queueRemoveNormal(entry)
 	}
 }
-func (voice *VoiceData) removeNormal(entry int) {
+func (voice *Voice) queueRemoveNormal(entry int) {
 	voice.Entries = append(voice.Entries[:entry], voice.Entries[entry+1:]...)
 }
-func (voice *VoiceData) removePointer(entry int) {
-	voice.ShuffledPointers = append(voice.ShuffledPointers[:entry], voice.ShuffledPointers[entry+1]...)
+func (voice *Voice) queueRemovePointer(entry int) {
+	voice.ShuffledPointers = append(voice.ShuffledPointers[:entry], voice.ShuffledPointers[entry+1:]...)
 }
-func (voice *VoiceData) RemoveRange(start, end int) {
+func (voice *Voice) QueueRemoveRange(start, end int) {
 	if len(voice.Entries) == 0 {
 		return
 	}
@@ -33,21 +36,21 @@ func (voice *VoiceData) RemoveRange(start, end int) {
 	if start < 0 {
 		start = 0
 	}
-	if end > len(queue) {
-		end = len(queue)
+	if end > len(voice.Entries) {
+		end = len(voice.Entries)
 	}
 
 	for entry := end; entry < start; entry-- {
-		voice.Remove(entry)
+		voice.QueueRemove(entry)
 	}
 }
-func (voice *VoiceData) Clear() {
+func (voice *Voice) QueueClear() {
 	voice.Entries = nil
 	voice.ShuffledPointers = nil
 }
-func (voice *VoiceData) Get(entry int) *QueueEntry {
+func (voice *Voice) QueueGet(entry int) *QueueEntry {
 	if len(voice.Entries) < entry {
-		return
+		return nil
 	}
 
 	if voice.Shuffle {
@@ -55,9 +58,9 @@ func (voice *VoiceData) Get(entry int) *QueueEntry {
 	}
 	return voice.Entries[entry]
 }
-func (voice *VoiceData) GetNext() *QueueEntry {
+func (voice *Voice) QueueGetNext() *QueueEntry {
 	if len(voice.Entries) == 0 {
-		return
+		return nil
 	}
 	return voice.Entries[0]
 }
@@ -70,16 +73,16 @@ type QueueEntry struct {
 	Requester    *discordgo.User
 }
 
-func (voice *VoiceData) GetNowPlayingEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
+func (voice *Voice) GetNowPlayingEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
 	return voice.getQueueEmbed(entry, 1)
 }
-func (voice *VoiceData) GetNowPlayingDurationEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
+func (voice *Voice) GetNowPlayingDurationEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
 	return voice.getQueueEmbed(entry, 2)
 }
-func (voice *VoiceData) GetAddedEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
+func (voice *Voice) GetAddedEmbed(entry *QueueEntry) *discordgo.MessageEmbed {
 	return voice.getQueueEmbed(entry, 3)
 }
-func (voice *VoiceData) getQueueEmbed(entry *QueueEntry, embedType int) *discordgo.MessageEmbed {
+func (voice *Voice) getQueueEmbed(entry *QueueEntry, embedType int) *discordgo.MessageEmbed {
 	track := fmt.Sprintf("[%s](%s)", entry.Metadata.Title, entry.Metadata.DisplayURL)
 	if len(entry.Metadata.Artists) > 0 {
 		track += fmt.Sprintf(" by [%s](%s)", entry.Metadata.Artists[0].Name, entry.Metadata.Artists[0].URL)
@@ -109,17 +112,22 @@ func (voice *VoiceData) getQueueEmbed(entry *QueueEntry, embedType int) *discord
 		embed.AddField("Duration", duration)
 	case 2:
 		embed.AddField("Now Playing from "+entry.ServiceName, track)
-		embed.AddField("Time", fmt.Sprintf("%s / %s", secondsToHuman(voice.StreamingSession.PlaybackPosition().Seconds()), duration))
+		embed.AddField("Time", fmt.Sprintf("%s / %s", secondsToHuman(voice.NowPlaying.Position.Seconds()), duration))
 	case 3:
 		embed.AddField("Added to Queue from "+entry.ServiceName, track)
 		embed.AddField("Duration", duration)
 	}
+
+	embed.SetColor(entry.ServiceColor)
+	embed.SetThumbnail(entry.Metadata.ArtworkURL)
+
+	return embed.MessageEmbed
 }
 
 //VoiceNowPlaying contains data about the now playing queue entry
 type VoiceNowPlaying struct {
-	Entry    *QueueEntry //The underlying queue entry
-	Position float64     //The current position in the audio stream
+	Entry    *QueueEntry   //The underlying queue entry
+	Position time.Duration //The current position in the audio stream
 }
 
 // Metadata stores the metadata of a queue entry

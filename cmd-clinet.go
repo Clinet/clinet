@@ -79,7 +79,7 @@ func commandRestart(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	ioutil.WriteFile(".restart", []byte(env.Channel.ID), 0644)
 
 	//Save the state so it's not lost
-	stateSave()
+	stateSaveAll()
 
 	//Close the bot process, as the MASTER process will open it again
 	os.Exit(0)
@@ -162,23 +162,23 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	ioutil.WriteFile(".update", []byte(env.Channel.ID), 0644)
 
 	//Save the state so it's not lost
-	stateSave()
+	stateSaveAll()
 
 	//Mark updating flag as true so interrupted events (such as voice playback) will notify users that an update interrupted the event
 	botData.Updating = true
 
 	//Leave all voice channels
-	for guildID, guildDataRow := range guildData {
-		if guildDataRow.VoiceData.VoiceConnection != nil {
-			if voiceIsStreaming(guildID) {
+	for _, voiceIDRow := range voiceData {
+		if voiceIDRow.IsConnected() {
+			if voiceIDRow.IsStreaming() {
 				//Notify users that an update is occuring
-				botData.DiscordSession.ChannelMessageSendEmbed(guildDataRow.VoiceData.ChannelIDJoinedFrom, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
+				botData.DiscordSession.ChannelMessageSendEmbed(voiceIDRow.TextChannelID, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
 
-				debugLog("> Stopping stream in voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
-				voiceStop(guildID)
+				debugLog("> Stopping stream in voice channel "+voiceIDRow.VoiceConnection.ChannelID+"...", false)
+				voiceIDRow.Stop()
 			}
-			debugLog("> Closing connection to voice channel "+guildDataRow.VoiceData.VoiceConnection.ChannelID+"...", false)
-			guildDataRow.VoiceData.VoiceConnection.Close()
+			debugLog("> Closing connection to voice channel "+voiceIDRow.VoiceConnection.ChannelID+"...", false)
+			voiceIDRow.VoiceConnection.Close()
 		}
 	}
 

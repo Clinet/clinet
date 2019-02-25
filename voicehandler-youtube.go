@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"regexp"
 
 	isoduration "github.com/channelmeter/iso8601duration"
@@ -72,4 +73,130 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 	metadata.Artists = append(metadata.Artists, *videoAuthor)
 
 	return metadata, nil
+}
+
+func YouTubeGetQuery(query string) (string, error) {
+	call := botData.BotClients.YouTube.Search.List("id").
+		Q(query).
+		MaxResults(50)
+
+	response, err := call.Do()
+	if err != nil {
+		return "", errors.New("Could not find any results for the specified query.")
+	}
+
+	for _, item := range response.Items {
+		if item.Id.Kind == "youtube#video" {
+			url := "https://youtube.com/watch?v=" + item.Id.VideoId
+			return url, nil
+		}
+	}
+
+	return "", errors.New("Could not find a video result for the specified query.")
+}
+
+//YouTube search results, interacted with via commands
+type YouTubeResultNav struct {
+	//Used by struct functions
+	Query         string                  //The search query used to retrieve the current results
+	TotalResults  int64                   //The total amount of results for the current search query
+	Results       []*youtube.SearchResult //The results of the current page
+	PrevPageToken string                  //The token of the previous page of results
+	NextPageToken string                  //The token of the next page of results
+	PageNumber    int                     //The numerical identifier of the current page
+
+	//Used by external functions for easy page management
+	ResponseID string //The message response ID used to display and update result listings
+	MaxResults int64  //The total amount of results per page
+}
+
+func (page *YouTubeResultNav) Prev() error {
+	if page.PageNumber == 0 {
+		return errors.New("No search pages found")
+	}
+	if page.PrevPageToken == "" {
+		return errors.New("No pages exist before current page")
+	}
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(page.Query).
+		MaxResults(page.MaxResults).
+		PageToken(page.PrevPageToken)
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the previous page")
+	}
+
+	page.PageNumber--
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
+}
+func (page *YouTubeResultNav) Next() error {
+	if page.PageNumber == 0 {
+		return errors.New("No search pages found")
+	}
+	if page.NextPageToken == "" {
+		return errors.New("No pages exist after current page")
+	}
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(page.Query).
+		MaxResults(page.MaxResults).
+		PageToken(page.NextPageToken)
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the next page")
+	}
+
+	page.PageNumber++
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
+}
+func (page *YouTubeResultNav) GetResults() ([]*youtube.SearchResult, error) {
+	if len(page.Results) == 0 {
+		return nil, errors.New("No search results found")
+	}
+	return page.Results, nil
+}
+func (page *YouTubeResultNav) Search(query string) error {
+	if page.MaxResults == 0 {
+		page.MaxResults = int64(botData.BotOptions.YouTubeMaxResults)
+	}
+
+	page.Query = ""
+	page.PageNumber = 0
+	page.TotalResults = 0
+	page.Results = nil
+	page.PrevPageToken = ""
+	page.NextPageToken = ""
+
+	searchCall := botData.BotClients.YouTube.Search.
+		List("id").
+		Q(query).
+		MaxResults(page.MaxResults).
+		Type("video")
+
+	response, err := searchCall.Do()
+	if err != nil {
+		return errors.New("Could not find any video results for the specified query")
+	}
+
+	page.Query = query
+	page.PageNumber = 1
+	page.TotalResults = response.PageInfo.TotalResults
+	page.Results = response.Items
+	page.PrevPageToken = response.PrevPageToken
+	page.NextPageToken = response.NextPageToken
+
+	return nil
 }

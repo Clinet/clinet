@@ -11,9 +11,11 @@ import (
 )
 
 func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	VoiceInit(env.Guild.ID)
+
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
-			voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+			voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 			return NewGenericEmbed("Voice", "Joined the voice channel.")
 		}
 	}
@@ -21,15 +23,16 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 }
 
 func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
-		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
+	VoiceInit(env.Guild.ID)
+
+	if voiceData[env.Guild.ID].VoiceConnection == nil {
+		return NewErrorEmbed("Voice Error", botData.BotName+"is not currently in a voice channel.")
 	}
 
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-			voiceStop(env.Guild.ID)
-			err := voiceLeave(env.Guild.ID, voiceState.ChannelID)
-			if err != nil {
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == voiceData[env.Guild.ID].VoiceConnection.ChannelID {
+			voiceData[env.Guild.ID].Stop()
+			if err := voiceData[env.Guild.ID].Disconnect(); err != nil {
 				return NewErrorEmbed("Voice Error", "There was an error leaving the voice channel.")
 			}
 			return NewGenericEmbed("Voice", "Left the voice channel.")
@@ -39,20 +42,20 @@ func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.Messag
 }
 
 func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	VoiceInit(env.Guild.ID)
+
 	if env.UpdatedMessageEvent {
 		return nil
 	}
 
-	for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-	}
 	foundVoiceChannel := false
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
-			if guildData[env.Guild.ID].VoiceData.VoiceConnection != nil && voiceState.ChannelID != guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
+			if voiceData[env.Guild.ID].IsConnected() && voiceState.ChannelID != voiceData[env.Guild.ID].VoiceConnection.ChannelID {
 				return NewErrorEmbed("Voice Error", "You must join the voice channel "+botData.BotName+" is in before using the play command.")
 			}
 			foundVoiceChannel = true
-			voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+			voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 			break
 		}
 	}
@@ -60,17 +63,14 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		return NewErrorEmbed("Voice Error", "You must join the voice channel to use before using the play command.")
 	}
 
-	guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing = true
-	defer stopPlaybackPreparing(env.Guild.ID)
-
-	guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+	voiceData[env.Guild.ID].SetTextChannel(env.Channel.ID)
 
 	mediaURL := ""
 
 	if len(args) >= 1 {
 		_, err := url.ParseRequestURI(args[0])
 		if err != nil {
-			queryURL, err := voiceGetQuery(strings.Join(args, " "))
+			queryURL, err := YouTubeGetQuery(strings.Join(args, " "))
 			if err != nil {
 				return NewErrorEmbed("Voice Error", "There was an error getting a result for the specified query.")
 			}
@@ -96,27 +96,27 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 					continue
 				}
 				queueEntry.Requester = env.Member.User
-				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+				go voiceData[env.Guild.ID].Play(queueEntry, false)
 			}
 
 			return NewGenericEmbed("Voice", "Finished adding all "+strconv.Itoa(len(env.Message.Attachments))+" attachments to the queue.")
 		}
 
-		if guildData[env.Guild.ID].AudioNowPlaying != nil {
-			if voiceIsStreaming(env.Guild.ID) {
+		if voiceData[env.Guild.ID].NowPlaying != nil {
+			if voiceData[env.Guild.ID].IsStreaming() {
 				return NewErrorEmbed("Voice Error", "There is already audio playing.")
 			}
-			queueEntry := guildData[env.Guild.ID].AudioNowPlaying
-			go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueEntry, true)
+			queueEntry := voiceData[env.Guild.ID].NowPlaying.Entry
+			go voiceData[env.Guild.ID].Play(queueEntry, true)
 			return nil
 		}
-		if len(guildData[env.Guild.ID].AudioQueue) > 0 {
-			if voiceIsStreaming(env.Guild.ID) {
+		if len(voiceData[env.Guild.ID].Entries) > 0 {
+			if voiceData[env.Guild.ID].IsStreaming() {
 				return NewErrorEmbed("Voice Error", "There is already audio playing.")
 			}
-			queueEntry := guildData[env.Guild.ID].AudioQueue[0]
-			guildData[env.Guild.ID].QueueRemove(0)
-			go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Message.ChannelID, queueEntry, true)
+			queueEntry := voiceData[env.Guild.ID].Entries[0]
+			voiceData[env.Guild.ID].QueueRemove(0)
+			go voiceData[env.Guild.ID].Play(queueEntry, true)
 		}
 	}
 
@@ -129,7 +129,7 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 			return NewErrorEmbed("Voice Error", "There was an error figuring out who requested the track.")
 		}
 		queueEntry.Requester = env.Member.User
-		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
+		go voiceData[env.Guild.ID].Play(queueEntry, true)
 		return nil
 	}
 
@@ -137,14 +137,18 @@ func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+	VoiceInit(env.Guild.ID)
+
+	if !voiceData[env.Guild.ID].IsConnected() {
 		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
 	}
 
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-			if voiceIsStreaming(env.Guild.ID) {
-				voiceStop(env.Guild.ID)
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == voiceData[env.Guild.ID].VoiceConnection.ChannelID {
+			if voiceData[env.Guild.ID].IsStreaming() {
+				if err := voiceData[env.Guild.ID].Stop(); err != nil {
+					return NewErrorEmbed("Voice Error", "There was an error stopping the audio playback.")
+				}
 				return NewGenericEmbed("Voice", "Stopped the audio playback.")
 			}
 			return NewErrorEmbed("Voice Error", "There is no audio currently playing.")
@@ -154,14 +158,18 @@ func commandStop(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+	VoiceInit(env.Guild.ID)
+
+	if !voiceData[env.Guild.ID].IsConnected() {
 		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
 	}
 
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-			if voiceIsStreaming(env.Guild.ID) {
-				voiceSkip(env.Guild.ID)
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == voiceData[env.Guild.ID].VoiceConnection.ChannelID {
+			if voiceData[env.Guild.ID].IsStreaming() {
+				if err := voiceData[env.Guild.ID].Skip(); err != nil {
+					return NewErrorEmbed("Voice Error", "There was an error skipping the audio playback.")
+				}
 				return nil
 			}
 			return NewErrorEmbed("Voice Error", "There is no audio currently playing.")
@@ -171,16 +179,18 @@ func commandSkip(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+	VoiceInit(env.Guild.ID)
+
+	if !voiceData[env.Guild.ID].IsConnected() {
 		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
 	}
 
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-			isPaused, err := voicePause(env.Guild.ID)
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == voiceData[env.Guild.ID].VoiceConnection.ChannelID {
+			isPaused, err := voiceData[env.Guild.ID].Pause()
 			if err != nil {
 				if isPaused {
-					return NewErrorEmbed("Voice Error", "Already playing audio.")
+					return NewErrorEmbed("Voice Error", "Already paused the audio.")
 				}
 				return NewErrorEmbed("Voice Error", "There is no audio currently playing.")
 			}
@@ -191,13 +201,15 @@ func commandPause(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 }
 
 func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if guildData[env.Guild.ID].VoiceData.VoiceConnection == nil {
+	VoiceInit(env.Guild.ID)
+
+	if !voiceData[env.Guild.ID].IsConnected() {
 		return NewErrorEmbed("Voice Error", botData.BotName+" is not currently in a voice channel.")
 	}
 
 	for _, voiceState := range env.Guild.VoiceStates {
-		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == guildData[env.Guild.ID].VoiceData.VoiceConnection.ChannelID {
-			isPaused, err := voiceResume(env.Guild.ID)
+		if voiceState.UserID == env.Message.Author.ID && voiceState.ChannelID == voiceData[env.Guild.ID].VoiceConnection.ChannelID {
+			isPaused, err := voiceData[env.Guild.ID].Resume()
 			if err != nil {
 				if isPaused {
 					return NewErrorEmbed("Voice Error", "Already playing audio.")
@@ -222,10 +234,10 @@ func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 			return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 100, with 100 being normal volume.")
 		}
 
-		if guildData[env.Guild.ID].VoiceData.EncodingOptions == nil {
-			guildData[env.Guild.ID].VoiceData.EncodingOptions = encodeOptionsPresetHigh
+		if voiceData[env.Guild.ID].EncodingOptions == nil {
+			voiceData[env.Guild.ID].EncodingOptions = encodeOptionsPresetHigh
 		}
-		guildData[env.Guild.ID].VoiceData.EncodingOptions.Volume = float64(volume) * 0.01
+		voiceData[env.Guild.ID].EncodingOptions.Volume = float64(volume) * 0.01
 		return NewErrorEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
 	*/
 
@@ -235,42 +247,48 @@ func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 }
 
 func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	VoiceInit(env.Guild.ID)
+
 	if len(args) > 0 {
 		switch strings.Join(args, " ") {
 		case "normal", "norm", "disable", "d", "0", "zero":
-			guildData[env.Guild.ID].VoiceData.RepeatLevel = 0
+			voiceData[env.Guild.ID].RepeatLevel = RepeatNone
 			return NewGenericEmbed("Voice", "The queue will now play through as normal.")
 		case "queue", "list", "queue list", "q", "l", "1", "one":
-			guildData[env.Guild.ID].VoiceData.RepeatLevel = 1
+			voiceData[env.Guild.ID].RepeatLevel = RepeatPlaylist
 			return NewGenericEmbed("Voice", "The queue will now be repeated on a loop.")
 		case "nowplaying", "now playing", "now", "playing", "np", "n", "enable", "e", "2", "two":
-			guildData[env.Guild.ID].VoiceData.RepeatLevel = 2
+			voiceData[env.Guild.ID].RepeatLevel = RepeatNowPlaying
 			return NewGenericEmbed("Voice", "The now playing entry will now be repeated on a loop.")
 		}
 	}
-	switch guildData[env.Guild.ID].VoiceData.RepeatLevel {
+	switch voiceData[env.Guild.ID].RepeatLevel {
 	case 0: //No repeat
-		guildData[env.Guild.ID].VoiceData.RepeatLevel = 1
+		voiceData[env.Guild.ID].RepeatLevel = RepeatPlaylist
 		return NewGenericEmbed("Voice", "The queue will now be repeated on a loop.")
 	case 1: //Repeat the current queue
-		guildData[env.Guild.ID].VoiceData.RepeatLevel = 2
+		voiceData[env.Guild.ID].RepeatLevel = RepeatNowPlaying
 		return NewGenericEmbed("Voice", "The now playing entry will now be repeated on a loop.")
 	case 2: //Repeat what's in the now playing slot
-		guildData[env.Guild.ID].VoiceData.RepeatLevel = 0
+		voiceData[env.Guild.ID].RepeatLevel = RepeatNone
 		return NewGenericEmbed("Voice", "The queue will now play through as normal.")
 	}
 	return nil
 }
 
 func commandShuffle(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	guildData[env.Guild.ID].VoiceData.Shuffle = !guildData[env.Guild.ID].VoiceData.Shuffle
-	if guildData[env.Guild.ID].VoiceData.Shuffle {
+	VoiceInit(env.Guild.ID)
+
+	voiceData[env.Guild.ID].Shuffle = !voiceData[env.Guild.ID].Shuffle
+	if voiceData[env.Guild.ID].Shuffle {
 		return NewGenericEmbed("Voice", "The queue will be shuffled around in a random order while playing.")
 	}
 	return NewGenericEmbed("Voice", "The queue will play through as normal.")
 }
 
 func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	VoiceInit(env.Guild.ID)
+
 	page := &YouTubeResultNav{}
 
 	switch args[0] {
@@ -336,14 +354,11 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("YouTube Error", "An invalid selection was specified.")
 		}
 
-		for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-			//Wait for the handling of a previous playback command to finish
-		}
 		foundVoiceChannel := false
 		for _, voiceState := range env.Guild.VoiceStates {
 			if voiceState.UserID == env.Message.Author.ID {
 				foundVoiceChannel = true
-				voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+				voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 				break
 			}
 		}
@@ -352,7 +367,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 
 		//Update channel ID to send voice messages to
-		guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+		voiceData[env.Guild.ID].TextChannelID = env.Channel.ID
 
 		result := results[selection-1]
 		resultURL := "https://youtube.com/watch?v=" + result.Id.VideoId
@@ -362,7 +377,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			return NewErrorEmbed("YouTube Error", "There was an error getting info for the result.")
 		}
 		queueEntry.Requester = env.Member.User
-		go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
+		go voiceData[env.Guild.ID].Play(queueEntry, true)
 		return nil
 	default:
 		return NewErrorEmbed("YouTube Error", "Unknown command ``"+args[0]+"``.")
@@ -406,6 +421,8 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 }
 
 func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	VoiceInit(env.Guild.ID)
+
 	page := &SpotifyResultNav{}
 
 	switch args[0] {
@@ -515,19 +532,16 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
 					foundVoiceChannel = true
-					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 					break
 				}
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
 
 			//Update channel ID to send voice messages to
-			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+			voiceData[env.Guild.ID].TextChannelID = env.Channel.ID
 
 			waitEmbed := NewEmbed().
 				SetTitle("Spotify").
@@ -559,7 +573,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				}
 				queueEntry.Requester = env.Member.User
 
-				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+				go voiceData[env.Guild.ID].Play(queueEntry, false)
 
 				page.AddedSoFar++
 			}
@@ -572,19 +586,16 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
 					foundVoiceChannel = true
-					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 					break
 				}
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playbck command to finish
-			}
 
 			//Update channel ID to send voice messages to
-			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+			voiceData[env.Guild.ID].TextChannelID = env.Channel.ID
 
 			waitEmbed := NewEmbed().
 				SetTitle("Spotify").
@@ -616,7 +627,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				}
 				queueEntry.Requester = env.Member.User
 
-				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+				go voiceData[env.Guild.ID].Play(queueEntry, false)
 
 				page.AddedSoFar++
 			}
@@ -637,19 +648,16 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			for _, voiceState := range env.Guild.VoiceStates {
 				if voiceState.UserID == env.Message.Author.ID {
 					foundVoiceChannel = true
-					voiceJoin(botData.DiscordSession, env.Guild.ID, voiceState.ChannelID, env.Message.ID)
+					voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
 					break
 				}
 			}
 			if !foundVoiceChannel {
 				return NewErrorEmbed("Spotify Error", "You must join the voice channel to use before using the "+args[0]+" command.")
 			}
-			for guildData[env.Guild.ID].VoiceData.IsPlaybackPreparing {
-				//Wait for the handling of a previous playback command to finish
-			}
 
 			//Update channel ID to send voice messages to
-			guildData[env.Guild.ID].VoiceData.ChannelIDJoinedFrom = env.Channel.ID
+			voiceData[env.Guild.ID].TextChannelID = env.Channel.ID
 
 			result := results[selection-1]
 			switch result.GetType() {
@@ -662,7 +670,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				}
 				queueEntry.Requester = env.Member.User
 
-				go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, true)
+				go voiceData[env.Guild.ID].Play(queueEntry, true)
 				return nil
 			case "artist":
 				artistInfo, err := botData.BotClients.Spotify.GetArtistInfo(result.URI)
@@ -695,7 +703,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					}
 					queueEntry.Requester = env.Member.User
 
-					go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+					go voiceData[env.Guild.ID].Play(queueEntry, false)
 
 					page.AddedSoFar++
 				}
@@ -740,7 +748,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 						}
 						queueEntry.Requester = env.Member.User
 
-						go voicePlayWrapper(botData.DiscordSession, env.Guild.ID, env.Channel.ID, queueEntry, false)
+						go voiceData[env.Guild.ID].Play(queueEntry, false)
 
 						page.AddedSoFar++
 					}
@@ -877,10 +885,10 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	if len(args) >= 1 {
 		switch args[0] {
 		case "clear":
-			if len(guildData[env.Guild.ID].AudioQueue) > 0 {
-				queueLength := len(guildData[env.Guild.ID].AudioQueue)
+			if len(voiceData[env.Guild.ID].Entries) > 0 {
+				queueLength := len(voiceData[env.Guild.ID].Entries)
 
-				guildData[env.Guild.ID].QueueClear()
+				voiceData[env.Guild.ID].QueueClear()
 
 				return NewGenericEmbed("Queue", "Cleared all "+strconv.Itoa(queueLength)+" entries from the queue.")
 			}
@@ -897,13 +905,13 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				}
 				queueEntryNumber--
 
-				if queueEntryNumber >= len(guildData[env.Guild.ID].AudioQueue) || queueEntryNumber < 0 {
+				if queueEntryNumber >= len(voiceData[env.Guild.ID].Entries) || queueEntryNumber < 0 {
 					return NewErrorEmbed("Queue Error", "``"+queueEntry+"`` is not a valid queue entry.")
 				}
 			}
 
 			var newAudioQueue []*QueueEntry
-			for queueEntryN, queueEntry := range guildData[env.Guild.ID].AudioQueue {
+			for queueEntryN, queueEntry := range voiceData[env.Guild.ID].Entries {
 				keepQueueEntry := true
 				for _, removedQueueEntry := range args[1:] {
 					removedQueueEntryNumber, _ := strconv.Atoi(removedQueueEntry)
@@ -918,7 +926,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 				}
 			}
 
-			guildData[env.Guild.ID].AudioQueue = newAudioQueue
+			voiceData[env.Guild.ID].Entries = newAudioQueue
 
 			if len(args) > 2 {
 				return NewGenericEmbed("Queue", "Successfully removed the specified queue entries.")
@@ -937,14 +945,14 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 
 			copiedGuilds := make([]string, 0)
 			for _, guildID := range args[1:] {
-				if guild, exists := guildData[guildID]; exists { //Just in case it doesn't exist anymore when we reach this point, we all know how edge cases go
-					if guild.AudioNowPlaying.Metadata.StreamURL != "" || len(guild.AudioQueue) > 0 {
-						if guild.AudioNowPlaying.Metadata.StreamURL != "" {
-							guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioNowPlaying)
+				if voice, exists := voiceData[guildID]; exists { //Just in case it doesn't exist anymore when we reach this point, we all know how edge cases go
+					if voice.NowPlaying.Entry.Metadata.StreamURL != "" || len(voice.Entries) > 0 {
+						if voice.NowPlaying.Entry.Metadata.StreamURL != "" {
+							voiceData[env.Guild.ID].Entries = append(voiceData[env.Guild.ID].Entries, voice.NowPlaying.Entry)
 						}
-						if len(guild.AudioQueue) > 0 {
-							for i := 0; i < len(guild.AudioQueue); i++ {
-								guildData[env.Guild.ID].AudioQueue = append(guildData[env.Guild.ID].AudioQueue, guild.AudioQueue[i])
+						if len(voice.Entries) > 0 {
+							for i := 0; i < len(voice.Entries); i++ {
+								voiceData[env.Guild.ID].Entries = append(voiceData[env.Guild.ID].Entries, voice.Entries[i])
 							}
 						}
 
@@ -976,8 +984,8 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		Value: "There is no audio currently playing.",
 	}
 
-	if voiceIsStreaming(env.Guild.ID) && guildData[env.Guild.ID].AudioNowPlaying != nil {
-		nowPlaying = *guildData[env.Guild.ID].AudioNowPlaying
+	if voiceData[env.Guild.ID].IsStreaming() && voiceData[env.Guild.ID].NowPlaying != nil {
+		nowPlaying = *voiceData[env.Guild.ID].NowPlaying.Entry
 		track := "[" + nowPlaying.Metadata.Title + "](" + nowPlaying.Metadata.DisplayURL + ")"
 		if len(nowPlaying.Metadata.Artists) > 0 {
 			track += " by [" + nowPlaying.Metadata.Artists[0].Name + "](" + nowPlaying.Metadata.Artists[0].URL + ")"
@@ -1000,7 +1008,7 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	}
 
 	queueList := make([]*discordgo.MessageEmbedField, 0)
-	for queueEntryNumber, queueEntry := range guildData[env.Guild.ID].AudioQueue {
+	for queueEntryNumber, queueEntry := range voiceData[env.Guild.ID].Entries {
 		displayNumber := strconv.Itoa(queueEntryNumber + 1)
 
 		queueEntryFieldName := "Entry #" + displayNumber + " - " + queueEntry.ServiceName
@@ -1069,24 +1077,24 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 }
 
 func commandNowPlaying(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if voiceIsStreaming(env.Guild.ID) {
-		return guildData[env.Guild.ID].AudioNowPlaying.GetNowPlayingDurationEmbed(guildData[env.Guild.ID].VoiceData.StreamingSession)
+	if voiceData[env.Guild.ID].IsStreaming() {
+		return voiceData[env.Guild.ID].GetNowPlayingDurationEmbed(voiceData[env.Guild.ID].NowPlaying.Entry)
 	}
 	return NewErrorEmbed("Now Playing Error", "There is no audio currently playing.")
 }
 
 func commandLyrics(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	if !voiceIsStreaming(env.Guild.ID) {
+	if !voiceData[env.Guild.ID].IsStreaming() {
 		return NewErrorEmbed("Lyrics Error", "There is no audio currently playing.")
 	}
 
-	lyrics, err := botData.BotClients.Lyrics.Search(guildData[env.Guild.ID].AudioNowPlaying.Metadata.Title, guildData[env.Guild.ID].AudioNowPlaying.Metadata.Artists[0].Name)
+	lyrics, err := botData.BotClients.Lyrics.Search(voiceData[env.Guild.ID].NowPlaying.Entry.Metadata.Title, voiceData[env.Guild.ID].NowPlaying.Entry.Metadata.Artists[0].Name)
 	if err != nil {
 		return NewErrorEmbed("Lyrics Error", "There was an error fetching the lyrics for the current track.")
 	}
 
 	return NewEmbed().
 		AddField("Lyrics", lyrics).
-		SetThumbnail(guildData[env.Guild.ID].AudioNowPlaying.Metadata.ThumbnailURL).
-		SetColor(guildData[env.Guild.ID].AudioNowPlaying.ServiceColor).MessageEmbed
+		SetThumbnail(voiceData[env.Guild.ID].NowPlaying.Entry.Metadata.ThumbnailURL).
+		SetColor(voiceData[env.Guild.ID].NowPlaying.Entry.ServiceColor).MessageEmbed
 }

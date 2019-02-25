@@ -17,8 +17,16 @@ var (
 	errVoiceJoinChannel          = errors.New("voice: error joining channel")
 	errVoiceJoinChangeChannel    = errors.New("voice: error changing channel")
 	errVoiceLeaveChannel         = errors.New("voice: error leaving channel")
-	errVoiceLeaveNotConnected    = errors.New("voice: error leaving channel, not in channel")
+	errVoiceLeaveNotConnected    = errors.New("voice: error leaving channel, not connected")
 	errVoiceNotStreaming         = errors.New("voice: not streaming")
+	errVoicePausedAlready        = errors.New("voice: already paused")
+	errVoicePlayAlreadyStreaming = errors.New("voice: error playing audio, already streaming")
+	errVoicePlayInvalidURL       = errors.New("voice: error playing audio, invalid URL")
+	errVoicePlayMuted            = errors.New("voice: error playing audio, muted")
+	errVoicePlayNotConnected     = errors.New("voice: error playing audio, not connected")
+	errVoicePlayingAlready       = errors.New("voice: already playing")
+	errVoiceSkippedManually      = errors.New("voice: skipped audio manually")
+	errVoiceStoppedManually      = errors.New("voice: stopped audio manually")
 )
 
 func getErrorMessage(err error) (errHash, errMsg string) {
@@ -45,7 +53,7 @@ func getErrorEmbed(title string, err error) *discordgo.MessageEmbed {
 	return NewEmbed().
 		AddField(title+" Error", errMsg).
 		SetFooter("Error Code: " + errHash).
-		SetColor(0xFF0000)
+		SetColor(0xFF0000).MessageEmbed
 }
 
 func hashError(err error) string {

@@ -2,8 +2,6 @@ package main
 
 import (
 	"errors"
-
-	"github.com/bwmarrin/discordgo"
 )
 
 // VoiceService is the interface that wraps the methods required to access and identify a service.
@@ -46,8 +44,8 @@ func createQueueEntry(url string) (*QueueEntry, error) {
 			}
 			queueEntry := &QueueEntry{
 				Metadata:     metadata,
-				ServiceName:  service.Name(),
-				ServiceColor: service.Color(),
+				ServiceName:  service.GetName(),
+				ServiceColor: service.GetColor(),
 			}
 			return queueEntry, nil
 		}

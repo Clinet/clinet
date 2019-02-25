@@ -203,7 +203,7 @@ func main() {
 
 		//If a state exists, load it
 		Info.Println("Loading state...")
-		stateRestore()
+		stateRestoreAll()
 
 		Info.Println("Connecting to Discord...")
 		err = discord.Open()
@@ -231,20 +231,20 @@ func main() {
 		//Save the current state before shutting down
 		// Note: This is done before shutting down as the shutdown process may yield
 		//       some errors with goroutines like voice playback
-		stateSave()
+		stateSaveAll()
 
-		for guildID, guildDataRow := range guildData {
-			if guildDataRow.VoiceData.VoiceConnection != nil {
-				if voiceIsStreaming(guildID) {
-					if botData.Updating {
-						//Notify users that an update is occuring
-						botData.DiscordSession.ChannelMessageSendEmbed(guildDataRow.VoiceData.ChannelIDJoinedFrom, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
-					}
-					Debug.Printf("Stopping stream in voice channel %s...\n", guildDataRow.VoiceData.VoiceConnection.ChannelID)
-					voiceStop(guildID)
+		//Leave all voice channels
+		for _, voiceIDRow := range voiceData {
+			if voiceIDRow.IsConnected() {
+				if voiceIDRow.IsStreaming() {
+					//Notify users that an update is occuring
+					botData.DiscordSession.ChannelMessageSendEmbed(voiceIDRow.TextChannelID, NewEmbed().SetTitle("Update").SetDescription("Your audio playback has been interrupted for a "+botData.BotName+" update event. You may resume playback in a few seconds.").SetColor(0x1C1C1C).MessageEmbed)
+
+					debugLog("> Stopping stream in voice channel "+voiceIDRow.VoiceConnection.ChannelID+"...", false)
+					voiceIDRow.Stop()
 				}
-				Debug.Printf("Closing connection to voice channel %s...\n", guildDataRow.VoiceData.VoiceConnection.ChannelID)
-				guildDataRow.VoiceData.VoiceConnection.Close()
+				debugLog("> Closing connection to voice channel "+voiceIDRow.VoiceConnection.ChannelID+"...", false)
+				voiceIDRow.VoiceConnection.Close()
 			}
 		}
 
