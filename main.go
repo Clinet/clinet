@@ -223,6 +223,11 @@ func main() {
 		Debug.Println("Checking if bot was updated...")
 		checkUpdate()
 
+		if botData.BotOptions.API.Enabled {
+			Info.Printf("Starting API on [%s]...\n", botData.BotOptions.API.Host)
+			go StartAPI(botData.BotOptions.API.Host)
+		}
+
 		Debug.Println("Waiting for SIGINT syscall signal...")
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT)
@@ -378,6 +383,10 @@ func debugLog(msg string, overrideConfig bool) {
 }
 
 func stateSaveAll() {
+	if _, err := os.Stat("state"); os.IsNotExist(err) {
+		os.Mkdir("state", 0744)
+	}
+
 	err := stateSaveRaw(guildData, "state/guildData.json")
 	if err != nil {
 		Error.Printf("Error saving guildData state: %s\n", err)
@@ -414,7 +423,7 @@ func stateSaveRaw(data interface{}, file string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(file, dataJSON, 0644)
+	err = ioutil.WriteFile(file, dataJSON, 0744)
 	return err
 }
 

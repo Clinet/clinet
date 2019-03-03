@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/url"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
@@ -18,6 +19,8 @@ const (
 
 //Voice contains data about the current voice session
 type Voice struct {
+	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
+
 	//Voice connections and audio sessions
 	VoiceConnection  *discordgo.VoiceConnection `json:"voiceConnection"`  //The current Discord voice connection
 	EncodingSession  *dca.EncodeSession         `json:"encodingSession"`  //The encoding session for encoding the audio stream to Opus
@@ -48,6 +51,9 @@ type Voice struct {
 
 // Connect connects to a given voice channel
 func (voice *Voice) Connect(guildID, vChannelID string) error {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//If a voice connection is already established...
 	if voice.IsConnected() {
 		//Change the voice channel
@@ -80,6 +86,9 @@ func (voice *Voice) Connect(guildID, vChannelID string) error {
 
 // Disconnect disconnects from the current voice channel
 func (voice *Voice) Disconnect() error {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//If a voice connection is already established...
 	if voice.IsConnected() {
 		//Stop the Google Assistant
@@ -122,6 +131,8 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 		return nil
 	}
 
+	voice.Lock()
+
 	//Make sure we're allowed to speak
 	if voice.Muted {
 		return errVoicePlayMuted
@@ -135,6 +146,8 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 
 	//Create a channel to signal when the voice stream is finished or stopped
 	voice.done = make(chan error)
+
+	voice.Unlock()
 
 	//Start playing this entry
 	msg, err := voice.playRaw(voice.NowPlaying.Entry.Metadata.StreamURL)
@@ -195,6 +208,8 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 		return nil, errVoicePlayAlreadyStreaming
 	}
 
+	voice.Lock()
+
 	//Make sure we're allowed to speak
 	if voice.Muted {
 		return nil, errVoicePlayMuted
@@ -218,11 +233,15 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	//Create the streaming session to send the encoded DCA audio to Discord
 	voice.StreamingSession = dca.NewStream(voice.EncodingSession, voice.VoiceConnection, voice.done)
 
+	voice.Unlock()
+
 	//Start a goroutine to update the current streaming position
 	go voice.updatePosition()
 
 	//Wait for the streaming session to finish
 	msg := <-voice.done
+
+	voice.Lock()
 
 	//Mark our voice presence as not speaking
 	voice.Silent()
@@ -238,22 +257,32 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	voice.EncodingSession.Cleanup()
 	voice.EncodingSession = nil
 
+	voice.Unlock()
+
 	//Return any streaming errors, if any
 	return msg, err
 }
 
 // updatePosition updates the current position of a playing media
 func (voice *Voice) updatePosition() {
-	for voice.IsStreaming() {
+	for {
+		voice.Lock()
+
 		if voice.StreamingSession == nil || voice.NowPlaying == nil {
+			voice.Unlock()
 			return
 		}
 		voice.NowPlaying.Position = voice.StreamingSession.PlaybackPosition()
+
+		voice.Unlock()
 	}
 }
 
 // Stop stops the playback of a media
 func (voice *Voice) Stop() error {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return errVoiceNotStreaming
@@ -274,6 +303,9 @@ func (voice *Voice) Stop() error {
 
 // Skip stops the encoding session of a playing media, allowing the play wrapper to continue to the next media in a queue
 func (voice *Voice) Skip() error {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return errVoiceNotStreaming
@@ -295,6 +327,9 @@ func (voice *Voice) Skip() error {
 
 // Pause pauses the playback of a media
 func (voice *Voice) Pause() (bool, error) {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return false, errVoiceNotStreaming
@@ -312,6 +347,9 @@ func (voice *Voice) Pause() (bool, error) {
 
 // Resume resumes the playback of a media
 func (voice *Voice) Resume() (bool, error) {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return false, errVoiceNotStreaming

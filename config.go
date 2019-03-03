@@ -96,6 +96,13 @@ type BotOptions struct {
 	YouTubeMaxResults  int                `json:"youtubeMaxResults"`
 	SpotifyMaxResults  int                `json:"spotifyMaxResults"`
 	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`
+	API                APIConfig          `json:"api"`
+}
+
+// API stores configurations for the API
+type APIConfig struct {
+	Enabled bool   `json:"enabled"`
+	Host    string `json:"host"`
 }
 
 // CustomResponseQuery stores a custom response
