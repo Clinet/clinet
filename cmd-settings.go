@@ -56,8 +56,8 @@ type GuildSettings struct { //By default this will only be configurable for user
 
 // UserSettings holds settings specific to a user
 type UserSettings struct {
-	//Unused, WIP later
-	Balance int `json:"balance"` //A balance to use as virtual currency for some bot tasks
+	Balance   int       `json:"balance"`   //A balance to use as virtual currency for up-and-coming ideas
+	DailyNext time.Time `json:"dailyNext"` //The next time the user is able to use the daily credits command
 
 	//Basic info
 	AboutMe  string `json:"description"` //An aboutme set by the user

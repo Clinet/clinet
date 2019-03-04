@@ -259,6 +259,14 @@ func initCommands() {
 			{Name: "term", Description: "The term to fetch a definition for", ArgType: "string"},
 		},
 	}
+	botData.Commands["balance"] = &Command{
+		Function: commandBalance,
+		HelpText: "Displays the user's current balance.",
+	}
+	botData.Commands["daily"] = &Command{
+		Function: commandDaily,
+		HelpText: "Lets the user receive credits daily.",
+	}
 
 	//Voice commands
 	botData.Commands["play"] = &Command{
