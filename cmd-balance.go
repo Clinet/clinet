@@ -26,10 +26,10 @@ func commandBalance(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 		var balances []string
 		for _, mention := range mentions {
-			if _, exists := userSettings[env.User.ID]; !exists {
-				balances = append(balances, "**"+mention.String()+"**: $0")
+			if _, exists := userSettings[mention.ID]; !exists {
+				balances = append(balances, "<@!"+mention.ID+">: $0")
 			} else {
-				balances = append(balances, "**"+mention.String()+"**: $"+strconv.Itoa(userSettings[env.User.ID].Balance))
+				balances = append(balances, "<@!"+mention.ID+">: $"+strconv.Itoa(userSettings[mention.ID].Balance))
 			}
 		}
 		return NewGenericEmbedAdvanced("Balance", "The balances of the mentioned users are available below:\n\n"+strings.Join(balances, "\n"), 0x85BB65)
@@ -87,5 +87,5 @@ func commandTransfer(args []string, env *CommandEnvironment) *discordgo.MessageE
 	userSettings[env.User.ID].Balance -= credits
 	userSettings[target.ID].Balance += credits
 
-	return NewGenericEmbed("Transfer", "Successfully transferred __$"+args[0]+"__ in credits to "+target.String()+"!")
+	return NewGenericEmbed("Transfer", "Successfully transferred __$"+args[0]+"__ in credits to <@!"+target.ID+">!")
 }
