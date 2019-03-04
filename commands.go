@@ -267,6 +267,18 @@ func initCommands() {
 		Function: commandDaily,
 		HelpText: "Lets the user receive credits daily.",
 	}
+	botData.Commands["transfer"] = &Command{
+		Function: commandTransfer,
+		HelpText: "Transfers credits to another user.",
+		RequiredArguments: []string{
+			"amount",
+			"target",
+		},
+		Arguments: []CommandArgument{
+			{Name: "amount", Description: "The amount of credits to transfer", ArgType: "number"},
+			{Name: "target", Description: "The target user to transfer credits to", ArgType: "mention"},
+		},
+	}
 
 	//Voice commands
 	botData.Commands["play"] = &Command{
@@ -517,6 +529,7 @@ func initCommands() {
 	botData.Commands["cash"] = &Command{IsAlternateOf: "balance"}
 	botData.Commands["money"] = &Command{IsAlternateOf: "balance"}
 	botData.Commands["nightly"] = &Command{IsAlternateOf: "daily"}
+	botData.Commands["send"] = &Command{IsAlternateOf: "transfer"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
