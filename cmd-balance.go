@@ -82,6 +82,9 @@ func commandTransfer(args []string, env *CommandEnvironment) *discordgo.MessageE
 	}
 
 	target := env.Message.Mentions[0]
+	if target.Bot {
+		return NewErrorEmbed("Transfer Error", "You cannot transfer credits to a bot!")
+	}
 	initializeUserSettings(target.ID)
 
 	userSettings[env.User.ID].Balance -= credits
