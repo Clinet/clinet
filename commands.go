@@ -513,6 +513,10 @@ func initCommands() {
 	botData.Commands["mc"] = &Command{IsAlternateOf: "minecraft"}
 	botData.Commands["guildinfo"] = &Command{IsAlternateOf: "serverinfo"}
 	botData.Commands["ss"] = &Command{IsAlternateOf: "screenshot"}
+	botData.Commands["credits"] = &Command{IsAlternateOf: "balance"}
+	botData.Commands["cash"] = &Command{IsAlternateOf: "balance"}
+	botData.Commands["money"] = &Command{IsAlternateOf: "balance"}
+	botData.Commands["nightly"] = &Command{IsAlternateOf: "daily"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
