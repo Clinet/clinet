@@ -36,7 +36,11 @@ func commandBalance(args []string, env *CommandEnvironment) *discordgo.MessageEm
 	}
 
 	if userSettings[env.User.ID].DailyNext.IsZero() {
-		return NewGenericEmbedAdvanced("Balance", "Your current balance is __$"+strconv.Itoa(userSettings[env.User.ID].Balance)+"__!\n\nYou may run "+botData.CommandPrefix+"daily to receive your first __$200__ daily credits.", 0x85BB65)
+		return NewGenericEmbedAdvanced("Balance", "Your current balance is __$"+strconv.Itoa(userSettings[env.User.ID].Balance)+"__!\n\nYou may run "+env.BotPrefix+"daily to receive your first __$200__ daily credits.", 0x85BB65)
+	}
+
+	if time.Now().After(userSettings[env.User.ID].DailyNext) {
+		return NewGenericEmbedAdvanced("Balance", "Your current balance is __$"+strconv.Itoa(userSettings[env.User.ID].Balance)+"__!\n\nYou may run "+env.BotPrefix+"daily to receive your next __$200__ daily credits.", 0x85BB65)
 	}
 
 	return NewGenericEmbedAdvanced("Balance", "Your current balance is __$"+strconv.Itoa(userSettings[env.User.ID].Balance)+"__!\n\nYou may receive your next __$200__ daily credits approximately "+humanize.Time(userSettings[env.User.ID].DailyNext)+".", 0x85BB65)
