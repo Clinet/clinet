@@ -2,7 +2,7 @@
 	"botToken": "",
 	"botOwnerID": "127184346334494721",
 	"botInviteURL": "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot",
-	"botDiscordURL": "https://discord.gg/qkbKEWT",
+	"botDiscordURL": "https://discord.gg/zx2ns2J",
 	"botDonationURL": "https://www.paypal.me/JoshuaDoes",
 	"botSourceURL": "https://github.com/JoshuaDoes/clinet/",
 	"cmdPrefix": "cli$",
@@ -16,16 +16,31 @@
 		"soundcloudAppVersion": "",
 		"spotifyHost": "",
 		"spotifyPass": "",
-		"thum.ioAPIKey": ""
+		"geniusAccessToken": "",
+		"ninty": {
+			"ClientID": "ea25c66c26b403376b4c5ed94ab9cdea",
+			"ClientSecret": "d137be62cb6a2b831cad8c013b92fb55",
+			"DeviceCert": "",
+			"Environment": "",
+			"Country": "US",
+			"Region": "2",
+			"SysVersion": "1111",
+			"Serial": "1",
+			"DeviceID": "1",
+			"DeviceType": "",
+			"PlatformID": "1"
+		}
 	},
 	"botOptions": {
-		"maxPingCount": 5,
-		"helpMaxResults": 10,
+		"maxPingCount": 4,
+		"helpMaxResults": 8,
 		"sendTypingEvent": true,
 		"useCustomResponses": true,
 		"useDuckDuckGo": true,
 		"useGitHub": true,
 		"useImgur": true,
+		"useLyrics": true,
+		"useNinty": true,
 		"useSoundCloud": true,
 		"useSpotify": true,
 		"useWolframAlpha": true,
@@ -41,8 +56,26 @@
 			"IP address registrant",
 			"Clocks"
 		],
-		"youtubeMaxResults": 10,
-		"spotifyMaxResults": 10
+		"youtubeMaxResults": 8,
+		"spotifyMaxResults": 8,
+		"audioEncoding": {
+		"audioEncoding": {
+			"Volume": 256,
+			"Channels": 2,
+			"FrameRate": 48000,
+			"FrameDuration": 20,
+			"Bitrate": 128,
+			"Application": "audio",
+			"CompressionLevel": 10,
+			"PacketLoss": 0,
+			"BufferedFrames": 100,
+			"VBR": true,
+			"RawOutput": true
+		},
+		"api": {
+			"enabled": true,
+			"host": ":8080"
+		}
 	},
 	"debugMode": true,
 	"tipMessages": [

@@ -8,7 +8,7 @@
 
 ----
 
-## Using the official up-to-date version of Clinet
+## Using the official live version of Clinet (to stay up to date on fixes and features)
 
 1. Click on [this link](https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot) to invite `Clinet` into your Discord server.
     1. The `Administrator` permission is not required. The invite link above
@@ -27,28 +27,30 @@ After the `Clinet` bot is invited to your Discord server, it will immediately
 begin listening for certain keywords within conversations to trigger certain
 events.
 
-`Clinet` will listen for a message that tags it and contains a question mark (?) suffix to
-detect when it is being queried with a question. It begins by checking a list of RegEx expressions
+`Clinet` will listen for a message that prefixes a query with a mention of it to detect when it is
+being queried to do something or answer a question. It begins by checking a list of RegEx expressions
 stored in the bot configuration to look for configurable responses that bot hosters can set
-for their specific instance of the bot. If nothing is found, it then continues on to query
+for their specific instance of the bot. If nothing is found, then it continues on to check for
+hard-coded natural language queries to trigger various commands. If that fails, it again continues on to query
 DuckDuckGo's Instant Answers API for a possible response. If DuckDuckGo comes up short, it
 finally queries Wolfram|Alpha as a last resort (as Wolfram|Alpha's API services are limited for
 non-paying developers). Should no responses be found from any of the three sources, Clinet tells
-the user that there was an error finding the response.
+the user that there was an error finding a response for the given query.
 
 Additionally, `Clinet` supports various functionalities not available in question-response queries
 using commands. Commands are prefixed by default using `cli$` and sometimes take parameters to
-control the output and action of the command.
+control the output and action of the command. Server owners can change the prefix for their servers
+after inviting Clinet to the server.
 
 Finally, `Clinet` has some very useful message management features proven to be successful in the
 servers it resides in. If you send a query and make a mistake, for example if you misspell a word,
-forget to tag the bot, or forget a question mark, you don't have to send a whole new message - just
-edit the previous message with the fix and Clinet happily responds to the updated message. Adding
-onto this, you can even edit a message that had a successful response - Clinet will happily edit its
-response message with the new response to the updated query. Lastly, if you delete your original query
-message, Clinet will help with the chat cleanup and delete its response message. These message
-management features work for both question queries and commands, and soon will be interwoven into
-music playback commands.
+forget to tag the bot, or forget some form of required punctuation, you don't have to send a whole
+new message - just edit the previous message with the fix and Clinet happily responds to the updated
+message. Adding onto this, you can even edit a message that had a successful response - Clinet will
+happily edit its response message with the new response to the updated query. Lastly, if you delete
+your original query message, Clinet will help with the chat cleanup and delete its response message.
+These message management features work for both question queries and commands, and soon will be
+interwoven into music playback commands.
 
 ## Commands
 
@@ -67,7 +69,7 @@ For a list of available commands, use the `cli$help` command in a server with Cl
 
 In order to run `Clinet` locally, you must have already installed a working Golang
 environment on your development system. Clinet is currently built using Golang `1.11`,
-and other versions of Go are not guaranteed to be supported at this time.
+and earlier versions of Go are not guaranteed to be supported at this time.
 
 ### Fetching Clinet and dependencies
 
@@ -102,102 +104,9 @@ structure. It has a number of configurable variables and will always globally
 override a server's settings if it disables a feature. Passing the command line
 argument `-config test.json` will instead load the bot configuration from `test.json`.
 
-The following is an example configuration file:
-```JSON
-{
-	"botToken": "[insert bot token here]",
-	"botName": "Clinet",
-	"botOwnerID": "[insert bot owner's user ID here]",
-	"cmdPrefix": "cli$",
-	"sendOwnerStackTraces": true,
-	"botKeys": {
-		"wolframAppID": "[insert Wolfram|Alpha app ID here]",
-		"ddgAppName": "Clinet",
-		"youtubeAPIKey": "[insert YouTube API key here]",
-		"imgurClientID": "[insert Imgur client ID here]",
-		"soundcloudClientID": "[insert SoundCloud client ID here]",
-		"soundcloudAppVersion": "[insert SoundCloud app version here]"
-	},
-	"botOptions": {
-		"maxPingCount": 4,
-		"sendTypingEvent": true,
-		"useCustomResponses": true,
-		"useDuckDuckGo": true,
-		"useGitHub": true,
-		"useImgur": true,
-		"useSoundCloud": true,
-		"useWolframAlpha": true,
-		"useXKCD": true,
-		"useYouTube": true,
-		"wolframDeniedPods": [
-			"Locations",
-			"Nearby locations",
-			"Local map",
-			"Inferred local map",
-			"Inferred nearest city center",
-			"IP address",
-			"IP address registrant",
-			"Clocks"
-		],
-		"youtubeMaxResults": 5
-	},
-	"debugMode": false,
-	"customResponses": [
-		{
-			"expression": "(.*)(?i)raining(.*)tacos(.*)",
-			"cmdResponses": [
-				{
-					"commandName": "play",
-					"args": [
-						"https://youtube.com/watch?v=npjF032TDDQ"
-					]
-				}
-			]
-		},
-		{
-			"expression": "(.*)(?i)who(.*)JoshuaDoes(.*)",
-			"responses": [
-				{
-					"responseEmbed": {
-						"title": "Who is JoshuaDoes?",
-						"description": "JoshuaDoes is a human being.",
-						"color": 1842204
-					}
-				}
-			]
-		}
-	],
-	"customStatuses": [
-		{
-			"type": 0,
-			"status": "`cli$help`!"
-		},
-		{
-			"type": 0,
-			"status": "experimentally!"
-		},
-		{
-			"type": 0,
-			"status": "in the Go Playground!"
-		},
-		{
-			"type": 0,
-			"status": "a nearly finished me!"
-		},
-		{
-			"type": 1,
-			"status": "some tunes with users!"
-		},
-		{
-			"type": 2,
-			"status": "rewritten code!",
-			"url": "https://github.com/JoshuaDoes/clinet-discord"
-		}
-	]
-}
-```
+An example of an empty configuration file can be found in `config.example.json`.
 
-Most of the above configuration options should be self-explanatory, but here's some explanations for a few of the less guessable ones:
+Most of the configuration options should be self-explanatory, but here's some explanations for a few of the less guessable ones:
 
 | Variable | Description |
 | -------- | ----------- |
@@ -218,6 +127,12 @@ The configuration file by default will never be included in git commits, as decl
 
 Finally, to run Clinet, simply type `./clinet` in your terminal/shell or `.\clinet.exe` in your command prompt. If everything goes well, you can find your bot user application and generate an OAuth2 URL to invite the bot into various servers in which you have the `Administrator` permission of.
 
+### Debug mode
+
+To start Clinet with debug mode enabled, simply type `./clinet -debug true` in your terminal/shell or `.\clinet.exe -debug true` in your command prompt. To toggle debug mode on-the-fly, type `cli$debug` in any channel Clinet can read from.
+
+When running Clinet in debug mode, a surplus of debug logging will be outputted to your terminal's STDOUT pipe. This includes debugging information reported by discordgo and the various happenings within Clinet, including the commands ran by other users and the resulting responses generated by Clinet (including embeds).
+
 ### Panic recovery
 
 If Clinet ever crashes from a panic, custom-made panic recovery will save the crash message to `crash.txt` and the stack trace to `stacktrace.txt` in the bot's working directory. When Clinet is next started up, it will send the crash message and the file of the stack trace to the user specified in the configuration option `botOwnerID` and proceed to delete the two files.
@@ -226,7 +141,7 @@ Running Clinet by itself will spawn a "master" process with a few small jobs: Sp
 
 ### States
 
-If you close Clinet after running it long enough for it to merely exist on Discord, you'll notice a new folder called `state`. This folder contains "states" of various structs within Clinet's memory, stored in JSON format. Upon reopening Clinet, these state files are then loaded into memory so Clinet can (for the most part) return to its original "state" before it was closed. States were added as helpers to panic recovery so users can continue with what they were doing.
+If you close Clinet after running it long enough for it to merely exist on Discord, you'll notice a new folder called `state`. This folder contains "states" of various structs within Clinet's memory, stored in pretty-printed JSON format. Upon reopening Clinet, these state files are then loaded into memory so Clinet can (for the most part) return to its original "state" before it was closed. States were added as helpers to panic recovery so users can continue with what they were doing, and will be replaced with a proper database engine at a later date.
 
 ### Updating
 
