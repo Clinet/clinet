@@ -536,6 +536,19 @@ func initCommands() {
 	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
 	botData.Commands["update"] = &Command{Function: commandUpdate, HelpText: "Updates the bot to the latest git repo commit.", IsAdministrative: true}
 	botData.Commands["debug"] = &Command{Function: commandDebug, HelpText: "Toggles debug mode.", IsAdministrative: true}
+	botData.Commands["sudo"] = &Command{
+		Function:         commandSudo,
+		HelpText:         "Runs a command as the specified user.",
+		IsAdministrative: true,
+		RequiredArguments: []string{
+			"user", "command (arguments)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "user", Description: "The user to run a command as", ArgType: "mention/ID"},
+			{Name: "command", Description: "The command to run as the specified user", ArgType: "string"},
+			{Name: "arguments", Description: "Optional additional arguments to pass to the command", ArgType: "N/A"},
+		},
+	}
 }
 
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

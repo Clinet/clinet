@@ -12,16 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JoshuaDoes/duckduckgolang"
-	"github.com/JoshuaDoes/go-soundcloud"
-	"github.com/JoshuaDoes/go-wolfram"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
+	soundcloud "github.com/JoshuaDoes/go-soundcloud"
+	wolfram "github.com/JoshuaDoes/go-wolfram"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
-	"github.com/koffeinsource/go-klogger"
-	"github.com/nishanths/go-xkcd"
+	klogger "github.com/koffeinsource/go-klogger"
+	xkcd "github.com/nishanths/go-xkcd"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
-	"gopkg.in/src-d/go-git.v4"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -195,6 +195,31 @@ func commandUpdate(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	}
 
 	return NewGenericEmbed("Update", "Waiting for update to finish...")
+}
+
+func commandSudo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	userID := args[0]
+	userID = strings.TrimLeft(userID, "<@!")
+	userID = strings.TrimRight(userID, ">")
+
+	user, err := botData.DiscordSession.User(userID)
+	if err != nil {
+		return NewErrorEmbed("Sudo Error", "Invalid user ``"+args[0]+"``.")
+	}
+
+	member, err := botData.DiscordSession.GuildMember(env.Guild.ID, userID)
+	if err != nil {
+		return NewErrorEmbed("Sudo Error", "Specified user does not exist in current guild.")
+	}
+
+	env.User = user
+	env.Member = member
+	env.Message.Author = user
+
+	if len(args) > 2 {
+		return callCommand(args[1], args[2:], env)
+	}
+	return callCommand(args[1], make([]string, 0), env)
 }
 
 func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
