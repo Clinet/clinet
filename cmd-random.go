@@ -83,7 +83,7 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 
 	siteURL, err := url.Parse(args[0])
 	if err != nil {
-		return NewErrorEmbed("Screenshot Error", "Unknown address format ``" + args[0] + "``.")
+		return NewErrorEmbed("Screenshot Error", "Unknown address format ``"+args[0]+"``.")
 	}
 	if siteURL.Scheme == "" {
 		siteURL.Scheme = "http" //By standard, SSL-enabled sites should automatically redirect to https if needed
@@ -148,16 +148,4 @@ func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.Messag
 		return NewErrorEmbed("Screenshot Error", "Unexpected error uploading screenshot.")
 	}
 	return nil
-}
-
-func commandNNID(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	exists, _, err := botData.BotClients.Ninty.DoesUserExist(args[0])
-	if err != nil {
-		return NewErrorEmbed("NNID Error", "Error checking for user `" + args[0] + "`.")
-	}
-
-	if exists {
-		return NewGenericEmbed("NNID", "The user `" + args[0] + "` exists!")
-	}
-	return NewGenericEmbed("NNID", "The user `" + args[0] + "` does not exist.")
 }
