@@ -8,7 +8,7 @@ require (
 	github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4
 	github.com/JoshuaDoes/go-cve v0.0.0-20180802130150-ddfd9d0080df
 	github.com/JoshuaDoes/go-soundcloud v0.0.0-20180304005454-9d4c26f4bf5a
-	github.com/JoshuaDoes/go-wolfram v0.0.0-20180208100144-916d49d41b7f
+	github.com/JoshuaDoes/go-wolfram v0.0.0-20181104014914-c99b0fd7d862
 	github.com/JoshuaDoes/goeip v0.0.0-20180918002602-8db6ede8249b
 	github.com/JoshuaDoes/goprobe v0.0.0-20180803053841-dfdb75b62b9f
 	github.com/JoshuaDoes/spotigo v0.0.0-20181022030848-85421fc009f6
@@ -16,18 +16,23 @@ require (
 	github.com/PuerkitoBio/goquery v1.4.1
 	github.com/Sirupsen/logrus v1.2.0 // indirect
 	github.com/Syfaro/minepong v0.0.0-20171114202836-f73aadc7bef0
+	github.com/andygrunwald/go-trending v0.0.0-20180826184306-5a4d422f8977
 	github.com/bwmarrin/discordgo v0.19.0
 	github.com/channelmeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/disintegration/gift v1.2.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/structs v1.1.0
+	github.com/go-chi/chi v4.0.2+incompatible
+	github.com/go-chi/render v1.0.1
 	github.com/go-playground/colors v1.1.1
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/jonas747/dca v0.0.0-20180225204759-bf5d11669cdb
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
+	github.com/klauspost/compress v1.4.1 // indirect
+	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/koffeinsource/go-imgur v0.1.0
 	github.com/koffeinsource/go-klogger v0.1.0
 	github.com/kortschak/zalgo v0.0.0-20141105224154-8c91a4a457cf
@@ -38,11 +43,16 @@ require (
 	github.com/neurosnap/sentences v1.0.6 // indirect
 	github.com/nishanths/go-xkcd v0.0.0-20160531092901-9497d909de39
 	github.com/olebedev/when v0.0.0-20171024044931-53693fbb59a8
-	github.com/rhnvrm/lyric-api-go v0.1.3 // indirect
+	github.com/rhnvrm/lyric-api-go v0.1.3
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
 	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
 	github.com/rylio/ytdl v0.5.1
-	golang.org/x/sys v0.0.0-20181031143558-9b800f95dbbc // indirect
+	github.com/superwhiskers/crunch v0.0.0-20190309065515-f13f5eb2da18 // indirect
+	github.com/superwhiskers/fennel v0.0.0-20190321220722-ad4cfd9aefc5
+	github.com/valyala/fasthttp v1.2.0 // indirect
+	golang.org/x/crypto v0.0.0-20190320223903-b7391e95e576 // indirect
+	golang.org/x/net v0.0.0-20190320064053-1272bf9dcd53 // indirect
+	golang.org/x/sys v0.0.0-20190321052220-f7bb7a8bee54 // indirect
 	golang.org/x/text v0.3.0
 	gonum.org/v1/gonum v0.0.0-20181029232933-400065bf7646 // indirect
 	gonum.org/v1/netlib v0.0.0-20181029234149-ec6d1f5cefe6 // indirect

@@ -24,7 +24,7 @@ import (
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
-	"github.com/superwhiskers/libninty"
+	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
 )
@@ -160,7 +160,7 @@ func main() {
 			botData.BotClients.Lyrics = lyrics.New(lyrics.WithoutProviders(), lyrics.WithLyricsWikia(), lyrics.WithMusixMatch(), lyrics.WithSongLyrics(), lyrics.WithGeniusLyrics(botData.BotKeys.GeniusAccessToken))
 		}
 		if botData.BotOptions.UseNinty {
-			nintyClient, err := libninty.NewClient("https://account.nintendo.net/v1/api", "keypair/ctr-common-cert.pem", "keypair/ctr-common-key.pem", botData.BotKeys.Ninty)
+			nintyClient, err := fennel.NewAccountServerClient("https://account.nintendo.net/v1/api", "keypair/ctr-common-cert.pem", "keypair/ctr-common-key.pem", botData.BotKeys.Ninty)
 			if err != nil {
 				Error.Printf("Error initializing Ninty: %v", err)
 			} else {

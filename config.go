@@ -15,7 +15,7 @@ import (
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
-	"github.com/superwhiskers/libninty"
+	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -59,21 +59,21 @@ type BotClients struct {
 	Wolfram    *wolfram.Client
 	XKCD       *xkcd.Client
 	YouTube    *youtube.Service
-	Ninty      *libninty.Client
+	Ninty      *fennel.AccountServerClient
 }
 
 // BotKeys stores all bot keys for using external services
 type BotKeys struct {
-	DuckDuckGoAppName    string                     `json:"ddgAppName"`
-	GeniusAccessToken    string                     `json:"geniusAccessToken"`
-	ImgurClientID        string                     `json:"imgurClientID"`
-	SoundCloudAppVersion string                     `json:"soundcloudAppVersion"`
-	SoundCloudClientID   string                     `json:"soundcloudClientID"`
-	SpotifyHost          string                     `json:"spotifyHost"`
-	SpotifyPass          string                     `json:"spotifyPass"`
-	WolframAppID         string                     `json:"wolframAppID"`
-	YouTubeAPIKey        string                     `json:"youtubeAPIKey"`
-	Ninty                libninty.ClientInformation `json:"ninty"`
+	DuckDuckGoAppName    string                   `json:"ddgAppName"`
+	GeniusAccessToken    string                   `json:"geniusAccessToken"`
+	ImgurClientID        string                   `json:"imgurClientID"`
+	SoundCloudAppVersion string                   `json:"soundcloudAppVersion"`
+	SoundCloudClientID   string                   `json:"soundcloudClientID"`
+	SpotifyHost          string                   `json:"spotifyHost"`
+	SpotifyPass          string                   `json:"spotifyPass"`
+	WolframAppID         string                   `json:"wolframAppID"`
+	YouTubeAPIKey        string                   `json:"youtubeAPIKey"`
+	Ninty                fennel.ClientInformation `json:"ninty"`
 }
 
 // BotOptions stores all bot options
