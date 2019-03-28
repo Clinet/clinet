@@ -14,15 +14,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JoshuaDoes/duckduckgolang"
-	"github.com/JoshuaDoes/go-soundcloud"
-	"github.com/JoshuaDoes/go-wolfram"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
+	soundcloud "github.com/JoshuaDoes/go-soundcloud"
+	wolfram "github.com/JoshuaDoes/go-wolfram"
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
-	"github.com/koffeinsource/go-klogger"
-	"github.com/nishanths/go-xkcd"
-	"github.com/rhnvrm/lyric-api-go"
+	klogger "github.com/koffeinsource/go-klogger"
+	xkcd "github.com/nishanths/go-xkcd"
+	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
@@ -53,6 +53,9 @@ var (
 
 	//Contains a pointer to the current log file
 	logFile *os.File
+
+	//Contains the current uptime
+	uptime time.Time
 )
 
 var (
@@ -93,6 +96,8 @@ func main() {
 	Info.Println("Clinet © JoshuaDoes: 2017-2018.")
 	Info.Println("Build ID: " + BuildID)
 	Info.Println("Current PID: " + strconv.Itoa(os.Getpid()))
+
+	uptime = time.Now()
 
 	if configIsBot == "true" {
 		numCPU := runtime.NumCPU()

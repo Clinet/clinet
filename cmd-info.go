@@ -7,7 +7,7 @@ import (
 
 	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 )
 
 func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
@@ -25,38 +25,38 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		AddField("Guild Count", strconv.Itoa(guildCount)).
 		AddField("Default Prefix", botData.CommandPrefix).
 		AddField("Command Count", strconv.Itoa(commandCount)).
-		AddField("Disabled Wolfram|Alpha Pods", strings.Join(botData.BotOptions.WolframDeniedPods, ", ")).
+		AddField("Uptime", humanize.Time(uptime)).
 		AddField("Debug Mode", strconv.FormatBool(botData.DebugMode)).
 		InlineAllFields().
 		SetColor(0x1C1C1C)
 
 	enabledFeatures := make([]string, 0)
 	if botData.BotOptions.UseCustomResponses {
-		enabledFeatures = append(enabledFeatures, "**Custom Responses**")
+		enabledFeatures = append(enabledFeatures, "Custom Responses")
 	}
 	if botData.BotOptions.UseDuckDuckGo {
-		enabledFeatures = append(enabledFeatures, "**DuckDuckGo**")
+		enabledFeatures = append(enabledFeatures, "DuckDuckGo")
 	}
 	if botData.BotOptions.UseGitHub {
-		enabledFeatures = append(enabledFeatures, "**GitHub**")
+		enabledFeatures = append(enabledFeatures, "GitHub")
 	}
 	if botData.BotOptions.UseImgur {
-		enabledFeatures = append(enabledFeatures, "**Imgur**")
+		enabledFeatures = append(enabledFeatures, "Imgur")
 	}
 	if botData.BotOptions.UseSoundCloud {
-		enabledFeatures = append(enabledFeatures, "**SoundCloud**")
+		enabledFeatures = append(enabledFeatures, "SoundCloud")
 	}
 	if botData.BotOptions.UseSpotify {
-		enabledFeatures = append(enabledFeatures, "**Spotify**")
+		enabledFeatures = append(enabledFeatures, "Spotify")
 	}
 	if botData.BotOptions.UseWolframAlpha {
-		enabledFeatures = append(enabledFeatures, "**Wolfram|Alpha**")
+		enabledFeatures = append(enabledFeatures, "Wolfram|Alpha")
 	}
 	if botData.BotOptions.UseXKCD {
-		enabledFeatures = append(enabledFeatures, "**xkcd**")
+		enabledFeatures = append(enabledFeatures, "xkcd")
 	}
 	if botData.BotOptions.UseYouTube {
-		enabledFeatures = append(enabledFeatures, "**YouTube**")
+		enabledFeatures = append(enabledFeatures, "YouTube")
 	}
 	if len(enabledFeatures) > 0 {
 		botEmbed.AddField("Enabled Features", strings.Join(enabledFeatures, ", "))
