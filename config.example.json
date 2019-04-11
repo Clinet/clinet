@@ -4,7 +4,7 @@
 	"botInviteURL": "https://discordapp.com/api/oauth2/authorize?client_id=374546169755598849&permissions=8&scope=bot",
 	"botDiscordURL": "https://discord.gg/zx2ns2J",
 	"botDonationURL": "https://www.paypal.me/JoshuaDoes",
-	"botSourceURL": "https://github.com/JoshuaDoes/clinet/",
+	"botSourceURL": "https://github.com/Clinet/clinet/",
 	"cmdPrefix": "cli$",
 	"sendOwnerStackTraces": true,
 	"botKeys": {
