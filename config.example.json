@@ -68,7 +68,7 @@
 			"Application": "audio",
 			"CompressionLevel": 10,
 			"PacketLoss": 0,
-			"BufferedFrames": 100,
+			"BufferedFrames": 1000,
 			"VBR": true,
 			"RawOutput": true
 		},

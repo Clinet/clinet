@@ -365,6 +365,11 @@ func (voice *Voice) Resume() (bool, error) {
 	return true, nil
 }
 
+// ToggleShuffle toggles the current shuffle setting and manages the queue accordingly
+func (voice *Voice) ToggleShuffle() error {
+
+}
+
 // Speaking allows the sending of audio to Discord
 func (voice *Voice) Speaking() {
 	if voice.IsConnected() {
