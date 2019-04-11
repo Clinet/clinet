@@ -83,12 +83,20 @@ type SpotifyResultNav struct {
 }
 
 func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
+	if page == nil {
+		return nil, errors.New("Page not initialized")
+	}
+
 	if len(page.Results) == 0 {
 		return nil, errors.New("No search results found")
 	}
 	return page.Results, nil
 }
 func (page *SpotifyResultNav) Search(query string) error {
+	if page == nil {
+		return errors.New("Page not initialized")
+	}
+
 	if page.MaxResults == 0 {
 		page.MaxResults = botData.BotOptions.SpotifyMaxResults
 	}
@@ -136,6 +144,10 @@ func (page *SpotifyResultNav) Search(query string) error {
 	return nil
 }
 func (page *SpotifyResultNav) Playlist(url string) error {
+	if page == nil {
+		return errors.New("Page not initialized")
+	}
+
 	if page.MaxResults == 0 {
 		page.MaxResults = botData.BotOptions.SpotifyMaxResults
 	}
@@ -215,6 +227,10 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 	return nil
 }
 func (page *SpotifyResultNav) Prev() error {
+	if page == nil {
+		return errors.New("Page not initialized")
+	}
+
 	if page.PageNumber == 0 {
 		return errors.New("No pages found")
 	}
@@ -251,6 +267,10 @@ func (page *SpotifyResultNav) Prev() error {
 	return nil
 }
 func (page *SpotifyResultNav) Next() error {
+	if page == nil {
+		return errors.New("Page not initialized")
+	}
+
 	if page.PageNumber == 0 {
 		return errors.New("No pages found")
 	}
@@ -287,6 +307,10 @@ func (page *SpotifyResultNav) Next() error {
 	return nil
 }
 func (page *SpotifyResultNav) Jump(pageNumber int) error {
+	if page == nil {
+		return errors.New("Page not initialized")
+	}
+
 	if page.PageNumber == 0 {
 		return errors.New("No pages found")
 	}
