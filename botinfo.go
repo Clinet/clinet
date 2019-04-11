@@ -21,4 +21,7 @@ var (
 
 	//The version of Go used to build this release
 	GolangVersion string = runtime.Version()
+
+	//The reason for downtime
+	DowntimeReason string = "Unknown reason"
 )

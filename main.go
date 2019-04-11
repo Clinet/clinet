@@ -222,6 +222,11 @@ func main() {
 			checkPanicRecovery()
 		}
 
+		Debug.Println("Checking for first run...")
+		if firstRun() {
+			ioutil.WriteFile(".firstrun", make([]byte, 0), 0644)
+		}
+
 		Debug.Println("Checking if bot was restarted...")
 		checkRestart()
 
@@ -473,9 +478,22 @@ func stateRestoreRaw(file string, data interface{}) error {
 	return err
 }
 
+func firstRun() bool {
+	_, err := ioutil.ReadFile(".firstrun")
+	if err == nil {
+		DowntimeReason = "Restarted by host system or <@" + botData.BotOwnerID + ">"
+		return false
+	}
+
+	DowntimeReason = "First run"
+	return true
+}
+
 func checkRestart() {
 	restartChannelID, err := ioutil.ReadFile(".restart")
 	if err == nil && len(restartChannelID) > 0 {
+		DowntimeReason = "Restarted by <@" + botData.BotOwnerID + ">"
+
 		Info.Println("Restart succeeded!")
 		restartEmbed := NewGenericEmbed("Restart", "Successfully restarted "+botData.BotName+"!")
 		botData.DiscordSession.ChannelMessageSendEmbed(string(restartChannelID), restartEmbed)
@@ -487,6 +505,8 @@ func checkRestart() {
 func checkUpdate() {
 	updateChannelID, err := ioutil.ReadFile(".update")
 	if err == nil && len(updateChannelID) > 0 {
+		DowntimeReason = "Updated to " + BuildID
+
 		Info.Println("Update succeeded!")
 		updateEmbed := NewGenericEmbed("Update", "Successfully updated "+botData.BotName+"!")
 		botData.DiscordSession.ChannelMessageSendEmbed(string(updateChannelID), updateEmbed)

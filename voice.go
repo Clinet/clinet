@@ -19,7 +19,7 @@ const (
 
 //Voice contains data about the current voice session
 type Voice struct {
-	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
+	sync.Mutex `json:"-"` //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
 
 	//Voice connections and audio sessions
 	VoiceConnection  *discordgo.VoiceConnection `json:"voiceConnection"`  //The current Discord voice connection

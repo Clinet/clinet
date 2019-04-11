@@ -62,6 +62,8 @@ func commandBotInfo(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		botEmbed.AddField("Enabled Features", strings.Join(enabledFeatures, ", "))
 	}
 
+	botEmbed.AddField("Reason for Downtime", DowntimeReason)
+
 	return botEmbed.MessageEmbed
 }
 
