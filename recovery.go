@@ -39,6 +39,8 @@ func checkPanicRecovery() {
 		stack, stackErr := os.Open("stacktrace.txt")
 
 		if crashErr == nil && stackErr == nil {
+			DowntimeReason = "Crash: " + string(crash)
+
 			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Clinet has just recovered from an error that caused a crash.")
 			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Crash:\n```"+string(crash)+"```")
 			botData.DiscordSession.ChannelFileSendWithMessage(ownerPrivChannelID, "Stack trace:", "stacktrace.txt", stack)
