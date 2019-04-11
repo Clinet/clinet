@@ -51,7 +51,7 @@ func (*Spotify) GetMetadata(url string) (*Metadata, error) {
 
 	for _, artist := range trackInfo.Artists {
 		trackArtist := &MetadataArtist{
-			Name: artist.Title,
+			Name: artist.Name,
 			URL:  "https://open.spotify.com/artist/" + artist.ArtistID,
 		}
 		metadata.Artists = append(metadata.Artists, *trackArtist)

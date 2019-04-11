@@ -367,7 +367,7 @@ func (voice *Voice) Resume() (bool, error) {
 
 // ToggleShuffle toggles the current shuffle setting and manages the queue accordingly
 func (voice *Voice) ToggleShuffle() error {
-
+	return nil
 }
 
 // Speaking allows the sending of audio to Discord

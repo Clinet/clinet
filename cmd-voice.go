@@ -807,7 +807,7 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			if err != nil {
 				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Artist", Value: "Error fetching info for [this artist](https://open.spotify.com/artist/" + results[i].ID + ")"})
 			} else {
-				artist := artistInfo.Title
+				artist := artistInfo.Name
 
 				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Artist", Value: "[" + artist + "](https://open.spotify.com/artist/" + results[i].ID + ")"})
 			}
@@ -820,16 +820,16 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					//Spotify what the hell are you doing
 					fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Track", Value: "Error fetching info for [this track](https://open.spotify.com/track/" + results[i].ID + ")"})
 				} else {
-					artist := "[" + trackInfo.Artists[0].Title + "](https://open.spotify.com/artist/" + trackInfo.Artists[0].ArtistID + ")"
+					artist := "[" + trackInfo.Artists[0].Name + "](https://open.spotify.com/artist/" + trackInfo.Artists[0].ArtistID + ")"
 					if len(trackInfo.Artists) > 1 {
-						artist += " ft. " + "[" + trackInfo.Artists[1].Title + "](https://open.spotify.com/artist/" + trackInfo.Artists[1].ArtistID + ")"
+						artist += " ft. " + "[" + trackInfo.Artists[1].Name + "](https://open.spotify.com/artist/" + trackInfo.Artists[1].ArtistID + ")"
 						if len(trackInfo.Artist) > 2 {
 							for i, trackArtist := range trackInfo.Artists[2:] {
 								artist += ", "
 								if (i + 3) == len(trackInfo.Artists) {
 									artist += " and "
 								}
-								artist += "[" + trackArtist.Title + "](https://open.spotify.com/artist/" + trackArtist.ArtistID + ")"
+								artist += "[" + trackArtist.Name + "](https://open.spotify.com/artist/" + trackArtist.ArtistID + ")"
 							}
 						}
 					}
@@ -843,16 +843,16 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			if err != nil {
 				fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1) + " - Album", Value: "Error fetching info for [this album](https://open.spotify.com/album/" + results[i].ID + ")"})
 			} else {
-				artist := "[" + albumInfo.Artists[0].Title + "](https://open.spotify.com/artist/" + albumInfo.Artists[0].ArtistID + ")"
+				artist := "[" + albumInfo.Artists[0].Name + "](https://open.spotify.com/artist/" + albumInfo.Artists[0].ArtistID + ")"
 				if len(albumInfo.Artists) > 1 {
-					artist += " ft. " + "[" + albumInfo.Artists[1].Title + "](https://open.spotify.com/artist/" + albumInfo.Artists[1].ArtistID + ")"
+					artist += " ft. " + "[" + albumInfo.Artists[1].Name + "](https://open.spotify.com/artist/" + albumInfo.Artists[1].ArtistID + ")"
 					if len(albumInfo.Artist) > 2 {
 						for i, albumArtist := range albumInfo.Artists[2:] {
 							artist += ", "
 							if (i + 3) == len(albumInfo.Artists) {
 								artist += " and "
 							}
-							artist += "[" + albumArtist.Title + "](https://open.spotify.com/artist/" + albumArtist.ArtistID + ")"
+							artist += "[" + albumArtist.Name + "](https://open.spotify.com/artist/" + albumArtist.ArtistID + ")"
 						}
 					}
 				}
