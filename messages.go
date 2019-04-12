@@ -13,7 +13,7 @@ import (
 
 // Query holds data about a query's response message
 type Query struct {
-	ResponseMessageID string
+	ResponseMessageID string `json:"responseMessageID,omitempty"`
 }
 
 func debugMessage(session *discordgo.Session, message *discordgo.Message, channel *discordgo.Channel, guild *discordgo.Guild, updatedMessageEvent bool) {

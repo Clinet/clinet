@@ -37,42 +37,42 @@ var (
 
 // GuildSettings holds settings specific to a guild
 type GuildSettings struct { //By default this will only be configurable for users in a role with the server admin permission
-	AllowVoice              bool                  `json:"allowVoice"`              //Whether voice commands should be usable in this guild
-	BotAdminRoles           []string              `json:"adminRoles"`              //An array of role IDs that can admin the bot without the guild administrator permission
-	BotAdminUsers           []string              `json:"adminUsers"`              //An array of user IDs that can admin the bot without a guild administrator role
-	BotOptions              BotOptions            `json:"botOptions"`              //The bot options to use in this guild (true gets overridden if global bot config is false)
-	BotPrefix               string                `json:"botPrefix"`               //The bot prefix to use in this guild
-	CustomResponses         []CustomResponseQuery `json:"customResponses"`         //An array of custom responses specific to the guild
-	LogSettings             LogSettings           `json:"logSettings"`             //Logging settings
-	SwearFilter             SwearFilter           `json:"swearFilter"`             //The swear filter settings specific to this guild
-	TipsChannel             string                `json:"tipsChannel"`             //The channel to post tip messages to
-	UserJoinMessage         string                `json:"userJoinMessage"`         //A message to send when a user joins
-	UserJoinMessageChannel  string                `json:"userJoinMessageChannel"`  //The channel to send the user join message to
-	UserLeaveMessage        string                `json:"userLeaveMessage"`        //A message to send when a user leaves
-	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel"` //The channel to send the user leave message to
-	RoleMeList              []*RoleMe             `json:"roleMeList"`              //An array of rolemes specific to this guild
-	AutoSendNowPlaying      bool                  `json:"disableNowPlaying"`       //Whether or not the Now Playing embed should be sent each time a new track is automatically started without user interaction
+	AllowVoice              bool                  `json:"allowVoice,omitempty"`              //Whether voice commands should be usable in this guild
+	BotAdminRoles           []string              `json:"adminRoles,omitempty"`              //An array of role IDs that can admin the bot without the guild administrator permission
+	BotAdminUsers           []string              `json:"adminUsers,omitempty"`              //An array of user IDs that can admin the bot without a guild administrator role
+	BotOptions              BotOptions            `json:"botOptions,omitempty"`              //The bot options to use in this guild (true gets overridden if global bot config is false)
+	BotPrefix               string                `json:"botPrefix",omitempty`               //The bot prefix to use in this guild
+	CustomResponses         []CustomResponseQuery `json:"customResponses,omitempty"`         //An array of custom responses specific to the guild
+	LogSettings             LogSettings           `json:"logSettings,omitempty"`             //Logging settings
+	SwearFilter             SwearFilter           `json:"swearFilter,omitempty"`             //The swear filter settings specific to this guild
+	TipsChannel             string                `json:"tipsChannel,omitempty"`             //The channel to post tip messages to
+	UserJoinMessage         string                `json:"userJoinMessage,omitempty"`         //A message to send when a user joins
+	UserJoinMessageChannel  string                `json:"userJoinMessageChannel,omitempty"`  //The channel to send the user join message to
+	UserLeaveMessage        string                `json:"userLeaveMessage,omitempty"`        //A message to send when a user leaves
+	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel,omitempty"` //The channel to send the user leave message to
+	RoleMeList              []*RoleMe             `json:"roleMeList,omitempty"`              //An array of rolemes specific to this guild
+	AutoSendNowPlaying      bool                  `json:"disableNowPlaying,omitempty"`       //Whether or not the Now Playing embed should be sent each time a new track is automatically started without user interaction
 }
 
 // UserSettings holds settings specific to a user
 type UserSettings struct {
-	Balance   int       `json:"balance"`   //A balance to use as virtual currency for up-and-coming ideas
-	DailyNext time.Time `json:"dailyNext"` //The next time the user is able to use the daily credits command
+	Balance   int       `json:"balance,omitempty"`   //A balance to use as virtual currency for up-and-coming ideas
+	DailyNext time.Time `json:"dailyNext,omitempty"` //The next time the user is able to use the daily credits command
 
 	//Basic info
-	AboutMe  string `json:"description"` //An aboutme set by the user
-	Timezone string `json:"timezone"`    //A timezone set by the user to use in other functions
+	AboutMe  string `json:"description,omitempty"` //An aboutme set by the user
+	Timezone string `json:"timezone,omitempty"`    //A timezone set by the user to use in other functions
 
 	//Socials
-	Socials Socials `json:"socials"` //Social media, gamertags, etc
+	Socials Socials `json:"socials,omitempty"` //Social media, gamertags, etc
 }
 
 // Socials holds socials information
 type Socials struct {
-	SwitchFC string `json:"switchFC"` //Nintendo Switch friend code
-	NNID     string `json:"nintyID"`  //Nintendo Network ID
-	PSN      string `json:"psn"`      //PlayStation Network
-	Xbox     string `json:"xbox"`     //Xbox Live
+	SwitchFC string `json:"switchFC,omitempty"` //Nintendo Switch friend code
+	NNID     string `json:"nintyID,omitempty"`  //Nintendo Network ID
+	PSN      string `json:"psn,omitempty"`      //PlayStation Network
+	Xbox     string `json:"xbox,omitempty"`     //Xbox Live
 }
 
 // LogSettings holds settings specific to logging
