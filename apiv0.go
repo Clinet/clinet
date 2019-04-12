@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 )
@@ -23,6 +24,9 @@ func APIv0() *chi.Mux {
 
 	//Guild starboard endpoint
 	router.Get("/guild/{guildID}/starboard", v0GetGuildStarboard) //Retrieves all starboard settings and entries
+
+	//Guild invite link generation endpoint
+	router.Get("/guild/{guildID}/invite/{key}", v0GetGuildInvite) //Retrieves a new one-user invite link for the specified guild
 
 	//User endpoint
 	router.Get("/user/{userID}", v0GetUser)                           //Retrieves info about a particular user
@@ -96,6 +100,43 @@ func v0GetGuildStarboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, starboards[guildID])
+}
+
+func v0GetGuildInvite(w http.ResponseWriter, r *http.Request) {
+	guildID := chi.URLParam(r, "guildID")
+	if guildID == "" {
+		render.JSON(w, r, errAPI("guildID must not be empty"))
+		return
+	}
+
+	key := chi.URLParam(r, "key")
+	if key == "" {
+		render.JSON(w, r, errAPI("key must not be empty"))
+		return
+	}
+
+	if _, ok := guildSettings[guildID]; !ok {
+		render.JSON(w, r, errAPI("specified guildID has no settings"))
+		return
+	}
+
+	if key != guildSettings[guildID].APIInviteKey {
+		render.JSON(w, r, errAPI("specified key is invalid"))
+		return
+	}
+
+	inviteSettings := discordgo.Invite{
+		MaxAge:  3600, //One hour
+		MaxUses: 1,    //Only one use
+	}
+
+	invite, err := botData.DiscordSession.ChannelInviteCreate(guildSettings[guildID].APIInviteChannel, inviteSettings)
+	if err != nil {
+		render.JSON(w, r, errAPI("error generating invite", err))
+		return
+	}
+
+	render.JSON(w, r, invite)
 }
 
 func v0GetUser(w http.ResponseWriter, r *http.Request) {

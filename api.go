@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -9,11 +10,15 @@ import (
 )
 
 type APIError struct {
-	Error string `json:"error"`
+	Error   string `json:"error,omitempty"`
+	Details string `json:"details,omitempty"`
 }
 
-func errAPI(err string) *APIError {
-	return &APIError{Error: err}
+func errAPI(err ...interface{}) *APIError {
+	if len(err) > 1 {
+		return &APIError{Error: err[0].(string), Details: fmt.Sprintf("%v", err[1].(error))}
+	}
+	return &APIError{Error: err[0].(string)}
 }
 
 func StartAPI(host string) {

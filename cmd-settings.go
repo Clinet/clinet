@@ -52,6 +52,8 @@ type GuildSettings struct { //By default this will only be configurable for user
 	UserLeaveMessageChannel string                `json:"userLeaveMessageChannel,omitempty"` //The channel to send the user leave message to
 	RoleMeList              []*RoleMe             `json:"roleMeList,omitempty"`              //An array of rolemes specific to this guild
 	AutoSendNowPlaying      bool                  `json:"disableNowPlaying,omitempty"`       //Whether or not the Now Playing embed should be sent each time a new track is automatically started without user interaction
+	APIInviteChannel        string                `json:"apiInviteChannel,omitempty"`        //The channel to use for server-side invite link generation
+	APIInviteKey            string                `json:"apiInviteKey,omitempty"`            //The key to use for server-side invite link generation
 }
 
 // UserSettings holds settings specific to a user
@@ -352,7 +354,37 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			guildSettings[env.Guild.ID].AutoSendNowPlaying = false
 			return NewGenericEmbed("Server Settings - Auto Send Now Playing", "Successfully disabled sending now playing messages each time a new track is started without user interaction.")
 		}
-		return NewErrorEmbed("Server Settings - Auto Send Now Playing", "Unknown ASNP command ``"+args[1]+"``.")
+		return NewErrorEmbed("Server Settings - Auto Send Now Playing Error", "Unknown ASNP command ``"+args[1]+"``.")
+	case "invitegen":
+		if len(args) < 2 {
+			invitegenHelpCmd := &Command{
+				HelpText: "Manages invite link generation via the API.",
+				RequiredArguments: []string{
+					"setting (value(s))",
+				},
+				Arguments: []CommandArgument{
+					{Name: "setchannel", Description: "Sets the invite link channel to the current channel", ArgType: "this"},
+					{Name: "key", Description: "Displays or sets the key to use for invite link generation", ArgType: "this/string"},
+				},
+			}
+			return getCustomCommandUsage(invitegenHelpCmd, "server invitegen", "Server Settings - API Invite Generation Help", env)
+		}
+
+		switch args[1] {
+		case "setchannel":
+			guildSettings[env.Guild.ID].APIInviteChannel = env.Channel.ID
+			return NewGenericEmbed("Server Settings - API Invite Generation", "Successfully set the channel to use for generating invite links to this channel.")
+		case "key":
+			if len(args) > 2 {
+				guildSettings[env.Guild.ID].APIInviteKey = strings.Join(args[2:], " ")
+				return NewGenericEmbed("Server Settings - API Invite Generation", "Successfully set the key to use for generating invite links to ``"+guildSettings[env.Guild.ID].APIInviteKey+"``.")
+			}
+			if guildSettings[env.Guild.ID].APIInviteKey == "" {
+				return NewGenericEmbed("Server Settings - API Invite Generation", "No key is currently set for generating invite links!")
+			}
+			return NewGenericEmbed("Server Settings - API Invite Generation", "The current key for generating invite links is ``"+guildSettings[env.Guild.ID].APIInviteKey+"``.")
+		}
+		return NewErrorEmbed("Server Settings - API Invite Generation Error", "Unknown invitegen command ``"+args[1]+"``.")
 	case "filter":
 		if len(args) < 2 {
 			filterHelpCmd := &Command{
@@ -600,6 +632,9 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout = time.Duration(0)
 			guildSettings[env.Guild.ID].SwearFilter.AllowAdminBypass = false
 			guildSettings[env.Guild.ID].SwearFilter.AllowBotOwnerBypass = false
+		case "invitegen":
+			guildSettings[env.Guild.ID].APIInviteChannel = ""
+			guildSettings[env.Guild.ID].APIInviteKey = ""
 		default:
 			return NewErrorEmbed("Server Settings - Reset Error", "Error finding the setting ``"+args[1]+"``.")
 		}

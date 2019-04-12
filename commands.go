@@ -446,6 +446,7 @@ func initCommands() {
 			{Name: "log", Description: "Manages the logging events", ArgType: "this"},
 			{Name: "tips", Description: "Enables or disables logging events for this channel", ArgType: "enable/disable"},
 			{Name: "autosendnowplaying", Description: "Enables or disables automatically sending now playing embeds without user interaction", ArgType: "enable/disable"},
+			{Name: "invitegen", Description: "Manages invite link generation via the API", ArgType: "this"},
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
 		},
 	}
