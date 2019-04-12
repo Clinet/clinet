@@ -21,6 +21,9 @@ func APIv0() *chi.Mux {
 	router.Get("/guild/{guildID}/settings", v0GetGuildSettings)          //Retrieves all settings and their values for a particular guild
 	router.Put("/guild/{guildID}/settings/{setting}", v0PutGuildSetting) //Sets a new value to a particular guild setting
 
+	//Guild starboard endpoint
+	router.Get("/guild/{guildID}/starboard", v0GetGuildStarboard) //Retrieves all starboard settings and entries
+
 	//User endpoint
 	router.Get("/user/{userID}", v0GetUser)                           //Retrieves info about a particular user
 	router.Get("/user/{userID}/settings", v0GetUserSettings)          //Retrieves all settings and their values for a particular user
@@ -78,6 +81,21 @@ func v0GetGuildSettings(w http.ResponseWriter, r *http.Request) {
 
 func v0PutGuildSetting(w http.ResponseWriter, r *http.Request) {
 	render.PlainText(w, r, "stub")
+}
+
+func v0GetGuildStarboard(w http.ResponseWriter, r *http.Request) {
+	guildID := chi.URLParam(r, "guildID")
+	if guildID == "" {
+		render.JSON(w, r, errAPI("guildID must not be empty"))
+		return
+	}
+
+	if _, ok := starboards[guildID]; !ok {
+		render.JSON(w, r, errAPI("specified guildID has no starboard data"))
+		return
+	}
+
+	render.JSON(w, r, starboards[guildID])
 }
 
 func v0GetUser(w http.ResponseWriter, r *http.Request) {
