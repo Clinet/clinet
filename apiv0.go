@@ -62,7 +62,18 @@ func v0GetGuild(w http.ResponseWriter, r *http.Request) {
 }
 
 func v0GetGuildSettings(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "stub")
+	guildID := chi.URLParam(r, "guildID")
+	if guildID == "" {
+		render.JSON(w, r, errAPI("guildID must not be empty"))
+		return
+	}
+
+	if _, ok := guildSettings[guildID]; !ok {
+		render.JSON(w, r, errAPI("specified guildID has no settings"))
+		return
+	}
+
+	render.JSON(w, r, guildSettings[guildID])
 }
 
 func v0PutGuildSetting(w http.ResponseWriter, r *http.Request) {
@@ -70,11 +81,34 @@ func v0PutGuildSetting(w http.ResponseWriter, r *http.Request) {
 }
 
 func v0GetUser(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "stub")
+	userID := chi.URLParam(r, "userID")
+	if userID == "" {
+		render.JSON(w, r, errAPI("userID must not be empty"))
+		return
+	}
+
+	user, err := botData.DiscordSession.User(userID)
+	if err != nil {
+		render.JSON(w, r, errAPI("userID invalid"))
+		return
+	}
+
+	render.JSON(w, r, user)
 }
 
 func v0GetUserSettings(w http.ResponseWriter, r *http.Request) {
-	render.PlainText(w, r, "stub")
+	userID := chi.URLParam(r, "userID")
+	if userID == "" {
+		render.JSON(w, r, errAPI("userID must not be empty"))
+		return
+	}
+
+	if _, ok := userSettings[userID]; !ok {
+		render.JSON(w, r, errAPI("specified userID has no settings"))
+		return
+	}
+
+	render.JSON(w, r, userSettings[userID])
 }
 
 func v0PutUserSetting(w http.ResponseWriter, r *http.Request) {
