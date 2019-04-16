@@ -11,7 +11,7 @@ require (
 	github.com/JoshuaDoes/go-wolfram v0.0.0-20181104014914-c99b0fd7d862
 	github.com/JoshuaDoes/goeip v0.0.0-20180918002602-8db6ede8249b
 	github.com/JoshuaDoes/goprobe v0.0.0-20180803053841-dfdb75b62b9f
-	github.com/JoshuaDoes/spotigo v0.0.0-20181022030848-85421fc009f6
+	github.com/JoshuaDoes/spotigo v0.0.0-20190411025235-e70234edff2b
 	github.com/JoshuaDoes/urbandictionary v0.0.0-20180802142829-e5f649d88711
 	github.com/PuerkitoBio/goquery v1.4.1
 	github.com/Sirupsen/logrus v1.2.0 // indirect
@@ -47,12 +47,12 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
 	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
 	github.com/rylio/ytdl v0.5.1
-	github.com/superwhiskers/crunch v0.0.0-20190309065515-f13f5eb2da18 // indirect
-	github.com/superwhiskers/fennel v0.0.0-20190321220722-ad4cfd9aefc5
+	github.com/superwhiskers/crunch v1.0.0 // indirect
+	github.com/superwhiskers/fennel v0.0.0-20190416230116-e9cdc7c7a362
 	github.com/valyala/fasthttp v1.2.0 // indirect
-	golang.org/x/crypto v0.0.0-20190320223903-b7391e95e576 // indirect
-	golang.org/x/net v0.0.0-20190320064053-1272bf9dcd53 // indirect
-	golang.org/x/sys v0.0.0-20190321052220-f7bb7a8bee54 // indirect
+	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a // indirect
+	golang.org/x/net v0.0.0-20190415214537-1da14a5a36f2 // indirect
+	golang.org/x/sys v0.0.0-20190416152802-12500544f89f // indirect
 	golang.org/x/text v0.3.0
 	gonum.org/v1/gonum v0.0.0-20181029232933-400065bf7646 // indirect
 	gonum.org/v1/netlib v0.0.0-20181029234149-ec6d1f5cefe6 // indirect

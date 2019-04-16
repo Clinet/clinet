@@ -165,7 +165,7 @@ func main() {
 			botData.BotClients.Lyrics = lyrics.New(lyrics.WithoutProviders(), lyrics.WithLyricsWikia(), lyrics.WithMusixMatch(), lyrics.WithSongLyrics(), lyrics.WithGeniusLyrics(botData.BotKeys.GeniusAccessToken))
 		}
 		if botData.BotOptions.UseNinty {
-			nintyClient, err := fennel.NewAccountServerClient("https://account.nintendo.net/v1/api", "keypair/ctr-common-cert.pem", "keypair/ctr-common-key.pem", botData.BotKeys.Ninty)
+			nintyClient, err := fennel.NewAccountServerClient("https://account.nintendo.net/v1/api", ctrCommonCert, ctrCommonKey, botData.BotKeys.Ninty)
 			if err != nil {
 				Error.Printf("Error initializing Ninty: %v", err)
 			} else {

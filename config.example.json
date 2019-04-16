@@ -59,7 +59,6 @@
 		"youtubeMaxResults": 8,
 		"spotifyMaxResults": 8,
 		"audioEncoding": {
-		"audioEncoding": {
 			"Volume": 256,
 			"Channels": 2,
 			"FrameRate": 48000,
