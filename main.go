@@ -339,9 +339,9 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 		oldFeeds := guild.Feeds
 		guild.Feeds = make([]*Feed, 0)
 		for _, feed := range oldFeeds {
-			addErr := addFeed(guildID, feed.ChannelID, feed.FeedLink, feed.Frequency)
+			addErr := addFeed(guildID, feed.ChannelID, feed.FeedURL, feed.Frequency)
 			if addErr != nil {
-				Error.Println("Error adding feed [" + feed.FeedLink + "]")
+				Error.Println("Error adding feed ["+feed.FeedLink+"]: %v", addErr)
 			}
 		}
 	}

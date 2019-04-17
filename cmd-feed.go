@@ -22,6 +22,7 @@ type Feed struct {
 	*gofeed.Feed
 
 	ChannelID string `json:"channelID"` //The channel to post new feed entries to
+	FeedURL   string `json:"feedURL"`   //The URL to the feed
 	Frequency int    `json:"frequency"` //How often to check for new feed entries in seconds
 }
 
@@ -196,13 +197,14 @@ func addFeed(guildID, channelID, feedURL string, frequency int) error {
 
 	wrapFeed := &Feed{Feed: feed}
 	wrapFeed.ChannelID = channelID
+	wrapFeed.FeedURL = feedURL
 	wrapFeed.Frequency = frequency
 
 	guildSettings[guildID].Feeds = append(guildSettings[guildID].Feeds, wrapFeed)
 
 	waitDuration := time.Duration(frequency) * time.Second
 	time.AfterFunc(waitDuration, func() {
-		postFeed(guildID, len(guildSettings[guildID].Feeds)-1, feedURL, frequency)
+		postFeed(guildID, len(guildSettings[guildID].Feeds)-1, wrapFeed.Title, frequency)
 	})
 
 	return nil
@@ -215,7 +217,7 @@ func addFeed(guildID, channelID, feedURL string, frequency int) error {
 //
 // If the comparison fails, it means that the given feedPointer no longer points to its original feed as the original feed was removed.
 // In this case, the postFeed function will not be re-registered for a later call.
-func postFeed(guildID string, feedPointer int, feedURL string, frequency int) {
+func postFeed(guildID string, feedPointer int, feedTitle string, frequency int) {
 	if len(guildSettings[guildID].Feeds) == 0 {
 		return
 	}
@@ -227,30 +229,43 @@ func postFeed(guildID string, feedPointer int, feedURL string, frequency int) {
 	}
 
 	feed := guildSettings[guildID].Feeds[feedPointer]
-	if feed.FeedLink != feedURL {
+	if feed.Title != feedTitle {
 		return
 	}
 
 	waitDuration := time.Duration(frequency) * time.Second
 	time.AfterFunc(waitDuration, func() {
-		postFeed(guildID, feedPointer, feedURL, frequency)
+		postFeed(guildID, feedPointer, feed.Title, frequency)
 	})
 
-	newFeed, err := botData.BotClients.FeedParser.ParseURL(feedURL)
+	newFeed, err := botData.BotClients.FeedParser.ParseURL(feed.FeedURL)
 	if err != nil {
 		return
 	}
 
-	if len(newFeed.Items) > len(feed.Items) {
-		newPosts := newFeed.Items[0:(len(newFeed.Items) - len(feed.Items))]
+	newPostCount := 0
+	for _, newPost := range newFeed.Items {
+		if newPost.GUID == feed.Items[0].GUID {
+			if newPost.Updated == feed.Items[0].Updated {
+				break
+			}
+		}
+		if newPost.Title == feed.Items[0].Title {
+			if newPost.Updated == feed.Items[0].Updated {
+				break
+			}
+		}
+		newPostCount++
+	}
+
+	if newPostCount > 0 {
+		newPosts := newFeed.Items[0:newPostCount]
 
 		for _, post := range newPosts {
-			Debug.Println("Old content: ", post.Content)
 			content := post.Content
 			content = regexParagraph.ReplaceAllString(content, "$1\n\n")
 			content = regexLink.ReplaceAllString(content, "[$1]($2)")
 			content = regexCode.ReplaceAllString(content, "``$1``")
-			Debug.Println("Processed content: ", content)
 
 			postEmbed := NewEmbed().
 				SetTitle(newFeed.Title).
@@ -262,8 +277,9 @@ func postFeed(guildID string, feedPointer int, feedURL string, frequency int) {
 		}
 
 		wrapFeed := &Feed{Feed: newFeed}
-		wrapFeed.ChannelID = guildSettings[guildID].Feeds[feedPointer].ChannelID
-		wrapFeed.Frequency = guildSettings[guildID].Feeds[feedPointer].Frequency
+		wrapFeed.ChannelID = feed.ChannelID
+		wrapFeed.FeedURL = feed.FeedURL
+		wrapFeed.Frequency = feed.Frequency
 
 		guildSettings[guildID].Feeds[feedPointer] = wrapFeed
 	}
