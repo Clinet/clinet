@@ -9,32 +9,32 @@ import (
 func commandNNID(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	exists, exml, err := botData.BotClients.Ninty.DoesUserExist(args[0])
 	if err != nil {
-		return NewErrorEmbed("NNID Error", "Error checking for user ``" + args[0] + "``.")
+		return NewErrorEmbed("NNID Error", "Error checking for user ``"+args[0]+"``.")
 	}
 
 	if len(exml.Errors) != 0 {
-		return NewErrorEmbed("NNID Error", "Error checking for user ``" + args[0] + "``.\n```" + exml.Errors[0].Error() + "```")
+		return NewErrorEmbed("NNID Error", "Error checking for user ``"+args[0]+"``.\n```"+exml.Errors[0].Error()+"```")
 	}
 
 	if exists {
 		pids, exml, err := botData.BotClients.Ninty.GetPIDs(args)
 		if err != nil {
-			return NewErrorEmbed("NNID Error", "Error getting pid for user ``" + args[0] + "``.")
+			return NewErrorEmbed("NNID Error", "Error getting pid for user ``"+args[0]+"``.")
 		}
 
 		if len(exml.Errors) != 0 {
-			return NewErrorEmbed("NNID Error", "Error getting pid for user ``" + args[0] + "``.\n```" + exml.Errors[0].Error() + "```")
+			return NewErrorEmbed("NNID Error", "Error getting pid for user ``"+args[0]+"``.\n```"+exml.Errors[0].Error()+"```")
 		}
 
 		miis, exml, err := botData.BotClients.Ninty.GetMiis(pids)
 		if err != nil {
-			return NewErrorEmbed("NNID Error", "Error getting mii for user ``" + args[0] + "``.")
+			return NewErrorEmbed("NNID Error", "Error getting mii for user ``"+args[0]+"``.")
 		}
 
 		if len(exml.Errors) != 0 {
-			return NewErrorEmbed("NNID Error", "Error getting mii for user ``" + args[0] + "``.\n```" + exml.Errors[0].Error() + "```")
+			return NewErrorEmbed("NNID Error", "Error getting mii for user ``"+args[0]+"``.\n```"+exml.Errors[0].Error()+"```")
 		}
-		
+
 		e := NewEmbed().
 			SetTitle("NNID").
 			SetDescription("Showing information for user ``" + args[0] + "``.").
@@ -54,5 +54,5 @@ func commandNNID(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 		return e.MessageEmbed
 	}
 
-	return NewGenericEmbed("NNID", "The user ``" + args[0] + "`` does not exist.")
+	return NewGenericEmbed("NNID", "The user ``"+args[0]+"`` does not exist.")
 }

@@ -476,7 +476,7 @@ func createStarboardEntry(stars int, message *discordgo.Message, channel *discor
 			}
 		}
 	}
-	entry.AddField("Permalink", "https://discordapp.com/channels/" + channel.GuildID + "/" + channel.ID + "/" + message.ID)
+	entry.AddField("Permalink", "https://discordapp.com/channels/"+channel.GuildID+"/"+channel.ID+"/"+message.ID)
 
 	return entry.MessageEmbed
 }
