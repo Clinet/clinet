@@ -14,6 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mmcdole/gofeed"
+
 	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	soundcloud "github.com/JoshuaDoes/go-soundcloud"
 	wolfram "github.com/JoshuaDoes/go-wolfram"
@@ -172,6 +174,9 @@ func main() {
 				botData.BotClients.Ninty = nintyClient
 			}
 		}
+		if botData.BotOptions.UseFeed {
+			botData.BotClients.FeedParser = gofeed.NewParser()
+		}
 
 		Info.Println("Creating a Discord session...")
 		discord, err := discordgo.New("Bot " + botData.BotToken)
@@ -327,6 +332,18 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	remindEntries = make([]RemindEntry, 0)
 	for i := range oldRemindEntries {
 		remindWhen(oldRemindEntries[i].UserID, oldRemindEntries[i].GuildID, oldRemindEntries[i].ChannelID, oldRemindEntries[i].Message, oldRemindEntries[i].Added, oldRemindEntries[i].When, time.Now())
+	}
+
+	Debug.Println("Loading feeds...")
+	for guildID, guild := range guildSettings {
+		oldFeeds := guild.Feeds
+		guild.Feeds = make([]*Feed, 0)
+		for _, feed := range oldFeeds {
+			addErr := addFeed(guildID, feed.ChannelID, feed.FeedLink, feed.Frequency)
+			if addErr != nil {
+				Error.Println("Error adding feed [" + feed.FeedLink + "]")
+			}
+		}
 	}
 
 	Info.Println("Discord is ready!")

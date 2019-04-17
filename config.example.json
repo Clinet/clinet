@@ -32,11 +32,17 @@
 		}
 	},
 	"botOptions": {
+		"api": {
+			"enabled": true,
+			"host": ":8080"
+		},
+		"feedFrequency": 3600,
 		"maxPingCount": 4,
 		"helpMaxResults": 8,
 		"sendTypingEvent": true,
 		"useCustomResponses": true,
 		"useDuckDuckGo": true,
+		"useFeed": true,
 		"useGitHub": true,
 		"useImgur": true,
 		"useLyrics": true,

@@ -508,6 +508,24 @@ func initCommands() {
 		},
 	}
 
+	botData.Commands["feed"] = &Command{
+		IsAdvancedCommand:   true,
+		AdvancedFunction:    commandFeed,
+		HelpText:            "Manages the guild's various RSS and Atom feeds.",
+		RequiredPermissions: discordgo.PermissionAdministrator,
+		RequiredArguments: []string{
+			"-action (value)",
+		},
+		Arguments: []CommandArgument{
+			{Name: "add", Description: "Adds an RSS/Atom feed", ArgType: "url"},
+			{Name: "edit", Description: "Edits a given feed entry", ArgType: "id"},
+			{Name: "remove", Description: "Removes a given feed entry", ArgType: "id"},
+			{Name: "frequency", Description: "How often in seconds to check for a new post, can be used with ``-edit``", ArgType: "seconds"},
+			{Name: "setchannel", Description: "When used with ``-edit``, sets the current channel as the feed's post channel", ArgType: "this"},
+			{Name: "list", Description: "Lists all active feeds", ArgType: "this"},
+		},
+	}
+
 	//Alternate commands for pre-established commands
 	botData.Commands["?"] = &Command{IsAlternateOf: "help"}
 	botData.Commands["commands"] = &Command{IsAlternateOf: "help"}

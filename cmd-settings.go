@@ -54,6 +54,7 @@ type GuildSettings struct { //By default this will only be configurable for user
 	AutoSendNowPlaying      bool                  `json:"disableNowPlaying,omitempty"`       //Whether or not the Now Playing embed should be sent each time a new track is automatically started without user interaction
 	APIInviteChannel        string                `json:"apiInviteChannel,omitempty"`        //The channel to use for server-side invite link generation
 	APIInviteKey            string                `json:"apiInviteKey,omitempty"`            //The key to use for server-side invite link generation
+	Feeds                   []*Feed               `json:"feeds,omitempty"`                   //A list of feeds for the current guild
 }
 
 // UserSettings holds settings specific to a user

@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/mmcdole/gofeed"
+
 	"github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
 	"github.com/JoshuaDoes/go-wolfram"
@@ -60,6 +62,7 @@ type BotClients struct {
 	XKCD       *xkcd.Client
 	YouTube    *youtube.Service
 	Ninty      *fennel.AccountServerClient
+	FeedParser *gofeed.Parser
 }
 
 // BotKeys stores all bot keys for using external services
@@ -83,6 +86,7 @@ type BotOptions struct {
 	SendTypingEvent    bool               `json:"sendTypingEvent"`
 	UseCustomResponses bool               `json:"useCustomResponses"`
 	UseDuckDuckGo      bool               `json:"useDuckDuckGo"`
+	UseFeed            bool               `json:"useFeed"`
 	UseGitHub          bool               `json:"useGitHub"`
 	UseImgur           bool               `json:"useImgur"`
 	UseLyrics          bool               `json:"useLyrics"`
@@ -97,6 +101,7 @@ type BotOptions struct {
 	SpotifyMaxResults  int                `json:"spotifyMaxResults"`
 	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`
 	API                APIConfig          `json:"api"`
+	FeedFrequency      int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
 }
 
 // API stores configurations for the API
