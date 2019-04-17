@@ -132,7 +132,7 @@ func commandFeed(args []CommandArgument, env *CommandEnvironment) *discordgo.Mes
 			SetColor(0x1C1C1C)
 
 		for i, feedEntry := range guildSettings[env.Guild.ID].Feeds {
-			feedListEmbed.AddField("Entry #"+strconv.Itoa(i+1), "Channel: <#"+env.Channel.ID+">\nFeed: "+feedEntry.FeedLink)
+			feedListEmbed.AddField("Entry #"+strconv.Itoa(i+1), "Channel: <#"+feedEntry.ChannelID+">\nFeed: "+feedEntry.FeedLink)
 		}
 
 		return feedListEmbed.MessageEmbed
