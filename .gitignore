@@ -9,6 +9,7 @@ state/
 .restart
 crash.txt
 stacktrace.txt
+.firstrun
 
 # Output executables
 *.exe

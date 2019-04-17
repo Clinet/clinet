@@ -70,8 +70,8 @@ func commandFeed(args []CommandArgument, env *CommandEnvironment) *discordgo.Mes
 			if err != nil {
 				return NewErrorEmbed("Feed Error", "``"+arg.Value+"`` is not a valid number.")
 			}
-			if freq < 5 {
-				return NewErrorEmbed("Feed Error", "Frequency must not be lower than 5 seconds.")
+			if freq < botData.BotOptions.FeedFrequency {
+				return NewErrorEmbed("Feed Error", "Frequency must not be lower than "+strconv.Itoa(botData.BotOptions.FeedFrequency)+" seconds.")
 			}
 			frequency = freq
 			//		case "all":
