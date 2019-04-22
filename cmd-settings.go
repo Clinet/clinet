@@ -21,17 +21,17 @@ var (
 	LogEventsRecommended = LogEvents{
 		ChannelCreate:     true,
 		ChannelDelete:     true,
-		GuildUpdate:       true,
 		GuildBanAdd:       true,
 		GuildBanRemove:    true,
 		GuildMemberAdd:    true,
 		GuildMemberRemove: true,
 		GuildRoleCreate:   true,
-		GuildRoleUpdate:   true,
 		GuildRoleDelete:   true,
-		VoiceStateUpdate:  true,
+		GuildRoleUpdate:   true,
+		GuildUpdate:       true,
 		SwearDetect:       true,
 		UserModlog:        true,
+		VoiceStateUpdate:  true,
 	}
 )
 
@@ -89,17 +89,17 @@ type LogSettings struct {
 type LogEvents struct {
 	//Events received from Discord
 	ChannelCreate     bool `json:"channelCreate"`
-	ChannelUpdate     bool `json:"channelUpdate"`
 	ChannelDelete     bool `json:"channelDelete"`
-	GuildUpdate       bool `json:"guildUpdate"`
+	ChannelUpdate     bool `json:"channelUpdate"`
 	GuildBanAdd       bool `json:"guildBanAdd"`
 	GuildBanRemove    bool `json:"guildBanRemove"`
+	GuildEmojisUpdate bool `json:"guildEmojisUpdate"`
 	GuildMemberAdd    bool `json:"guildMemberAdd"`
 	GuildMemberRemove bool `json:"guildMemberRemove"`
 	GuildRoleCreate   bool `json:"guildRoleCreate"`
-	GuildRoleUpdate   bool `json:"guildRoleUpdate"`
 	GuildRoleDelete   bool `json:"guildRoleDelete"`
-	GuildEmojisUpdate bool `json:"guildEmojisUpdate"`
+	GuildRoleUpdate   bool `json:"guildRoleUpdate"`
+	GuildUpdate       bool `json:"guildUpdate"`
 	UserUpdate        bool `json:"userUpdate"`
 	VoiceStateUpdate  bool `json:"voiceStateUpdate"`
 
@@ -337,6 +337,12 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 		guildSettings[env.Guild.ID].UserLeaveMessageChannel = env.Channel.ID
 		return NewGenericEmbed("Server Settings - Leave Message", "Successfully set the leave message to this channel.")
 	case "tips":
+		if len(args) <= 1 {
+			if guildSettings[env.Guild.ID].TipsChannel != "" {
+				return NewGenericEmbed("Server Settings - Tips", "Tips are enabled for this server.")
+			}
+			return NewGenericEmbed("Server Settings - Tips", "Tips are disabled for this server.")
+		}
 		switch args[1] {
 		case "enable":
 			guildSettings[env.Guild.ID].TipsChannel = env.Channel.ID
