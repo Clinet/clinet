@@ -39,6 +39,13 @@ func commandCoinFlip(args []string, env *CommandEnvironment) *discordgo.MessageE
 	return nil
 }
 
+func commandSay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	ttsURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=en", url.QueryEscape(strings.Join(args, " ")))
+
+	_ = commandStop(make([]string, 0), env)
+	return commandPlay([]string{ttsURL}, env)
+}
+
 func commandHewwo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	message := strings.Join(args, " ")
 

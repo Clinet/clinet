@@ -2,9 +2,11 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"net/url"
 	"sync"
 
+	assistant "github.com/JoshuaDoes/google-assistant"
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
 )
@@ -16,6 +18,8 @@ const (
 	RepeatPlaylist
 	RepeatNowPlaying
 )
+
+var SILENCE = []byte{0xF8, 0xFF, 0xFE}
 
 //Voice contains data about the current voice session
 type Voice struct {
@@ -33,7 +37,11 @@ type Voice struct {
 	Muted           bool               `json:"muted"`           //Whether or not audio should be sent to Discord
 	Deafened        bool               `json:"deafened"`        //Whether or not audio should be received from Discord
 
-	//Assistant configurations
+	//Google Assistant
+	Assistant           *assistant.Assistant `json:-` //The Google Assistant itself
+	AssistantIsSpeaking bool                 `json:-` //Whether or not the Google Assistant is speaking
+
+	//Google Assistant configuration
 	AssistantEnabled         bool `json:"assistantEnabled"`         //Whether or not the Google Assistant should be enabled
 	AssistantNLP             bool `json:"assistantNLP"`             //Whehter or not to use the Google Assistant transcripts for Clinet's natural language commands
 	AssistantSendTranscripts bool `json:"assistantSendTranscripts"` //Whether or not the Google Assistant transcripts should be sent to the channel specified in voice.TextChannelID
@@ -56,29 +64,37 @@ func (voice *Voice) Connect(guildID, vChannelID string) error {
 
 	//If a voice connection is already established...
 	if voice.IsConnected() {
+		//Stop the Google Assistant
+		voice.AssistantStop()
+
 		//Change the voice channel
 		err := voice.VoiceConnection.ChangeChannel(vChannelID, voice.Muted, voice.Deafened)
 		if err != nil {
 			//There was an error changing the voice channel
 			return errVoiceJoinChangeChannel
 		}
+	} else {
+		//Join the voice channel
+		voiceConnection, err := botData.DiscordSession.ChannelVoiceJoin(guildID, vChannelID, voice.Muted, voice.Deafened)
+		if err != nil {
+			//There was an error joining the voice channel
+			return errVoiceJoinChannel
+		}
 
-		//Changing the voice channel worked out fine
-		return nil
+		//Store the new voice connection in memory
+		voice.VoiceConnection = voiceConnection
+
+		//Add a handler for voice speaking updates
+		voice.VoiceConnection.AddHandler(discordVoiceSpeakingUpdate)
 	}
-
-	//Join the voice channel
-	voiceConnection, err := botData.DiscordSession.ChannelVoiceJoin(guildID, vChannelID, voice.Muted, voice.Deafened)
-	if err != nil {
-		//There was an error joining the voice channel
-		return errVoiceJoinChannel
-	}
-
-	//Store the new voice connection in memory
-	voice.VoiceConnection = voiceConnection
 
 	//Start the Google Assistant
-	voice.AssistantStart()
+	if voice.AssistantEnabled {
+		err := voice.AssistantStart()
+		if err != nil {
+			return err
+		}
+	}
 
 	//Joining the voice channel worked out fine
 	return nil
@@ -416,14 +432,83 @@ func (voice *Voice) SetTextChannel(tChannelID string) {
 	voice.TextChannelID = tChannelID
 }
 
+func (voice *Voice) StartListening() {
+	voice.Speaking()
+	voice.VoiceConnection.OpusSend <- SILENCE
+	voice.Silent()
+	go voice.AssistantListen()
+}
+
 // AssistantStart starts the Google Assistant
-func (voice *Voice) AssistantStart() {
-	//Placeholder for now
+func (voice *Voice) AssistantStart() error {
+	var err error
+
+	if voice.AssistantEnabled {
+		Debug.Println("Creating the assistant struct")
+		voice.Assistant = assistant.NewAssistant()
+		voice.Assistant.GCPAuth = &assistant.GCPAuthWrapper{PermissionCode: botData.AssistantPermissionCode}
+
+		Debug.Println("Initializing the assistant")
+		err = voice.Assistant.InitializeRaw(nil, botData.BotOptions.Assistant.AudioBuffer, botData.BotOptions.Assistant.Credentials, nil, "", nil)
+		if err != nil {
+			return err
+		}
+
+		if botData.AssistantPermissionCode == "" {
+			Debug.Println("Asking for first OAuth2 sign-in")
+			ownerPrivChannel, err := botData.DiscordSession.UserChannelCreate(botData.BotOwnerID)
+			if err != nil {
+				Debug.Printf("Error creating private channel with bot owner: %v\n", err)
+			} else {
+				ownerPrivChannelID := ownerPrivChannel.ID
+				botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Please open the following URL to authenticate the Google Assistant for the first time: "+voice.Assistant.GCPAuth.AuthURL)
+			}
+
+			Debug.Println("Waiting for permission code")
+			for {
+				if voice.Assistant.GCPAuth.PermissionCode != "" {
+					break
+				}
+			}
+
+			Debug.Println("Storing authentication permission code")
+			botData.AssistantPermissionCode = voice.Assistant.GCPAuth.PermissionCode
+			stateSaveAll()
+		}
+
+		Debug.Println("Starting the assistant")
+		err = voice.Assistant.Start()
+		if err != nil {
+			return err
+		}
+
+		Debug.Println("Starting a listening thread")
+		voice.StartListening()
+	}
+
+	return nil
+}
+
+func (voice *Voice) AssistantListen() {
+	for voice.IsConnected() {
+		select {
+		case packet := <-voice.VoiceConnection.OpusRecv:
+			Debug.Printf("Received a voice packet")
+			ioutil.WriteFile("/dev/null", packet.Opus, 0)
+		default:
+		}
+	}
+
+	Debug.Println("Stopping the listening thread")
 }
 
 // AssistantStop shuts down the Google Assistant
 func (voice *Voice) AssistantStop() {
-	//Placeholder for now
+	if voice.Assistant != nil {
+		Debug.Println("Stopping the assistant")
+		voice.Assistant.Close()
+	}
+	voice.AssistantEnabled = false
 }
 
 // VoiceInit initializes a voice object for the given guild
@@ -435,4 +520,9 @@ func VoiceInit(guildID string) {
 	voiceData[guildID] = &Voice{
 		EncodingOptions: botData.BotOptions.AudioEncoding,
 	}
+}
+
+// Event for speaking updates
+func discordVoiceSpeakingUpdate(voiceConnection *discordgo.VoiceConnection, voiceSpeaking *discordgo.VoiceSpeakingUpdate) {
+	Debug.Printf("Voice speaking update received:\nVoice Speaking: %v", voiceSpeaking)
 }

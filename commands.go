@@ -378,6 +378,16 @@ func initCommands() {
 		Function: commandLyrics,
 		HelpText: "Displays the lyrics for the currently playing track.",
 	}
+	botData.Commands["say"] = &Command{
+		Function: commandSay,
+		HelpText: "Says the given text in a voice channel.",
+		RequiredArguments: []string{
+			"text",
+		},
+		Arguments: []CommandArgument{
+			{Name: "text", Description: "The text to say", ArgType: "string"},
+		},
+	}
 
 	//All moderation commands with parameters
 	botData.Commands["purge"] = &Command{
@@ -552,6 +562,7 @@ func initCommands() {
 	botData.Commands["money"] = &Command{IsAlternateOf: "balance"}
 	botData.Commands["nightly"] = &Command{IsAlternateOf: "daily"}
 	botData.Commands["send"] = &Command{IsAlternateOf: "transfer"}
+	botData.Commands["tts"] = &Command{IsAlternateOf: "tts"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}

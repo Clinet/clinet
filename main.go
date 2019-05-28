@@ -243,6 +243,9 @@ func main() {
 			go StartAPI(botData.BotOptions.API.Host)
 		}
 
+		Debug.Printf("Google Assistant credentials: %v\n", botData.BotOptions.Assistant.Credentials)
+		Debug.Printf("Google Assistant audio buffer: %v\n", botData.BotOptions.Assistant.AudioBuffer)
+
 		Debug.Println("Waiting for SIGINT syscall signal...")
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGINT)
@@ -443,6 +446,11 @@ func stateSaveAll() {
 	if err != nil {
 		Error.Printf("Error saving voiceData state: %s\n", err)
 	}
+
+	err = stateSaveRaw(botData.AssistantPermissionCode, "state/assistantPermissionCode.json")
+	if err != nil {
+		Error.Printf("Error saving assistantPermissionCode state: %s\n", err)
+	}
 }
 
 func stateSaveRaw(data interface{}, file string) error {
@@ -483,6 +491,11 @@ func stateRestoreAll() {
 	err = stateRestoreRaw("state/voiceData.json", &voiceData)
 	if err != nil {
 		Error.Printf("Error loading voiceData state: %s\n", err)
+	}
+
+	err = stateRestoreRaw("state/assistantPermissionCode.json", &botData.AssistantPermissionCode)
+	if err != nil {
+		Error.Printf("Error loading assistantPermissionCode state: %s\n", err)
 	}
 }
 

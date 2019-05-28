@@ -7,16 +7,17 @@ import (
 
 	"github.com/mmcdole/gofeed"
 
-	"github.com/JoshuaDoes/duckduckgolang"
-	"github.com/JoshuaDoes/go-soundcloud"
-	"github.com/JoshuaDoes/go-wolfram"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
+	soundcloud "github.com/JoshuaDoes/go-soundcloud"
+	wolfram "github.com/JoshuaDoes/go-wolfram"
+	assistant "github.com/JoshuaDoes/google-assistant"
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/jonas747/dca"
-	"github.com/koffeinsource/go-imgur"
-	"github.com/nishanths/go-xkcd"
-	"github.com/rhnvrm/lyric-api-go"
+	imgur "github.com/koffeinsource/go-imgur"
+	xkcd "github.com/nishanths/go-xkcd"
+	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
 )
@@ -40,12 +41,13 @@ type BotData struct {
 	DebugMode            bool                  `json:"debugMode"`
 	SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
 
-	DiscordSession *discordgo.Session
-	Commands       map[string]*Command
-	NLPCommands    []*CommandNLP
-	VoiceServices  []VoiceService
-	QueryServices  []QueryService
-	LastTipMessage int
+	DiscordSession          *discordgo.Session
+	Commands                map[string]*Command
+	NLPCommands             []*CommandNLP
+	VoiceServices           []VoiceService
+	QueryServices           []QueryService
+	LastTipMessage          int
+	AssistantPermissionCode string
 
 	Updating bool
 }
@@ -80,10 +82,10 @@ type BotKeys struct {
 
 // BotOptions stores all bot options
 type BotOptions struct {
-	MaxPingCount       int                `json:"maxPingCount"` //How many pings to test to determine the average ping
-	HelpMaxResults     int                `json:"helpMaxResults"`
-	SendTypingEvent    bool               `json:"sendTypingEvent"`
-	UseCustomResponses bool               `json:"useCustomResponses"`
+	MaxPingCount       int                `json:"maxPingCount"`       //How many pings to test to determine the average ping
+	HelpMaxResults     int                `json:"helpMaxResults"`     //How many results to display on a help page
+	SendTypingEvent    bool               `json:"sendTypingEvent"`    //Whether or not to send typing events while generating a response
+	UseCustomResponses bool               `json:"useCustomResponses"` //Whether or not to use custom responses
 	UseDuckDuckGo      bool               `json:"useDuckDuckGo"`
 	UseFeed            bool               `json:"useFeed"`
 	UseGitHub          bool               `json:"useGitHub"`
@@ -95,12 +97,18 @@ type BotOptions struct {
 	UseWolframAlpha    bool               `json:"useWolframAlpha"`
 	UseXKCD            bool               `json:"useXKCD"`
 	UseYouTube         bool               `json:"useYouTube"`
-	WolframDeniedPods  []string           `json:"wolframDeniedPods"`
-	YouTubeMaxResults  int                `json:"youtubeMaxResults"`
-	SpotifyMaxResults  int                `json:"spotifyMaxResults"`
-	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`
-	API                APIConfig          `json:"api"`
-	FeedFrequency      int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
+	YouTubeMaxResults  int                `json:"youtubeMaxResults"` //How many results to display on a YouTube search results page
+	SpotifyMaxResults  int                `json:"spotifyMaxResults"` //How many results to display on a Spotify search results page
+	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`     //Configuration for audio transmission over voice
+	API                APIConfig          `json:"api"`               //Configuration for the API server
+	FeedFrequency      int                `json:"feedFrequency"`     //Default interval in seconds for checking for new feed entries
+	Assistant          *Assistant         `json:"assistant"`         //Configuration for the Google Assistant
+}
+
+// Assistant stores everything regarding the Google Assistant
+type Assistant struct {
+	Credentials *assistant.Token       `json:"credentials"`
+	AudioBuffer *assistant.AudioBuffer `json:"audioBuffer"`
 }
 
 // API stores configurations for the API

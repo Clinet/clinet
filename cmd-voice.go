@@ -13,6 +13,12 @@ import (
 func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	VoiceInit(env.Guild.ID)
 
+	if len(args) > 0 {
+		if args[0] == "assistant" {
+			voiceData[env.Guild.ID].AssistantEnabled = true
+		}
+	}
+
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
 			voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
@@ -43,6 +49,10 @@ func commandVoiceLeave(args []string, env *CommandEnvironment) *discordgo.Messag
 
 func commandPlay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	VoiceInit(env.Guild.ID)
+
+	if voiceData[env.Guild.ID].AssistantEnabled {
+		return NewErrorEmbed("Voice Error", "Cannot use audio playback commands while the Google Assistant is enabled.")
+	}
 
 	if env.UpdatedMessageEvent {
 		return nil
