@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -16,6 +17,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/robertkrimen/otto"
 )
+
+var regexBandcampArtist *regexp.Regexp = regexp.MustCompile("(?i)http(?:.*)://(.*).bandcamp.com(?:.*)")
 
 // Bandcamp exports the methods required to access the Bandcamp service
 type Bandcamp struct {
@@ -44,9 +47,15 @@ func (*Bandcamp) GetMetadata(url string) (*Metadata, error) {
 		return nil, err
 	}
 
+	artistIDs := regexBandcampArtist.FindAllString(url, -1)
+	if len(artistIDs) == 0 {
+		return nil, errors.New("unable to find artist ID")
+	}
+	artistID := artistIDs[0]
+
 	metadata := &Metadata{
 		Title:        album.Tracks[0].Title,
-		DisplayURL:   "https://" + album.Artist + ".bandcamp.com" + album.Tracks[0].TitleLink,
+		DisplayURL:   "https://" + artistID + ".bandcamp.com" + album.Tracks[0].TitleLink,
 		StreamURL:    album.Tracks[0].Files.MP3128,
 		Duration:     album.Tracks[0].Duration,
 		ArtworkURL:   "https://f4.bcbits.com/img/a0" + strconv.Itoa(album.ArtID) + "_10.jpg",
@@ -55,7 +64,7 @@ func (*Bandcamp) GetMetadata(url string) (*Metadata, error) {
 
 	trackArtist := &MetadataArtist{
 		Name: album.Artist,
-		URL:  "https://" + album.Artist + ".bandcamp.com",
+		URL:  "https://" + artistID + ".bandcamp.com",
 	}
 	metadata.Artists = append(metadata.Artists, *trackArtist)
 

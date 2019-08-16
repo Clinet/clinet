@@ -216,6 +216,8 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 				status = "Do Not Disturb"
 			case discordgo.StatusInvisible:
 				status = "Invisible"
+			default:
+				status = "Unknown"
 			}
 			if presence.Game != nil {
 				gameName := presence.Game.Name
@@ -227,10 +229,24 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 					status += ", playing " + gameName
 				case discordgo.GameTypeStreaming:
 					status += ", streaming " + gameName
+				case discordgo.GameTypeListening:
+					status += ", listening to " + gameName
+				case discordgo.GameTypeWatching:
+					status += ", watching " + gameName
+				default:
+					if gameName == "Custom Status" {
+						status += ", " + presence.Game.State
+					} else {
+						status += ", " + gameName
+					}
 				}
 				if presence.Game.TimeStamps.StartTimestamp != 0 {
 					status += " as of " + humanize.Time(time.Unix(presence.Game.TimeStamps.StartTimestamp, 0).In(location))
 				}
+			}
+			if presence.Since != nil {
+				since := *presence.Since
+				status += " since " + strconv.Itoa(since)
 			}
 			userInfoEmbed.AddField("Presence", status)
 		}
