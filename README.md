@@ -1,10 +1,12 @@
-# clinet
+# Clinet
 
 ### A Discord bot intended for assistance and control within your guilds
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/JoshuaDoes/clinet)](https://goreportcard.com/report/github.com/JoshuaDoes/clinet)
 
 [![Discord Bots](https://discordbots.org/api/widget/374546169755598849.svg)](https://discordbots.org/bot/374546169755598849)
+
+[Sponsored hosting courtesy of AllGamer™!](https://allgamer.net/ "AllGamer™")
 
 ----
 
