@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/Clinet/ffgoconv"
 	assistant "github.com/JoshuaDoes/google-assistant"
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
@@ -29,6 +30,12 @@ type Voice struct {
 	VoiceConnection  *discordgo.VoiceConnection `json:"voiceConnection"`  //The current Discord voice connection
 	EncodingSession  *dca.EncodeSession         `json:"encodingSession"`  //The encoding session for encoding the audio stream to Opus
 	StreamingSession *dca.StreamingSession      `json:"streamingSession"` //The streaming session for sending the Opus audio to Discord
+
+	//Audio processing handled by ffgoconv
+	MediaStreamer     *ffgoconv.Streamer   `json:-` //The media streamer for current media playback
+	TTSStreamer       *ffgoconv.Streamer   `json:-` //The TTS streamer for playing back text to speech messages
+	AssistantStreamer *ffgoconv.Streamer `json:-`   //The Google Assistant streamer for playing back Assistant responses
+	Transmuxer        *ffgoconv.Transmuxer `json:-` //The transmuxing session for transmuxing multiple audio streams
 
 	//Voice configurations
 	EncodingOptions *dca.EncodeOptions `json:"encodingOptions"` //The settings that will be used for encoding the audio stream to Opus
@@ -132,6 +139,7 @@ func (voice *Voice) Disconnect() error {
 // - queueEntry: The queue entry to play/add to the queue
 // - announceQueueAdded: Whether or not to announce a queue added message if something is already playing (used internally for mass playlist additions)
 func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error {
+	Debug.Println("ASDFPLAY")
 	//Make sure we're conected first
 	if !voice.IsConnected() {
 		return errVoicePlayNotConnected
@@ -211,6 +219,7 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 
 // playRaw plays a given media URL in a connected voice channel
 func (voice *Voice) playRaw(mediaURL string) (error, error) {
+	Debug.Println("ASDF")
 	/*
 		Just in case things change before playRaw is ran, these checks must stay
 	*/
@@ -225,6 +234,7 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	}
 
 	voice.Lock()
+	defer voice.Unlock()
 
 	//Make sure we're allowed to speak
 	if voice.Muted {
@@ -237,12 +247,32 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 		return nil, errVoicePlayInvalidURL
 	}
 
-	//Create the encoding session to encode the audio stream as DCA
-	voice.EncodingSession, err = dca.EncodeFile(mediaURL, voice.EncodingOptions)
+	Debug.Println("CREATING TRANSMUXER")
+	//Create the transmuxing session to encode the audio stream as OGG so that dca can understand it
+	voice.Transmuxer, err = ffgoconv.NewTransmuxer(nil, "pipe:1", "libmp3lame", "mp3", "320k", 1)
+	if err != nil {
+		return nil, err
+	}
+	
+	Debug.Println("ADDING MEDIA STREAMER")
+	voice.MediaStreamer, err = voice.Transmuxer.AddStreamer(mediaURL, nil, 1.0)
 	if err != nil {
 		return nil, err
 	}
 
+	Debug.Println("CREATING ENCODING SESSION")
+	//Create the encoding session to encode the audio stream as DCA
+	//voice.EncodingSession, err = dca.EncodeFile(mediaURL, voice.EncodingOptions)
+	voice.EncodingSession, err = dca.EncodeMem(voice.Transmuxer, voice.EncodingOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	Debug.Println("STARTING TRANSMUXER")
+	//Start the transmuxing session
+	go voice.Transmuxer.Run()
+
+	Debug.Println("SPEAKING")
 	//Mark our voice presence as speaking
 	voice.Speaking()
 
@@ -273,7 +303,13 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	voice.EncodingSession.Cleanup()
 	voice.EncodingSession = nil
 
-	voice.Unlock()
+	//Clean up the transmuxing session
+	voice.MediaStreamer.Close()
+	voice.MediaStreamer = nil
+	voice.TTSStreamer.Close()
+	voice.TTSStreamer = nil
+	voice.Transmuxer.Close()
+	voice.Transmuxer = nil
 
 	//Return any streaming errors, if any
 	return msg, err

@@ -233,27 +233,17 @@ func commandResume(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 }
 
 func commandVolume(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	//Disabled until further notice, real-time volume control using hrabin/opus and manually adjusting samples results in static noise distortion with the correct volume
-	/*
-		volume, err := strconv.Atoi(args[0])
-		if err != nil {
-			return NewErrorEmbed("Volume Error", "``"+args[0]+"`` is not a valid number.")
-		}
+	volume, err := strconv.Atoi(args[0])
+	if err != nil {
+		return NewErrorEmbed("Volume Error", "``"+args[0]+"`` is not a valid number.")
+	}
 
-		if volume < 0 || volume > 100 {
-			return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 100, with 100 being normal volume.")
-		}
+	if volume < 0 || volume > 100 {
+		return NewErrorEmbed("Volume Error", "You must specify a volume level from 0 to 100, with 100 being normal volume.")
+	}
 
-		if voiceData[env.Guild.ID].EncodingOptions == nil {
-			voiceData[env.Guild.ID].EncodingOptions = encodeOptionsPresetHigh
-		}
-		voiceData[env.Guild.ID].EncodingOptions.Volume = float64(volume) * 0.01
-		return NewErrorEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
-	*/
-
-	return NewGenericEmbed("Volume", "Volume adjustment in real time via this command is disabled at this time. While attempts proved to successfully change the volume, it was accompanied by static noise distortion and thus is not ready for production.\n"+
-		"If you wish to change your perceived volume of Clinet, consider using Discord's per-user volume control (right click Clinet on desktop/web or tap on Clinet in the user list on mobile to find it). Not only does it do what you want, but it doesn't have to ruin everyone else's high quality audio experience!\n"+
-		"If you would like to help with attempts to change the volume in real time, make sure to join the [Clinet Discord server](https://discord.gg/qkbKEWT).")
+	voiceData[env.Guild.ID].Transmuxer.SetMasterVolume(float64(volume) * 0.01)
+	return NewGenericEmbed("Volume", "Set the volume for audio playback to "+args[0]+".")
 }
 
 func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

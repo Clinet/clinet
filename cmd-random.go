@@ -7,9 +7,11 @@ import (
 	"image"
 	"image/gif"
 	"image/png"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -40,10 +42,55 @@ func commandCoinFlip(args []string, env *CommandEnvironment) *discordgo.MessageE
 }
 
 func commandSay(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	ttsURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q=%s&tl=en", url.QueryEscape(strings.Join(args, " ")))
+	message := strings.Join(args, " ")
+	if len(message) > 188 {
+		return NewErrorEmbed("Say Error", "Cannot exceed 188 characters for the text to speech message!")
+	}
+	if !voiceData[env.Guild.ID].IsStreaming() {
+		return NewErrorEmbed("Say Error", "You must be in a voice channel playing music first! This is only a demo, can't blame me for preventing known crashes...")
+	}
 
-	_ = commandStop(make([]string, 0), env)
-	return commandPlay([]string{ttsURL}, env)
+	ttsURL := fmt.Sprintf("http://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=%d&client=tw-ob&q=%s&tl=en", len(message), url.QueryEscape(message))
+	
+	data, err := http.Get(ttsURL)
+	if err != nil {
+		return NewErrorEmbed("Say Error", "Error creating text to speech message.")
+	}
+	defer data.Body.Close()
+	
+	out, err := os.Create("tts_" + env.Guild.ID + ".mpga")
+	if err != nil {
+		return NewErrorEmbed("Say Error", "Error finding location to store text to speech message.")
+	}
+	defer out.Close()
+	
+	_, err = io.Copy(out, data.Body)
+	if err != nil {
+		return NewErrorEmbed("Say Error", "Error storing text to speech message.")
+	}
+
+	for i := 100; i >= 1; i-- {
+		time.Sleep(10 * time.Millisecond)
+		voiceData[env.Guild.ID].MediaStreamer.SetVolume(float64(i) * 0.01)
+	}
+
+	ttsStreamer, err := voiceData[env.Guild.ID].Transmuxer.AddStreamer("tts_" + env.Guild.ID + ".mpga", nil, 1.0)
+	if err != nil {
+		return NewErrorEmbed("Say Error", "Error playing text to speech message.")
+	}
+
+	for ttsStreamer.IsRunning() {
+		//Wait for message to finish
+	}
+
+	ttsStreamer.Close()
+
+	for i := 1; i <= 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		voiceData[env.Guild.ID].MediaStreamer.SetVolume(float64(i) * 0.01)
+	}
+
+	return nil
 }
 
 func commandHewwo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

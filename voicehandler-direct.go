@@ -25,6 +25,7 @@ func (*Direct) GetColor() int {
 func (*Direct) TestURL(url string) (bool, error) {
 	probe, err := goprobe.ProbeMedia(url)
 	if err != nil {
+		Error.Println(err)
 		return false, nil
 	}
 
