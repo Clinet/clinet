@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"regexp"
+	"sort"
 
 	isoduration "github.com/channelmeter/iso8601duration"
 	"github.com/rylio/ytdl"
@@ -36,7 +37,16 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 		return nil, err
 	}
 
-	format := videoInfo.Formats.Extremes(ytdl.FormatAudioBitrateKey, true)[0]
+	formats := videoInfo.Formats
+	if len(formats) == 0 {
+		return nil, errors.New("unable to get list of formats")
+	}
+
+	sort.SliceStable(formats, func(i, j int) bool {
+		return formats[i].Itag.Number < formats[j].Itag.Number
+	})
+
+	format := formats[0]
 
 	videoURL, err := videoInfo.GetDownloadURL(format)
 	if err != nil {
