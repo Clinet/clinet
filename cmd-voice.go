@@ -21,7 +21,9 @@ func commandVoiceJoin(args []string, env *CommandEnvironment) *discordgo.Message
 
 	for _, voiceState := range env.Guild.VoiceStates {
 		if voiceState.UserID == env.Message.Author.ID {
-			voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID)
+			if err := voiceData[env.Guild.ID].Connect(env.Guild.ID, voiceState.ChannelID); err != nil {
+				return NewErrorEmbed("Voice Error", "[DEBUG] %v", err)
+			}
 			return NewGenericEmbed("Voice", "Joined the voice channel.")
 		}
 	}

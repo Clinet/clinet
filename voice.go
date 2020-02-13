@@ -3,8 +3,10 @@ package main
 import (
 	"io"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/Clinet/ffgoconv"
 	assistant "github.com/JoshuaDoes/google-assistant"
@@ -20,7 +22,9 @@ const (
 	RepeatNowPlaying
 )
 
-var SILENCE = []byte{0xF8, 0xFF, 0xFE}
+var (
+	SILENCE = []byte{0xF8, 0xFF, 0xFE}
+)
 
 //Voice contains data about the current voice session
 type Voice struct {
@@ -32,10 +36,12 @@ type Voice struct {
 	StreamingSession *dca.StreamingSession      `json:"streamingSession"` //The streaming session for sending the Opus audio to Discord
 
 	//Audio processing handled by ffgoconv
-	MediaStreamer     *ffgoconv.Streamer   `json:-` //The media streamer for current media playback
-	TTSStreamer       *ffgoconv.Streamer   `json:-` //The TTS streamer for playing back text to speech messages
-	AssistantStreamer *ffgoconv.Streamer `json:-`   //The Google Assistant streamer for playing back Assistant responses
-	Transmuxer        *ffgoconv.Transmuxer `json:-` //The transmuxing session for transmuxing multiple audio streams
+	MediaStreamer             *ffgoconv.Streamer   `json:-` //The media streamer for current media playback
+	TTSStreamer               *ffgoconv.Streamer   `json:-` //The TTS streamer for playing back text to speech messages
+	AssistantPlaybackStreamer *ffgoconv.Streamer   `json:-` //The Google Assistant streamer for playing back Assistant responses
+	//AssistantRecordStreamer   *ffgoconv.Streamer   `json:-` //The recording streamer used to record the users in a voice chat
+	AssistantVoiceRecorder    *Opus                `json:-` //The recording session used to record users in a voice chat for the Assistant
+	Transmuxer                *ffgoconv.Transmuxer `json:-` //The transmuxing session for transmuxing multiple audio streams
 
 	//Voice configurations
 	EncodingOptions *dca.EncodeOptions `json:"encodingOptions"` //The settings that will be used for encoding the audio stream to Opus
@@ -103,6 +109,12 @@ func (voice *Voice) Connect(guildID, vChannelID string) error {
 		}
 	}
 
+	//Create the transmuxing session to encode the audio stream as MP3 so that dca can understand it
+	err := voice.CreateTransmuxer()
+	if err != nil {
+		return err
+	}
+
 	//Joining the voice channel worked out fine
 	return nil
 }
@@ -116,6 +128,24 @@ func (voice *Voice) Disconnect() error {
 	if voice.IsConnected() {
 		//Stop the Google Assistant
 		voice.AssistantStop()
+
+		//Clean up the transmuxing session
+		if voice.MediaStreamer != nil {
+			voice.MediaStreamer.Close()
+			voice.MediaStreamer = nil
+		}
+		if voice.TTSStreamer != nil {
+			voice.TTSStreamer.Close()
+			voice.TTSStreamer = nil
+		}
+		if voice.AssistantPlaybackStreamer != nil {
+			voice.AssistantPlaybackStreamer.Close()
+			voice.AssistantPlaybackStreamer = nil
+		}
+		if voice.Transmuxer != nil {
+			voice.Transmuxer.Close()
+			voice.Transmuxer = nil
+		}
 
 		//Leave the voice channel
 		err := voice.VoiceConnection.Disconnect()
@@ -246,13 +276,6 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	if err != nil {
 		return nil, errVoicePlayInvalidURL
 	}
-
-	Debug.Println("CREATING TRANSMUXER")
-	//Create the transmuxing session to encode the audio stream as OGG so that dca can understand it
-	voice.Transmuxer, err = ffgoconv.NewTransmuxer(nil, "pipe:1", "libmp3lame", "mp3", "320k", 1)
-	if err != nil {
-		return nil, err
-	}
 	
 	Debug.Println("ADDING MEDIA STREAMER")
 	voice.MediaStreamer, err = voice.Transmuxer.AddStreamer(mediaURL, nil, 1.0)
@@ -267,10 +290,6 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	Debug.Println("STARTING TRANSMUXER")
-	//Start the transmuxing session
-	go voice.Transmuxer.Run()
 
 	Debug.Println("SPEAKING")
 	//Mark our voice presence as speaking
@@ -302,14 +321,10 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 	voice.EncodingSession.Stop()
 	voice.EncodingSession.Cleanup()
 	voice.EncodingSession = nil
-
-	//Clean up the transmuxing session
+	
+	//Clean up the media streamer
 	voice.MediaStreamer.Close()
 	voice.MediaStreamer = nil
-	voice.TTSStreamer.Close()
-	voice.TTSStreamer = nil
-	voice.Transmuxer.Close()
-	voice.Transmuxer = nil
 
 	//Return any streaming errors, if any
 	return msg, err
@@ -468,10 +483,27 @@ func (voice *Voice) SetTextChannel(tChannelID string) {
 	voice.TextChannelID = tChannelID
 }
 
+// CreateTransmuxer initializes and starts a transmuxing process
+func (voice *Voice) CreateTransmuxer() error {
+	if voice.Transmuxer == nil {
+		var err error
+		voice.Transmuxer, err = ffgoconv.NewTransmuxer(nil, "pipe:1", "libmp3lame", "mp3", "320k", 1)
+		if err != nil {
+			return err
+		}
+
+		go voice.Transmuxer.Run()
+	}
+
+	return nil
+}
+
+// StartListening sends the SILENCE Opus packet to Discord so that we can listen to audio from other users
 func (voice *Voice) StartListening() {
 	voice.Speaking()
+	Debug.Println("Sending SILENCE packet...")
 	voice.VoiceConnection.OpusSend <- SILENCE
-	voice.Silent()
+	//voice.Silent()
 	go voice.AssistantListen()
 }
 
@@ -480,18 +512,19 @@ func (voice *Voice) AssistantStart() error {
 	var err error
 
 	if voice.AssistantEnabled {
-		Debug.Println("Creating the assistant struct")
+		Debug.Println("Creating the assistant struct...")
 		voice.Assistant = assistant.NewAssistant()
 		voice.Assistant.GCPAuth = &assistant.GCPAuthWrapper{PermissionCode: botData.AssistantPermissionCode}
 
-		Debug.Println("Initializing the assistant")
-		err = voice.Assistant.InitializeRaw(nil, botData.BotOptions.Assistant.AudioBuffer, botData.BotOptions.Assistant.Credentials, nil, "", nil)
+		Debug.Println("Initializing the assistant...")
+		//err = voice.Assistant.InitializeRaw(nil, botData.BotOptions.Assistant.AudioBuffer, botData.BotOptions.Assistant.Credentials, nil, "", nil)
+		err = voice.Assistant.Initialize(botData.BotOptions.Assistant.Credentials, nil)
 		if err != nil {
 			return err
 		}
 
 		if botData.AssistantPermissionCode == "" {
-			Debug.Println("Asking for first OAuth2 sign-in")
+			Debug.Println("Asking for first OAuth2 sign-in...")
 			ownerPrivChannel, err := botData.DiscordSession.UserChannelCreate(botData.BotOwnerID)
 			if err != nil {
 				Debug.Printf("Error creating private channel with bot owner: %v\n", err)
@@ -499,26 +532,33 @@ func (voice *Voice) AssistantStart() error {
 				ownerPrivChannelID := ownerPrivChannel.ID
 				botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Please open the following URL to authenticate the Google Assistant for the first time: "+voice.Assistant.GCPAuth.AuthURL)
 			}
+			Info.Println("Please open the following URL to authenticate the Google Assistant for the first time: "+voice.Assistant.GCPAuth.AuthURL)
 
-			Debug.Println("Waiting for permission code")
+			Debug.Println("Waiting for permission code...")
 			for {
-				if voice.Assistant.GCPAuth.PermissionCode != "" {
+				if code := voice.Assistant.GCPAuth.PermissionCode; code != "" {
+					Debug.Println("Storing authentication permission code:", code)
+					botData.AssistantPermissionCode = code
+					stateSaveAll()
 					break
 				}
 			}
-
-			Debug.Println("Storing authentication permission code")
-			botData.AssistantPermissionCode = voice.Assistant.GCPAuth.PermissionCode
-			stateSaveAll()
 		}
+
+		Debug.Println("Waiting 2 seconds before starting the Assistant...")
+		time.Sleep(2 * time.Second)
 
 		Debug.Println("Starting the assistant")
 		err = voice.Assistant.Start()
 		if err != nil {
-			return err
+			Debug.Println("Trying again...")
+			err = voice.Assistant.Start()
+			if err != nil {
+				return err
+			}
 		}
 
-		Debug.Println("Starting a listening thread")
+		Debug.Println("Starting a listening thread...")
 		voice.StartListening()
 	}
 
@@ -526,16 +566,185 @@ func (voice *Voice) AssistantStart() error {
 }
 
 func (voice *Voice) AssistantListen() {
+	var err error
+
+	silenceCounter := 0
+
+	/*voice.AssistantRecordStreamer, err = ffgoconv.NewStreamer("-", []string{
+		"-hide_banner",
+		"-stats",
+		"-ac", "1",
+		"-re", "-i", "-",
+		"-acodec", "pcm_s16le",
+		"-f", "s16le",
+		"-vol", "256",
+		"-ar", "16000",
+		"-ac", "1",
+		"-b:a", "16k",
+		"-threads", "1",
+		"pipe:1",
+	}, 1.0)
+	if err != nil {
+		return
+	}
+	Debug.Println(err, voice.AssistantRecordStreamer.Err())*/
+	
+	//Audio samples from Discord users are stereo 48000Hz
+	voice.AssistantVoiceRecorder, err = NewOpus(48000, 2)
+	if err != nil {
+		Error.Println(err)
+		return
+	}
+
 	for voice.IsConnected() {
 		select {
 		case packet := <-voice.VoiceConnection.OpusRecv:
-			Debug.Printf("Received a voice packet")
-			ioutil.WriteFile("/dev/null", packet.Opus, 0)
+			//Debug.Println("Received a voice packet:", packet.Opus)
+			
+			if len(packet.Opus) == 3 && packet.Opus[0] == SILENCE[0] && packet.Opus[1] == SILENCE[1] && packet.Opus[2] == SILENCE[2] {
+				Debug.Println("Received a silence voice packet")
+				//voice.AssistantVoiceRecorder.Write(packet.Opus)
+				silenceCounter += 1
+				
+				if silenceCounter == 10 {
+					Debug.Println("Resetting silence counter...")
+					silenceCounter = 0
+			
+					Debug.Println("Playing response...")
+					voice.AssistantPlayResponse()
+				}
+				
+				continue
+			}
+
+			Debug.Println("Writing new Opus packet to Assistant voice recorder...")
+			voice.AssistantVoiceRecorder.Write(packet.Opus)
+			
+			Debug.Println("Reading back converted audio data from Assistant record streamer...")
+					recAudio, err := ioutil.ReadAll(voice.AssistantVoiceRecorder)
+					if err != nil {
+						Error.Println(err)
+						continue
+					}
+
+					Debug.Println("Writing converted audio data to Assistant audio in...")
+					err = voice.AssistantAudioIn(recAudio)
+					if err != nil {
+						Error.Println(err)
+						continue
+					}
 		default:
 		}
 	}
 
-	Debug.Println("Stopping the listening thread")
+	Debug.Println("Stopping the listening thread...")
+}
+
+func (voice *Voice) AssistantAudioIn(audioIn []byte) error {
+	loop := int(math.Ceil(float64(len(audioIn)) / float64(8192)))
+	for i := 1; i < (loop + 1); i++ {
+		Debug.Println("Sending pass", i, "/", loop)
+
+		low := (i - 1) * 8192
+		high := i * 8192
+		if high > len(audioIn) {
+			high = len(audioIn)
+		}
+
+		err := voice.Assistant.AudioIn(audioIn[low:high])
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(25 * time.Millisecond)
+	}
+	return nil
+}
+
+func (voice *Voice) AssistantPlayResponse() {
+	var err error
+	
+	Debug.Println("Creating Assistant playback streamer...")
+	voice.AssistantPlaybackStreamer, err = ffgoconv.NewStreamer("pipe:", []string{
+		"-hide_banner",
+		"-stats",
+		"-acodec", "pcm_s16le",
+		"-f", "s16le",
+		"-ar", "16000",
+		"-ac", "1",
+		"-re", "-i", "-",
+		"-acodec", "pcm_f64le",
+		"-f", "f64le",
+		"-vol", "256",
+		"-ar", "48000",
+		"-ac", "2",
+		"-b:a", "320k",
+		"-threads", "1",
+		"pipe:1",
+	}, 1.0)
+	if err != nil {
+		Error.Println(err)
+		return
+	}
+	
+	wroteAudio := false
+	reqTxt := ""
+	resTxt := ""
+	
+	Debug.Println("Starting record response loop...")
+	for {
+		Debug.Println("Requesting response piece...")
+		response, err := voice.Assistant.RequestResponse()
+		if err == io.EOF {
+			Debug.Println("Received EOF on audio")
+			wroteAudio = true
+		} else if err != nil {
+			Error.Println(err)
+			break
+		}
+		//Debug.Println("Response piece:", response)
+		Debug.Println("Getting result...")
+		result := response.GetResult()
+		//Debug.Println("Result:", result)
+		
+		if response == nil {
+			Debug.Println("Empty response piece")
+			continue
+		}
+		if audioOut := response.GetAudioOut(); audioOut != nil {
+			if wroteAudio == false {
+				Debug.Println("Writing audio piece to Assistant streamer...")
+				voice.AssistantPlaybackStreamer.Write(audioOut.GetAudioData())
+			}
+		}
+		if requestText := result.GetSpokenRequestText(); requestText != "" {
+			Debug.Println("Received request text piece:", requestText)
+			reqTxt = requestText
+		}
+		if responseText := result.GetSpokenResponseText(); responseText != "" {
+			Debug.Println("Received response text piece:", responseText)
+			resTxt = responseText
+		}
+		if wroteAudio && reqTxt != "" && resTxt != "" {
+			Debug.Println("Finished receiving response pieces")
+			break
+		}
+	}
+
+	Debug.Println("Closing input stream...")
+	err = voice.Assistant.Conversation.CloseSend()
+	if err != nil {
+		Error.Println(err)
+	}
+	
+	Debug.Println("Adding Assistant streamer to transmuxing session...")
+	_, err = voice.Transmuxer.AddRunningStreamer(voice.AssistantPlaybackStreamer)
+	if err != nil {
+		Error.Println(err)
+	}
+	
+	Debug.Println("Telling the world what we did!")
+	botData.DiscordSession.ChannelMessageSendEmbed(voice.TextChannelID, NewGenericEmbed("Google Assistant", "**Request**\n" + reqTxt + "\n\n**Response**\n" + resTxt))
 }
 
 // AssistantStop shuts down the Google Assistant
