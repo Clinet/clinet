@@ -32,7 +32,8 @@ func (*Spotify) TestURL(url string) (bool, error) {
 // GetMetadata returns the metadata for a given Spotify track URL
 func (*Spotify) GetMetadata(url string) (*Metadata, error) {
 	if strings.HasPrefix(url, "spotify:track:") {
-		url = "https://open.spotify.com/track/" + strings.TrimPrefix(url, "spotify:track:")
+		newURL := "https://open.spotify.com/track/" + strings.TrimPrefix(url, "spotify:track:")
+		url = newURL
 	}
 
 	trackInfo, err := botData.BotClients.Spotify.GetTrackInfo(url)
