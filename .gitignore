@@ -22,5 +22,9 @@ clinet
 # Log files
 *.log
 
+# Supervise
+run
+superivse/
+
 # OS leftovers
 desktop.ini
