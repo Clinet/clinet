@@ -70,7 +70,6 @@ type BotKeys struct {
 	DuckDuckGoAppName    string                   `json:"ddgAppName"`
 	GeniusAccessToken    string                   `json:"geniusAccessToken"`
 	ImgurClientID        string                   `json:"imgurClientID"`
-	SoundCloudAppVersion string                   `json:"soundcloudAppVersion"`
 	SoundCloudClientID   string                   `json:"soundcloudClientID"`
 	SpotifyHost          string                   `json:"spotifyHost"`
 	SpotifyPass          string                   `json:"spotifyPass"`
@@ -171,9 +170,6 @@ func (configData *BotData) PrepConfig() error {
 	}
 	if configData.BotOptions.UseImgur && configData.BotKeys.ImgurClientID == "" {
 		return errors.New("config:{botOptions:{useImgur: true}} not permitted, config:{botKeys:{imgurClientID: \"\"}}")
-	}
-	if configData.BotOptions.UseSoundCloud && configData.BotKeys.SoundCloudAppVersion == "" {
-		return errors.New("config:{botOptions:{useSoundCloud: true}} not permitted, config:{botKeys:{soundcloudAppVersion: \"\"}}")
 	}
 	if configData.BotOptions.UseSoundCloud && configData.BotKeys.SoundCloudClientID == "" {
 		return errors.New("config:{botOptions:{useSoundCloud: true}} not permitted, config:{botKeys:{soundcloudClientID: \"\"}}")

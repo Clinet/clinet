@@ -50,7 +50,7 @@ func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		botData.BotClients.Imgur.ImgurClientID = botData.BotKeys.ImgurClientID
 	}
 	if botData.BotOptions.UseSoundCloud {
-		botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
+		botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID}
 	}
 	if botData.BotOptions.UseWolframAlpha {
 		botData.BotClients.Wolfram = &wolfram.Client{AppID: botData.BotKeys.WolframAppID}

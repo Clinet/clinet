@@ -138,7 +138,7 @@ func main() {
 			botData.BotClients.Imgur.ImgurClientID = botData.BotKeys.ImgurClientID
 		}
 		if botData.BotOptions.UseSoundCloud {
-			botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID, AppVersion: botData.BotKeys.SoundCloudAppVersion}
+			botData.BotClients.SoundCloud = &soundcloud.Client{ClientID: botData.BotKeys.SoundCloudClientID}
 		}
 		if botData.BotOptions.UseSpotify {
 			botData.BotClients.Spotify = &spotigo.Client{Host: botData.BotKeys.SpotifyHost, Pass: botData.BotKeys.SpotifyPass}
