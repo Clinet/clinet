@@ -408,10 +408,10 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		if err != nil {
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this video](https://youtube.com/watch?v=" + results[i].Id.VideoId + ")"})
 		} else {
-			author := videoInfo.Author
+			uploader := videoInfo.Uploader
 			title := videoInfo.Title
 
-			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://youtube.com/watch?v=" + results[i].Id.VideoId + ") by **" + author + "**"})
+			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://youtube.com/watch?v=" + results[i].Id.VideoId + ") by **" + uploader + "**"})
 		}
 	}
 	fields = append(fields, commandListField)
