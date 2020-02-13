@@ -43,7 +43,6 @@ func APIRouter() *chi.Mux {
 	router.Use(
 		render.SetContentType(render.ContentTypeJSON), //Set Content-Type to application/json
 		middleware.Logger,
-		middleware.DefaultCompress,
 		middleware.RedirectSlashes,
 		middleware.Recoverer,
 	)
