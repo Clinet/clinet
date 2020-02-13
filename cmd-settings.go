@@ -443,21 +443,21 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 				guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords = make([]string, 0)
 				return NewGenericEmbed("Server Settings - Swear Filter", "Successfully cleared all words from the filter.")
 			}
-		}
-	case "timeout":
-		if len(args) < 3 {
-			if guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout == 0 {
-				return NewGenericEmbed("Server Settings - Swear Filter", "The timeout for deleting warning messages is disabled.")
+		case "timeout":
+			if len(args) < 3 {
+				if guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout == 0 {
+					return NewGenericEmbed("Server Settings - Swear Filter", "The timeout for deleting warning messages is disabled.")
+				}
+				timeout := strconv.Itoa(int(guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout))
+				return NewGenericEmbed("Server Settings - Swear Filter", "The current timeout for deleting warning messages is set to "+timeout+" seconds.")
 			}
-			timeout := strconv.Itoa(int(guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout))
-			return NewGenericEmbed("Server Settings - Swear Filter", "The current timeout for deleting warning messages is set to "+timeout+" seconds.")
+			timeout, err := strconv.Atoi(args[2])
+			if err != nil {
+				return NewErrorEmbed("Server Settings - Swear Filter Error", "``"+args[2]+"`` is not a valid number.")
+			}
+			guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout = time.Duration(timeout)
+			return NewGenericEmbed("Server Settings - Swear Filter", "Successfully set he timeout for deleting warning messages to "+args[2]+" seconds.")
 		}
-		timeout, err := strconv.Atoi(args[2])
-		if err != nil {
-			return NewErrorEmbed("Server Settings - Swear Filter Error", "``"+args[2]+"`` is not a valid number.")
-		}
-		guildSettings[env.Guild.ID].SwearFilter.WarningDeleteTimeout = time.Duration(timeout)
-		return NewGenericEmbed("Server Settings - Swear Filter", "Successfully set he timeout for deleting warning messages to "+args[2]+" seconds.")
 	case "log":
 		if len(args) < 2 {
 			logHelpCmd := &Command{
