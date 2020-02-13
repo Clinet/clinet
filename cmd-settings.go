@@ -418,9 +418,13 @@ func commandSettingsServer(args []string, env *CommandEnvironment) *discordgo.Me
 			return NewGenericEmbed("Server Settings - Swear Filter", "Successfully disabled the swear filter.")
 		case "words":
 			if len(args) < 3 {
+				words := "No words are in the swear filter!"
+				if len(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords) > 0 {
+					words = strings.Join(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords, ", ")
+				}
 				wordListEmbed := NewEmbed().
 					SetTitle("Server Settings - Swear Filter").
-					AddField("Filtered Words", strings.Join(guildSettings[env.Guild.ID].SwearFilter.BlacklistedWords, ", ")).
+					AddField("Filtered Words", words).
 					SetColor(0x1C1C1C).MessageEmbed
 				return wordListEmbed
 			}
