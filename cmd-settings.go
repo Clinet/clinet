@@ -268,7 +268,7 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 			socialsEmbed.Fields = socialsFields
 
 			return socialsEmbed
-		case "clear":
+		case "clear", "remove":
 			if len(args) < 3 {
 				return cmdUsage
 			}
