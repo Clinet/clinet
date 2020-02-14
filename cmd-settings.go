@@ -176,7 +176,7 @@ func commandSettingsUser(args []string, env *CommandEnvironment) *discordgo.Mess
 			Arguments: []CommandArgument{
 				{Name: "set {social}", Description: "Sets a social", ArgType: "social code/name"},
 				{Name: "list", Description: "Lists your socials", ArgType: "this"},
-				{Name: "remove", Description: "Removes a social", ArgType: "number"},
+				{Name: "remove", Description: "Removes a social", ArgType: "social code/name"},
 				{Name: "available", Description: "Lists available socials", ArgType: "this"},
 			},
 		}
