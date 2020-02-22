@@ -286,7 +286,7 @@ func initCommands() {
 		HelpText: "Plays either the first result from a YouTube search query or the specified stream URL in the user's voice channel.",
 		Arguments: []CommandArgument{
 			{Name: "search query", Description: "The YouTube search query to use when fetching a video to play", ArgType: "string"},
-			{Name: "url", Description: "The YouTube, SoundCloud, or direct audio/video URL to play", ArgType: "string"},
+			{Name: "url", Description: "The YouTube, Spotify, SoundCloud, Bandcamp or direct audio/video URL to play", ArgType: "string"},
 		},
 	}
 	botData.Commands["stop"] = &Command{
