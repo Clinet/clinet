@@ -23,8 +23,9 @@ import (
 )
 
 type Logger struct {
-	logger *logrus.Logger
-	prefix string
+	logger    *logrus.Logger
+	prefix    string
+	Verbosity int
 }
 
 //NewLogger returns a logger with the specified verbosity level.
@@ -52,6 +53,7 @@ func NewLogger(prefix string, verbosity int) *Logger {
 	return &Logger{
 		logger: log,
 		prefix: prefix,
+		Verbosity: verbosity,
 	}
 }
 

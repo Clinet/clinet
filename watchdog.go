@@ -94,7 +94,7 @@ func isProcessRunning(pid int) bool {
 	if runtime.GOOS != "windows" {
 		log.Debug("Not running Windows, using alternative checker")
 
-		isRunning := process.Signal(syscall.Signal(0)) != nil
+		isRunning := process.Signal(syscall.Signal(0)) == nil
 		log.Debug("Process signal 0 response: ", isRunning)
 		return isRunning
 	}

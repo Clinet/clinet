@@ -4,9 +4,6 @@ import (
 	//Logging
 	"github.com/Clinet/clinet/utils/logger" //Advanced logging
 
-	//Discord-related essentials
-	//"github.com/bwmarrin/discordgo" //Used to communicate with Discord
-
 	//std necessities
 	"os"
 )
@@ -36,6 +33,8 @@ func Bot(cfgPath, token string, log *logger.Logger) {
 		Log.Debug("Patching configuration with new token")
 		cfg.Discord.Token = token
 	}
+
+	startDiscord()
 
 	Log.Info("Good-bye!")
 }
