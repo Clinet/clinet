@@ -15,7 +15,10 @@ package logger
 */
 
 import (
+	//Advanced logger
 	"github.com/sirupsen/logrus"
+
+	//Better formatting for logrus
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 

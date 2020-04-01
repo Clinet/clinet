@@ -1,6 +1,10 @@
 package main
 
 import (
+	//Process management
+	"github.com/mitchellh/go-ps"
+
+	//std necessities
 	"os"
 	"os/exec"
 	"os/signal"
@@ -9,8 +13,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/mitchellh/go-ps"
 )
 
 var sig = syscall.SIGINT
