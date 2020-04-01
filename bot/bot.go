@@ -19,17 +19,23 @@ var (
 	cfg *Config
 )
 
-func Bot(cfgPath string, log *logger.Logger) {
+func Bot(cfgPath, token string, log *logger.Logger) {
 	//For some reason we don't automatically exit as planned when we return to main()
 	defer os.Exit(0)
 
 	Log = log
-	Log.Trace("--- Bot() ---")
+	Log.Trace("--- Bot(", cfgPath, ", [REDACTED], ", log, ") ---")
 
 	Log.Info("Loading configuration...")
 	cfg, err = NewConfig(cfgPath, ConfigTypeJSON)
 	if err != nil {
 		Log.Error("Error loading configuration: ", err)
 	}
-	Log.Debug("cfg: ", cfg)
+
+	if token != "" {
+		Log.Debug("Patching configuration with new token")
+		cfg.Discord.Token = token
+	}
+
+	Log.Info("Good-bye!")
 }
