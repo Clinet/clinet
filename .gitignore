@@ -1,0 +1,26 @@
+# Bot configuration
+config.json
+
+# Bot save states
+state/
+
+# Bot temporaries
+.update
+.restart
+crash.txt
+stacktrace.txt
+.firstrun
+
+# Output executables
+*.exe
+*.app
+*.old
+
+# Most probable output executables for Linux
+clinet
+
+# Log files
+*.log
+
+# OS leftovers
+desktop.ini
