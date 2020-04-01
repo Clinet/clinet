@@ -17,15 +17,20 @@ const (
 )
 
 type Config struct {
+	Discord CfgDiscord `json:"discord"`
 }
 
 //NewConfig creates a new configuration struct with the values in the configuration file
 func NewConfig(path string, cfgType ConfigType) (cfg *Config, err error) {
 	Log.Trace("--- NewConfig(", path, ", ", cfgType, ") ---")
+
+	cfg = &Config{}
+
 	switch cfgType {
 	case ConfigTypeJSON:
 		configJSON, err := ioutil.ReadFile(path)
 		if err != nil {
+			Log.Error("Error reading configuration file")
 			return nil, err
 		}
 
@@ -39,4 +44,14 @@ func NewConfig(path string, cfgType ConfigType) (cfg *Config, err error) {
 }
 func (cfg *Config) Load(path string) error {
 	return cfg.Load(path)
+}
+
+type CfgDiscord struct {
+	//Stuff for communication with Discord
+	Token string `json:"token"`
+
+	//Trust for Discord communication
+	DisplayName   string `json:"displayName"`   //The display name for communicating on Discord
+	OwnerID       string `json:"ownerID"`       //The user ID of the bot owner on Discord
+	CommandPrefix string `json:"commandPrefix"` //The command prefix to use when invoking the bot on Discord
 }

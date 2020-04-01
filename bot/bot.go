@@ -11,14 +11,25 @@ import (
 	"os"
 )
 
-var Log *logger.Logger
+//Global error value because functions are mean
+var err error
 
-func Bot(log *logger.Logger) {
+var (
+	Log *logger.Logger //Stores the logger for the session
+	cfg *Config
+)
+
+func Bot(cfgPath string, log *logger.Logger) {
 	//For some reason we don't automatically exit as planned when we return to main()
 	defer os.Exit(0)
 
 	Log = log
 	Log.Trace("--- Bot() ---")
 
-	Log.Warn("Bot mode is not yet implemented!")
+	Log.Info("Loading configuration...")
+	cfg, err = NewConfig(cfgPath, ConfigTypeJSON)
+	if err != nil {
+		Log.Error("Error loading configuration: ", err)
+	}
+	Log.Debug("cfg: ", cfg)
 }

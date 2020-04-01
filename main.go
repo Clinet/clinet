@@ -13,6 +13,7 @@ import (
 
 var (
 	//Various command-line flags
+	cfgPath string  //Stores the path to the configuration file
 	verbosity int   //0 = default (info, warning, error), 1 = 0 + debug, 2 = 1 + trace
 	isBot bool      //if true, act as the bot process instead of the watchdog process
 	killOldBot bool //if true, search for dangling bot processes and kill them
@@ -25,6 +26,7 @@ var (
 
 func init() {
 	//Apply all command-line flags
+	flag.StringVar(&cfgPath, "config", "config.json", "the path to the configuration file")
 	flag.IntVar(&verbosity, "verbosity", 0, "sets the verbosity level; 0 = default, 1 = debug, 2 = trace")
 	flag.BoolVar(&isBot, "isBot", false, "act as the bot process instead of the watchdog process")
 	flag.BoolVar(&killOldBot, "killOldBot", false, "search for dangling bot processes and kill them")
@@ -46,7 +48,7 @@ func main() {
 	}
 
 	if isBot {
-		bot.Bot(log)
+		bot.Bot(cfgPath, log)
 	} else {
 		doWatchdog()
 	}
