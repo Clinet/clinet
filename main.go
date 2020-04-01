@@ -1,9 +1,14 @@
 package main
 
 import (
+	//The core essentials for Clinet
+	"github.com/Clinet/clinet/bot" //Holds the essential bot things
 
-	flag "github.com/spf13/pflag"
-	"github.com/Clinet/clinet/utils/logger"
+	//Logging
+	"github.com/Clinet/clinet/utils/logger" //Advanced logging
+
+	//Additional things
+	flag "github.com/spf13/pflag" //Unix-like command-line flags
 )
 
 var (
@@ -11,11 +16,11 @@ var (
 	verbosity int   //0 = default (info, warning, error), 1 = 0 + debug, 2 = 1 + trace
 	isBot bool      //if true, act as the bot process instead of the watchdog process
 	killOldBot bool //if true, search for dangling bot processes and kill them
-	watchdogPID int   //stores the watchdog PID if acting as a bot process, used as the exception when killing old bot processes
+	watchdogPID int //stores the watchdog PID if acting as a bot process, used as the exception when killing old bot processes
 
 	//Logging
-	log *logger.Logger
-	logPrefix string = "WATCHDOG"
+	log *logger.Logger            //Holds the advanced logger's logging methods
+	logPrefix string = "WATCHDOG" //Default to watchdog as it's the initial process
 )
 
 func init() {
@@ -28,7 +33,7 @@ func init() {
 
 	//Create the logger
 	if isBot {
-		logPrefix = "BOT"
+		logPrefix = "BOT" //We're the bot process, report as such
 	}
 	log = logger.NewLogger(logPrefix, verbosity)
 }
@@ -41,7 +46,7 @@ func main() {
 	}
 
 	if isBot {
-		doBot()
+		bot.Bot(log)
 	} else {
 		doWatchdog()
 	}

@@ -85,18 +85,25 @@ func isProcessRunning(pid int) bool {
 
 	process, err := os.FindProcess(pid)
 	if err != nil {
+		log.Debug("Error finding process with PID ", pid)
 		return false
 	}
 
 	if runtime.GOOS != "windows" {
-		return process.Signal(syscall.Signal(0)) == nil
+		log.Debug("Not running Windows, using alternative checker")
+
+		isRunning := process.Signal(syscall.Signal(0)) != nil
+		log.Debug("Process signal 0 response: ", isRunning)
+		return isRunning
 	}
 
 	processState, err := process.Wait()
 	if err != nil {
+		log.Debug("Error waiting on process")
 		return false
 	}
 	if processState.Exited() {
+		log.Debug("Process exited")
 		return false
 	}
 
