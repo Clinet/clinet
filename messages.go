@@ -246,7 +246,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			session.ChannelMessageDelete(message.ChannelID, message.ID)
 
 			//Reply with warning
-			msgWarning, _ := session.ChannelMessageSend(message.ChannelID, ":warning: <@"+message.Author.ID+">, please watch your language!")
+			msgWarning, _ := session.ChannelMessageSend(message.ChannelID, ":warning: <@!"+message.Author.ID+">, please watch your language!")
 
 			//Delete warning after x seconds if x > 0
 			if guildSettings[guild.ID].SwearFilter.WarningDeleteTimeout > 0 {

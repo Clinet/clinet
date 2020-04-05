@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"sort"
 
 	isoduration "github.com/channelmeter/iso8601duration"
-	"github.com/rylio/ytdl"
+//	"github.com/rylio/ytdl"
 	youtube "google.golang.org/api/youtube/v3"
+)
+
+var (
+	bg = context.Background()
 )
 
 // YouTube exports the methods required to access the YouTube service
@@ -32,7 +37,7 @@ func (*YouTube) TestURL(url string) (bool, error) {
 
 // GetMetadata returns the metadata for a given YouTube video URL
 func (*YouTube) GetMetadata(url string) (*Metadata, error) {
-	videoInfo, err := ytdl.GetVideoInfo(url)
+	videoInfo, err := botData.BotClients.YTDL.GetVideoInfo(bg, url)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +53,7 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 
 	format := formats[0]
 
-	videoURL, err := videoInfo.GetDownloadURL(format)
+	videoURL, err := botData.BotClients.YTDL.GetDownloadURL(bg, videoInfo, format)
 	if err != nil {
 		return nil, err
 	}

@@ -26,6 +26,7 @@ import (
 	xkcd "github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
+	"github.com/rylio/ytdl"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -158,6 +159,9 @@ func main() {
 				Error.Printf("Error initializing YouTube: %v", err)
 			} else {
 				botData.BotClients.YouTube = youtubeClient
+			}
+			botData.BotClients.YTDL = &ytdl.Client{
+				HTTPClient: httpClient,
 			}
 		}
 		if botData.BotOptions.UseGitHub {

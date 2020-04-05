@@ -17,6 +17,7 @@ import (
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	"github.com/rhnvrm/lyric-api-go"
+	"github.com/rylio/ytdl"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
 )
@@ -61,6 +62,7 @@ type BotClients struct {
 	Wolfram    *wolfram.Client
 	XKCD       *xkcd.Client
 	YouTube    *youtube.Service
+	YTDL       *ytdl.Client
 	Ninty      *fennel.AccountServerClient
 	FeedParser *gofeed.Parser
 }
