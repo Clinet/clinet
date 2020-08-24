@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"image"
@@ -51,24 +50,24 @@ func commandHewwo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 }
 
 func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	var buf bytes.Buffer
-	writer := bufio.NewWriter(&buf)
+	message := strings.Join(args, " ")
 
-	z := zalgo.NewCorrupter(writer)
+	var buf bytes.Buffer
+
+	z := zalgo.NewCorrupter(&buf)
 	z.Zalgo = func(n int, r rune, z *zalgo.Corrupter) bool {
 		z.Up += 0.01
 		z.Middle += complex(0.01, 0.01)
 		z.Down += complex(real(z.Down)*0.1, 0)
 		return false
 	}
-	z.Up = complex(0, 0.2)
-	z.Middle = complex(0, 0.2)
+	z.Up = complex(0, 0.1)
+	z.Middle = complex(0, 0.1)
 	z.Down = complex(0.001, 0.3)
 
-	fmt.Fprint(writer, []byte(strings.Join(args, " ")))
 	zalgo := buf.String()
 
-	return NewGenericEmbed("Zalgo", string(zalgo))
+	return NewGenericEmbed("Zalgo", zalgo)
 }
 
 func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
