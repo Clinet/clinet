@@ -59,6 +59,9 @@ var (
 
 	//Contains the current uptime
 	uptime time.Time
+
+	//Whether or not discordReady() has been called
+	isReady bool
 )
 
 var (
@@ -299,6 +302,9 @@ func main() {
 }
 
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
+	if isReady {
+		return //We don't want to re-init if we have to reconnect to Discord
+	}
 	defer recoverPanic()
 
 	Debug.Println("Setting bot username from Discord state...")
@@ -350,6 +356,7 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 		}
 	}
 
+	isReady = true
 	Info.Println("Discord is ready!")
 }
 
