@@ -343,7 +343,9 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 		}
 	}
 	if stars == 0 || stars < starboards[channel.GuildID].MinimumStars {
-		for i, starboardEntry := range starboards[channel.GuildID].StarboardEntries {
+		for i := 0; i < len(starboards[channel.GuildID].StarboardEntries); i++ {
+			starboardEntry := starboards[channel.GuildID].StarboardEntries[i]
+
 			if starboardEntry.SourceMessageID == message.ID {
 				if channel.NSFW {
 					session.ChannelMessageDelete(starboards[channel.GuildID].NSFWChannelID, starboardEntry.StarboardMessageID)
@@ -351,8 +353,7 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 					session.ChannelMessageDelete(starboards[channel.GuildID].ChannelID, starboardEntry.StarboardMessageID)
 				}
 
-				starboards[channel.GuildID].StarboardEntries[i] = starboards[channel.GuildID].StarboardEntries[len(starboards[channel.GuildID].StarboardEntries)-1]
-				starboards[channel.GuildID].StarboardEntries = starboards[channel.GuildID].StarboardEntries[:len(starboards[channel.GuildID].StarboardEntries)-1]
+				starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1:]...)
 
 				return
 			}
