@@ -404,7 +404,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 	fields := []*discordgo.MessageEmbedField{}
 	for i := 0; i < len(results); i++ {
-		videoInfo, err := ytdl.GetVideoInfo(bg, "https://youtube.com/watch?v=" + results[i].Id.VideoId)
+		videoInfo, err := ytdl.GetVideoInfo(bg, "https://youtube.com/watch?v="+results[i].Id.VideoId)
 		if err != nil {
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this video](https://youtube.com/watch?v=" + results[i].Id.VideoId + ")"})
 		} else {
@@ -1008,32 +1008,34 @@ func commandQueue(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	}
 
 	queueList := make([]*discordgo.MessageEmbedField, 0)
-	for queueEntryNumber, queueEntry := range voiceData[env.Guild.ID].Entries {
-		displayNumber := strconv.Itoa(queueEntryNumber + 1)
+	if len(voiceData[env.Guild.ID].Entries) > 0 {
+		for queueEntryNumber, queueEntry := range voiceData[env.Guild.ID].Entries {
+			displayNumber := strconv.Itoa(queueEntryNumber + 1)
 
-		queueEntryFieldName := "Entry #" + displayNumber + " - " + queueEntry.ServiceName
-		queueEntryFieldValue := ""
+			queueEntryFieldName := "Entry #" + displayNumber + " - " + queueEntry.ServiceName
+			queueEntryFieldValue := ""
 
-		track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
-		if len(queueEntry.Metadata.Artists) > 0 {
-			track += " by [" + queueEntry.Metadata.Artists[0].Name + "](" + queueEntry.Metadata.Artists[0].URL + ")"
-			if len(queueEntry.Metadata.Artists) > 1 {
-				track += " ft. " + "[" + queueEntry.Metadata.Artists[1].Name + "](" + queueEntry.Metadata.Artists[1].URL + ")"
-				if len(queueEntry.Metadata.Artists) > 2 {
-					for i, artist := range queueEntry.Metadata.Artists[2:] {
-						track += ", "
-						if (i + 3) == len(queueEntry.Metadata.Artists) {
-							track += " and "
+			track := "[" + queueEntry.Metadata.Title + "](" + queueEntry.Metadata.DisplayURL + ")"
+			if len(queueEntry.Metadata.Artists) > 0 {
+				track += " by [" + queueEntry.Metadata.Artists[0].Name + "](" + queueEntry.Metadata.Artists[0].URL + ")"
+				if len(queueEntry.Metadata.Artists) > 1 {
+					track += " ft. " + "[" + queueEntry.Metadata.Artists[1].Name + "](" + queueEntry.Metadata.Artists[1].URL + ")"
+					if len(queueEntry.Metadata.Artists) > 2 {
+						for i, artist := range queueEntry.Metadata.Artists[2:] {
+							track += ", "
+							if (i + 3) == len(queueEntry.Metadata.Artists) {
+								track += " and "
+							}
+							track += "[" + artist.Name + "](" + artist.URL + ")"
 						}
-						track += "[" + artist.Name + "](" + artist.URL + ")"
 					}
 				}
 			}
+
+			queueEntryFieldValue = fmt.Sprintf("%s\nRequested by <@!%s>", track, queueEntry.Requester.ID)
+
+			queueList = append(queueList, &discordgo.MessageEmbedField{Name: queueEntryFieldName, Value: queueEntryFieldValue})
 		}
-
-		queueEntryFieldValue = fmt.Sprintf("%s\nRequested by <@!%s>", track, queueEntry.Requester.ID)
-
-		queueList = append(queueList, &discordgo.MessageEmbedField{Name: queueEntryFieldName, Value: queueEntryFieldValue})
 	}
 
 	if len(queueList) <= 0 {
