@@ -364,7 +364,8 @@ func discordMessageReactionRemove(session *discordgo.Session, reaction *discordg
 	entry := createStarboardEntry(stars, message, channel)
 
 	//Check to see if the entry already exists, and if so, update it instead of create a new one
-	for i, starboardEntry := range starboards[channel.GuildID].StarboardEntries {
+	for i := 0; i < len(starboards[channel.GuildID].StarboardEntries); i++ {
+		starboardEntry := starboards[channel.GuildID].StarboardEntries[i]
 		if starboardEntry.SourceMessageID == message.ID {
 			if channel.NSFW {
 				session.ChannelMessageEditEmbed(starboards[channel.GuildID].NSFWChannelID, starboardEntry.StarboardMessageID, entry)
@@ -432,14 +433,16 @@ func discordMessageReactionRemoveAll(session *discordgo.Session, reaction *disco
 		return
 	}
 
-	for i, starboardEntry := range starboards[channel.GuildID].StarboardEntries {
+	for i := 0; i < len(starboards[channel.GuildID].StarboardEntries); i++ {
+		starboardEntry := starboards[channel.GuildID].StarboardEntries[i]
+
 		if starboardEntry.SourceMessageID == message.ID {
 			if channel.NSFW {
 				session.ChannelMessageDelete(starboards[channel.GuildID].NSFWChannelID, starboardEntry.StarboardMessageID)
 			} else {
 				session.ChannelMessageDelete(starboards[channel.GuildID].ChannelID, starboardEntry.StarboardMessageID)
 			}
-			starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1])
+			starboards[channel.GuildID].StarboardEntries = append(starboards[channel.GuildID].StarboardEntries[:i], starboards[channel.GuildID].StarboardEntries[i+1:]...)
 			return
 		}
 	}

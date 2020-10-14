@@ -65,6 +65,7 @@ func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	z.Middle = complex(0, 0.1)
 	z.Down = complex(0.001, 0.3)
 
+	fmt.Fprintln(z, message)
 	zalgo := buf.String()
 
 	return NewGenericEmbed("Zalgo", zalgo)
