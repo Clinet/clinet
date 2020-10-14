@@ -386,10 +386,11 @@ func (voice *Voice) Silent() {
 
 // IsConnected returns whether or not a voice connection exists
 func (voice *Voice) IsConnected() bool {
-	if voice.VoiceConnection != nil {
-		return true
+	if voice == nil {
+		return false
 	}
-	return false
+
+	return voice.VoiceConnection != nil
 }
 
 // IsStreaming returns whether a media is playing
