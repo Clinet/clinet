@@ -7,27 +7,27 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-//GoogleAssistant holds a Google Assistant query service
-type GoogleAssistant struct {
+//QueryServiceGoogleAssistant holds a Google Assistant query service
+type QueryServiceGoogleAssistant struct {
 }
 
 //GetName returns "Google Assistant"
-func (*GoogleAssistant) GetName() string {
+func (*QueryServiceGoogleAssistant) GetName() string {
 	return "Google Assistant"
 }
 
 //GetColor returns 0x0F9D58
-func (*GoogleAssistant) GetColor() int {
+func (*QueryServiceGoogleAssistant) GetColor() int {
 	return 0x0F9D58
 }
 
 //GetIconURL returns "https://files.joshuadoes.com/googleassistant_transparent.png"
-func (*GoogleAssistant) GetIconURL() string {
+func (*QueryServiceGoogleAssistant) GetIconURL() string {
 	return "https://files.joshuadoes.com/googleassistant_transparent.png"
 }
 
 //Query returns a Google Assistant response to a given query
-func (*GoogleAssistant) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
+func (*QueryServiceGoogleAssistant) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
 	Debug.Println("[Google Assistant] Spawning a conversation...")
 	conversation, err := botData.BotClients.GoogleAssistant.NewConversation(time.Second * 240)
 	if err != nil {

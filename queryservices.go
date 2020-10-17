@@ -35,16 +35,16 @@ func initQueryServices() {
 	botData.QueryServices = make([]QueryService, 0)
 
 	if botData.BotOptions.UseCustomResponses {
-		botData.QueryServices = append(botData.QueryServices, &CustomResponse{})
+		botData.QueryServices = append(botData.QueryServices, &QueryServiceCustomResponse{})
 	}
 	if gcpAuthTokenFile != "" {
-		botData.QueryServices = append(botData.QueryServices, &GoogleAssistant{})
+		botData.QueryServices = append(botData.QueryServices, &QueryServiceGoogleAssistant{})
 	}
 	if botData.BotOptions.UseDuckDuckGo {
-		botData.QueryServices = append(botData.QueryServices, &DuckDuckGo{})
+		botData.QueryServices = append(botData.QueryServices, &QueryServiceDuckDuckGo{})
 	}
 	if botData.BotOptions.UseWolframAlpha {
-		botData.QueryServices = append(botData.QueryServices, &WolframAlpha{})
+		botData.QueryServices = append(botData.QueryServices, &QueryServiceWolframAlpha{})
 	}
 }
 

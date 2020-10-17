@@ -8,22 +8,27 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type WolframAlpha struct {
+//QueryServiceWolframAlpha exports the methods required to use Wolfram Alpha
+type QueryServiceWolframAlpha struct {
 }
 
-func (*WolframAlpha) GetName() string {
+//GetName returns "Wolfram|Alpha"
+func (*QueryServiceWolframAlpha) GetName() string {
 	return "Wolfram|Alpha"
 }
 
-func (*WolframAlpha) GetColor() int {
+//GetColor returns 0xDA0E1A
+func (*QueryServiceWolframAlpha) GetColor() int {
 	return 0xDA0E1A
 }
 
-func (*WolframAlpha) GetIconURL() string {
+//GetIconURL returns "https://joshuadoes.com/WolframAlpha.png"
+func (*QueryServiceWolframAlpha) GetIconURL() string {
 	return "https://joshuadoes.com/WolframAlpha.png"
 }
 
-func (service *WolframAlpha) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
+//Query returns the response to a query
+func (service *QueryServiceWolframAlpha) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
 	Debug.Printf("[Wolfram|Alpha] Getting result for query [%s]...", query)
 	conversationResult, err := botData.BotClients.Wolfram.GetConversationalQuery(query, wolfram.Metric, env.WolframConversation)
 	if err != nil {

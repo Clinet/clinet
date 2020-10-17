@@ -8,22 +8,27 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type CustomResponse struct {
+//QueryServiceCustomResponse exports the methods required to respond to custom queries
+type QueryServiceCustomResponse struct {
 }
 
-func (*CustomResponse) GetName() string {
+//GetName returns "custom responses"
+func (*QueryServiceCustomResponse) GetName() string {
 	return "custom responses"
 }
 
-func (*CustomResponse) GetColor() int {
+//GetColor returns 0x1C1C1C
+func (*QueryServiceCustomResponse) GetColor() int {
 	return 0x1C1C1C
 }
 
-func (*CustomResponse) GetIconURL() string {
+//GetIconURL returns nothing
+func (*QueryServiceCustomResponse) GetIconURL() string {
 	return ""
 }
 
-func (*CustomResponse) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
+//Query returns the response to a query
+func (*QueryServiceCustomResponse) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
 	//Initialize a local list of custom responses to be checked in order
 	customResponses := make([]CustomResponseQuery, 0)
 

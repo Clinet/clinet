@@ -6,22 +6,27 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type DuckDuckGo struct {
+//QueryServiceDuckDuckGo exports the methods required to use DuckDuckGo
+type QueryServiceDuckDuckGo struct {
 }
 
-func (*DuckDuckGo) GetName() string {
+//GetName returns "DuckDuckGo"
+func (*QueryServiceDuckDuckGo) GetName() string {
 	return "DuckDuckGo"
 }
 
-func (*DuckDuckGo) GetColor() int {
+//GetColor returns 0xDF5730
+func (*QueryServiceDuckDuckGo) GetColor() int {
 	return 0xDF5730
 }
 
-func (*DuckDuckGo) GetIconURL() string {
+//GetIconURL returns "https://upload.wikimedia.org/wikipedia/en/9/90/The_DuckDuckGo_Duck.png"
+func (*QueryServiceDuckDuckGo) GetIconURL() string {
 	return "https://upload.wikimedia.org/wikipedia/en/9/90/The_DuckDuckGo_Duck.png"
 }
 
-func (*DuckDuckGo) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
+//Query returns the response to a query
+func (*QueryServiceDuckDuckGo) Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error) {
 	Debug.Printf("[DuckDuckGo] Getting result for [%s]...", query)
 	queryResult, err := botData.BotClients.DuckDuckGo.GetQueryResult(query)
 	if err != nil {
