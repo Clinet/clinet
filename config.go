@@ -7,16 +7,17 @@ import (
 
 	"github.com/mmcdole/gofeed"
 
-	"github.com/JoshuaDoes/duckduckgolang"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
 	"github.com/JoshuaDoes/go-wolfram"
+	gassist "github.com/JoshuaDoes/google-assistant/v1alpha2"
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 	"github.com/jonas747/dca"
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
-	"github.com/rhnvrm/lyric-api-go"
+	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/rylio/ytdl"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
@@ -53,31 +54,32 @@ type BotData struct {
 
 // BotClients stores available clients for the bot
 type BotClients struct {
-	DuckDuckGo *duckduckgo.Client
-	GitHub     *github.Client
-	Imgur      imgur.Client
-	Lyrics     lyrics.Lyric
-	SoundCloud *soundcloud.Client
-	Spotify    *spotigo.Client
-	Wolfram    *wolfram.Client
-	XKCD       *xkcd.Client
-	YouTube    *youtube.Service
-	YTDL       *ytdl.Client
-	Ninty      *fennel.AccountServerClient
-	FeedParser *gofeed.Parser
+	GoogleAssistant gassist.Assistant
+	DuckDuckGo      *duckduckgo.Client
+	GitHub          *github.Client
+	Imgur           imgur.Client
+	Lyrics          lyrics.Lyric
+	SoundCloud      *soundcloud.Client
+	Spotify         *spotigo.Client
+	Wolfram         *wolfram.Client
+	XKCD            *xkcd.Client
+	YouTube         *youtube.Service
+	YTDL            *ytdl.Client
+	Ninty           *fennel.AccountServerClient
+	FeedParser      *gofeed.Parser
 }
 
 // BotKeys stores all bot keys for using external services
 type BotKeys struct {
-	DuckDuckGoAppName    string                   `json:"ddgAppName"`
-	GeniusAccessToken    string                   `json:"geniusAccessToken"`
-	ImgurClientID        string                   `json:"imgurClientID"`
-	SoundCloudClientID   string                   `json:"soundcloudClientID"`
-	SpotifyHost          string                   `json:"spotifyHost"`
-	SpotifyPass          string                   `json:"spotifyPass"`
-	WolframAppID         string                   `json:"wolframAppID"`
-	YouTubeAPIKey        string                   `json:"youtubeAPIKey"`
-	Ninty                fennel.ClientInformation `json:"ninty"`
+	DuckDuckGoAppName  string                   `json:"ddgAppName"`
+	GeniusAccessToken  string                   `json:"geniusAccessToken"`
+	ImgurClientID      string                   `json:"imgurClientID"`
+	SoundCloudClientID string                   `json:"soundcloudClientID"`
+	SpotifyHost        string                   `json:"spotifyHost"`
+	SpotifyPass        string                   `json:"spotifyPass"`
+	WolframAppID       string                   `json:"wolframAppID"`
+	YouTubeAPIKey      string                   `json:"youtubeAPIKey"`
+	Ninty              fennel.ClientInformation `json:"ninty"`
 }
 
 // BotOptions stores all bot options
@@ -105,7 +107,7 @@ type BotOptions struct {
 	FeedFrequency      int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
 }
 
-// API stores configurations for the API
+// APIConfig stores configurations for the API
 type APIConfig struct {
 	Enabled bool   `json:"enabled"`
 	Host    string `json:"host"`

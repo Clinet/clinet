@@ -27,7 +27,7 @@ func spawnBot() int {
 	}
 	os.Remove(os.Args[0] + ".old")
 
-	botProcess := exec.Command(os.Args[0], "-bot", "true", "-masterpid", strconv.Itoa(os.Getpid()), "-debug", debug)
+	botProcess := exec.Command(os.Args[0], "-bot", "true", "-config", configFile, "-masterpid", strconv.Itoa(os.Getpid()), "-debug", debug, "-gcptoken", gcpAuthTokenFile)
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	err := botProcess.Start()

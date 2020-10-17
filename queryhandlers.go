@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// QueryService is the interface that a queryable service must satisfy
 type QueryService interface {
 	GetName() string
 	GetColor() int
@@ -14,6 +15,7 @@ type QueryService interface {
 	Query(query string, env *QueryEnvironment) (*discordgo.MessageEmbed, error)
 }
 
+// QueryEnvironment holds the details about a query
 type QueryEnvironment struct {
 	Channel *discordgo.Channel //The channel the command was executed in
 	Guild   *discordgo.Guild   //The guild the command was executed in
@@ -34,6 +36,9 @@ func initQueryServices() {
 
 	if botData.BotOptions.UseCustomResponses {
 		botData.QueryServices = append(botData.QueryServices, &CustomResponse{})
+	}
+	if gcpAuthTokenFile != "" {
+		botData.QueryServices = append(botData.QueryServices, &GoogleAssistant{})
 	}
 	if botData.BotOptions.UseDuckDuckGo {
 		botData.QueryServices = append(botData.QueryServices, &DuckDuckGo{})

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	soundcloud "github.com/JoshuaDoes/go-soundcloud"
 	wolfram "github.com/JoshuaDoes/go-wolfram"
+	gassist "github.com/JoshuaDoes/google-assistant/v1alpha2"
 	"github.com/JoshuaDoes/spotigo"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
@@ -65,7 +67,9 @@ var (
 )
 
 var (
-	configFile  string
+	configFile       string
+	gcpAuthTokenFile string
+
 	configIsBot string
 	masterPID   int
 	killOldBot  string
@@ -73,7 +77,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configFile, "config", "config.json", "The location of the JSON-structured configuration file")
+	flag.StringVar(&configFile, "config", "config.json", "The path to the JSON-structured configuration file")
+	flag.StringVar(&gcpAuthTokenFile, "gcptoken", "client_secret_XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com.json", "The path to the JSON-structured Google Cloud Platform authentication token")
 	flag.StringVar(&configIsBot, "bot", "false", "Whether or not to act as a bot")
 	flag.IntVar(&masterPID, "masterpid", -1, "The bot master's PID")
 	flag.StringVar(&killOldBot, "killold", "false", "Whether or not to kill an old bot process")
@@ -133,6 +138,31 @@ func main() {
 		}
 
 		Info.Println("Initializing clients for external services...")
+		if gcpAuthTokenFile != "" {
+			tokenJSON, err := ioutil.ReadFile(gcpAuthTokenFile)
+			if err != nil {
+				Error.Printf("Error initializing Google Assistant: %v", err)
+			} else {
+				token := &gassist.Token{}
+				err = json.Unmarshal(tokenJSON, &token)
+				if err != nil {
+					Error.Printf("Error initializing Google Assistant: %v", err)
+				} else {
+					googleAssistant, err := gassist.NewAssistant(token, nil, "en-US", gassist.NewDevice("254636LIVE0001", "assistant-for-clinet"), gassist.NewAudioSettings(1, 1, 16000, 16000, 100))
+					if err != nil {
+						Error.Printf("Error initializing Google Assistant: %v", err)
+					} else {
+						botData.BotClients.GoogleAssistant = googleAssistant
+
+						if googleAssistant.GetAuthURL() != "" {
+							Warning.Println("Please open the following URL to authenticate with Google Cloud Platform:", googleAssistant.GetAuthURL())
+							Warning.Println("When you've authenticated successfully, press enter to continue.")
+							bufio.NewReader(os.Stdin).ReadLine()
+						}
+					}
+				}
+			}
+		}
 		if botData.BotOptions.UseDuckDuckGo {
 			botData.BotClients.DuckDuckGo = &duckduckgo.Client{AppName: botData.BotKeys.DuckDuckGoAppName}
 		}
@@ -259,6 +289,8 @@ func main() {
 		// Note: This is done before shutting down as the shutdown process may yield
 		//       some errors with goroutines like voice playback
 		stateSaveAll()
+
+		botData.BotClients.GoogleAssistant.Close()
 
 		//Leave all voice channels
 		for _, voiceIDRow := range voiceData {
