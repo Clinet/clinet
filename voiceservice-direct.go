@@ -7,22 +7,22 @@ import (
 	"github.com/JoshuaDoes/goprobe"
 )
 
-// Direct exports the methods required to handle direct audio/video URLs
-type Direct struct {
+// VoiceServiceDirect exports the methods required to handle direct audio/video URLs
+type VoiceServiceDirect struct {
 }
 
 // GetName returns the service's name
-func (*Direct) GetName() string {
+func (*VoiceServiceDirect) GetName() string {
 	return "Direct URL"
 }
 
 // GetColor returns the service's color
-func (*Direct) GetColor() int {
+func (*VoiceServiceDirect) GetColor() int {
 	return 0x1C1C1C
 }
 
 // TestURL tests if the given URL has an audio stream
-func (*Direct) TestURL(url string) (bool, error) {
+func (*VoiceServiceDirect) TestURL(url string) (bool, error) {
 	probe, err := goprobe.ProbeMedia(url)
 	if err != nil {
 		return false, nil
@@ -42,7 +42,7 @@ func (*Direct) TestURL(url string) (bool, error) {
 }
 
 // GetMetadata returns the metadata for a given direct audio/video URL
-func (*Direct) GetMetadata(url string) (*Metadata, error) {
+func (*VoiceServiceDirect) GetMetadata(url string) (*Metadata, error) {
 	probe, err := goprobe.ProbeMedia(url)
 	if err != nil {
 		return nil, err

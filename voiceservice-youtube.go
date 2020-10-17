@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	isoduration "github.com/channelmeter/iso8601duration"
-//	"github.com/rylio/ytdl"
+	//	"github.com/rylio/ytdl"
 	youtube "google.golang.org/api/youtube/v3"
 )
 
@@ -15,28 +15,28 @@ var (
 	bg = context.Background()
 )
 
-// YouTube exports the methods required to access the YouTube service
-type YouTube struct {
+// VoiceServiceYouTube exports the methods required to access the YouTube service
+type VoiceServiceYouTube struct {
 }
 
 // GetName returns the service's name
-func (*YouTube) GetName() string {
+func (*VoiceServiceYouTube) GetName() string {
 	return "YouTube"
 }
 
 // GetColor returns the service's color
-func (*YouTube) GetColor() int {
+func (*VoiceServiceYouTube) GetColor() int {
 	return 0xFF0000
 }
 
 // TestURL tests if the given URL is a YouTube video URL
-func (*YouTube) TestURL(url string) (bool, error) {
+func (*VoiceServiceYouTube) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("(?:https?:\\/\\/)?(?:www\\.)?youtu\\.?be(?:\\.com)?\\/?.*(?:watch|embed)?(?:.*v=|v\\/|\\/)(?:[\\w-_]+)", url)
 	return test, err
 }
 
 // GetMetadata returns the metadata for a given YouTube video URL
-func (*YouTube) GetMetadata(url string) (*Metadata, error) {
+func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
 	videoInfo, err := botData.BotClients.YTDL.GetVideoInfo(bg, url)
 	if err != nil {
 		return nil, err
@@ -90,6 +90,7 @@ func (*YouTube) GetMetadata(url string) (*Metadata, error) {
 	return metadata, nil
 }
 
+//YouTubeGetQuery returns YouTube search results
 func YouTubeGetQuery(query string) (string, error) {
 	call := botData.BotClients.YouTube.Search.List("id").
 		Q(query).
@@ -97,7 +98,7 @@ func YouTubeGetQuery(query string) (string, error) {
 
 	response, err := call.Do()
 	if err != nil {
-		return "", errors.New("Could not find any results for the specified query.")
+		return "", errors.New("could not find any results for the specified query")
 	}
 
 	for _, item := range response.Items {
@@ -107,11 +108,11 @@ func YouTubeGetQuery(query string) (string, error) {
 		}
 	}
 
-	return "", errors.New("Could not find a video result for the specified query.")
+	return "", errors.New("could not find a video result for the specified query")
 }
 
-//YouTube search results, interacted with via commands
-type YouTubeResultNav struct {
+//VoiceServiceYouTubeResultNav holds YouTube search results, interacted with via commands
+type VoiceServiceYouTubeResultNav struct {
 	//Used by struct functions
 	Query         string                  //The search query used to retrieve the current results
 	TotalResults  int64                   //The total amount of results for the current search query
@@ -125,7 +126,8 @@ type YouTubeResultNav struct {
 	MaxResults int64  //The total amount of results per page
 }
 
-func (page *YouTubeResultNav) Prev() error {
+//Prev goes back to the previous page
+func (page *VoiceServiceYouTubeResultNav) Prev() error {
 	if page.PageNumber == 0 {
 		return errors.New("No search pages found")
 	}
@@ -151,7 +153,9 @@ func (page *YouTubeResultNav) Prev() error {
 
 	return nil
 }
-func (page *YouTubeResultNav) Next() error {
+
+//Next goes to the next page
+func (page *VoiceServiceYouTubeResultNav) Next() error {
 	if page.PageNumber == 0 {
 		return errors.New("No search pages found")
 	}
@@ -177,13 +181,17 @@ func (page *YouTubeResultNav) Next() error {
 
 	return nil
 }
-func (page *YouTubeResultNav) GetResults() ([]*youtube.SearchResult, error) {
+
+//GetResults returns the current search results
+func (page *VoiceServiceYouTubeResultNav) GetResults() ([]*youtube.SearchResult, error) {
 	if len(page.Results) == 0 {
 		return nil, errors.New("No search results found")
 	}
 	return page.Results, nil
 }
-func (page *YouTubeResultNav) Search(query string) error {
+
+//Search starts a search and stores the results
+func (page *VoiceServiceYouTubeResultNav) Search(query string) error {
 	if page.MaxResults == 0 {
 		page.MaxResults = int64(botData.BotOptions.YouTubeMaxResults)
 	}

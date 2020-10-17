@@ -10,8 +10,8 @@ import (
 type GuildData struct {
 	sync.Mutex //This struct gets accessed very repeatedly throughout various goroutines so we need a mutex to prevent race conditions
 
-	Queries              map[string]*Query                `json:"queries,omitempty"`
-	YouTubeResults       map[string]*YouTubeResultNav     `json:"youtubeResults,omitempty"`
-	SpotifyResults       map[string]*SpotifyResultNav     `json:"spotifyResults,omitempty"`
-	WolframConversations map[string]*wolfram.Conversation `json:"wolframConversations,omitempty"`
+	Queries              map[string]*Query                        `json:"queries,omitempty"`
+	YouTubeResults       map[string]*VoiceServiceYouTubeResultNav `json:"youtubeResults,omitempty"`
+	SpotifyResults       map[string]*VoiceServiceSpotifyResultNav `json:"spotifyResults,omitempty"`
+	WolframConversations map[string]*wolfram.Conversation         `json:"wolframConversations,omitempty"`
 }

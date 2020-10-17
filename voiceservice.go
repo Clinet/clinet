@@ -24,11 +24,11 @@ type VoiceService interface {
 func initVoiceServices() {
 	botData.VoiceServices = make([]VoiceService, 0)
 
-	botData.VoiceServices = append(botData.VoiceServices, &YouTube{})
-	botData.VoiceServices = append(botData.VoiceServices, &SoundCloud{})
-	botData.VoiceServices = append(botData.VoiceServices, &Spotify{})
-	botData.VoiceServices = append(botData.VoiceServices, &Bandcamp{})
-	botData.VoiceServices = append(botData.VoiceServices, &Direct{})
+	botData.VoiceServices = append(botData.VoiceServices, &VoiceServiceYouTube{})
+	botData.VoiceServices = append(botData.VoiceServices, &VoiceServiceSoundCloud{})
+	botData.VoiceServices = append(botData.VoiceServices, &VoiceServiceSpotify{})
+	botData.VoiceServices = append(botData.VoiceServices, &VoiceServiceBandcamp{})
+	botData.VoiceServices = append(botData.VoiceServices, &VoiceServiceDirect{})
 }
 
 func createQueueEntry(url string) (*QueueEntry, error) {

@@ -9,28 +9,28 @@ import (
 	"github.com/JoshuaDoes/spotigo"
 )
 
-// Spotify exports the methods required to access the Spotify service
-type Spotify struct {
+// VoiceServiceSpotify exports the methods required to access the Spotify service
+type VoiceServiceSpotify struct {
 }
 
 // GetName returns the service's name
-func (*Spotify) GetName() string {
+func (*VoiceServiceSpotify) GetName() string {
 	return "Spotify"
 }
 
 // GetColor returns the service's color
-func (*Spotify) GetColor() int {
+func (*VoiceServiceSpotify) GetColor() int {
 	return 0x1DB954
 }
 
 // TestURL tests if the given URL is a Spotify track URL
-func (*Spotify) TestURL(url string) (bool, error) {
+func (*VoiceServiceSpotify) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^(https:\\/\\/open.spotify.com\\/track\\/|spotify:track:)([a-zA-Z0-9]+)(.*)$", url)
 	return test, err
 }
 
 // GetMetadata returns the metadata for a given Spotify track URL
-func (*Spotify) GetMetadata(url string) (*Metadata, error) {
+func (*VoiceServiceSpotify) GetMetadata(url string) (*Metadata, error) {
 	if strings.HasPrefix(url, "spotify:track:") {
 		newURL := "https://open.spotify.com/track/" + strings.TrimPrefix(url, "spotify:track:")
 		url = newURL
@@ -61,8 +61,8 @@ func (*Spotify) GetMetadata(url string) (*Metadata, error) {
 	return metadata, nil
 }
 
-//Spotify search results, interacted with via commands
-type SpotifyResultNav struct {
+//VoiceServiceSpotifyResultNav returns Spotify search results, interacted with via commands
+type VoiceServiceSpotifyResultNav struct {
 	Query        string
 	TotalResults int
 	AllResults   []spotigo.SpotigoSearchHit //All results
@@ -83,7 +83,8 @@ type SpotifyResultNav struct {
 	GuildID string //To know what guild this page belongs to
 }
 
-func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
+//GetResults returns the current results
+func (page *VoiceServiceSpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
 	if page == nil {
 		return nil, errors.New("Page not initialized")
 	}
@@ -93,7 +94,9 @@ func (page *SpotifyResultNav) GetResults() ([]spotigo.SpotigoSearchHit, error) {
 	}
 	return page.Results, nil
 }
-func (page *SpotifyResultNav) Search(query string) error {
+
+//Search starts a search and stores the search results
+func (page *VoiceServiceSpotifyResultNav) Search(query string) error {
 	if page == nil {
 		return errors.New("Page not initialized")
 	}
@@ -144,7 +147,9 @@ func (page *SpotifyResultNav) Search(query string) error {
 
 	return nil
 }
-func (page *SpotifyResultNav) Playlist(url string) error {
+
+//Playlist loads a Spotify playlist into the results
+func (page *VoiceServiceSpotifyResultNav) Playlist(url string) error {
 	if page == nil {
 		return errors.New("Page not initialized")
 	}
@@ -227,7 +232,9 @@ func (page *SpotifyResultNav) Playlist(url string) error {
 
 	return nil
 }
-func (page *SpotifyResultNav) Prev() error {
+
+//Prev goes back to the previous page
+func (page *VoiceServiceSpotifyResultNav) Prev() error {
 	if page == nil {
 		return errors.New("Page not initialized")
 	}
@@ -267,7 +274,9 @@ func (page *SpotifyResultNav) Prev() error {
 
 	return nil
 }
-func (page *SpotifyResultNav) Next() error {
+
+//Next goes to the next page
+func (page *VoiceServiceSpotifyResultNav) Next() error {
 	if page == nil {
 		return errors.New("Page not initialized")
 	}
@@ -307,7 +316,9 @@ func (page *SpotifyResultNav) Next() error {
 
 	return nil
 }
-func (page *SpotifyResultNav) Jump(pageNumber int) error {
+
+//Jump jumps to a page number
+func (page *VoiceServiceSpotifyResultNav) Jump(pageNumber int) error {
 	if page == nil {
 		return errors.New("Page not initialized")
 	}

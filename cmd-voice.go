@@ -288,7 +288,7 @@ func commandShuffle(args []string, env *CommandEnvironment) *discordgo.MessageEm
 func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	VoiceInit(env.Guild.ID)
 
-	page := &YouTubeResultNav{}
+	page := &VoiceServiceYouTubeResultNav{}
 
 	switch args[0] {
 	case "search", "s":
@@ -298,10 +298,10 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 
 		if guildData[env.Guild.ID].YouTubeResults == nil {
-			guildData[env.Guild.ID].YouTubeResults = make(map[string]*YouTubeResultNav)
+			guildData[env.Guild.ID].YouTubeResults = make(map[string]*VoiceServiceYouTubeResultNav)
 		}
 
-		guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] = &YouTubeResultNav{}
+		guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID] = &VoiceServiceYouTubeResultNav{}
 
 		page = guildData[env.Guild.ID].YouTubeResults[env.Message.Author.ID]
 		err := page.Search(query)
@@ -422,7 +422,7 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	VoiceInit(env.Guild.ID)
 
-	page := &SpotifyResultNav{}
+	page := &VoiceServiceSpotifyResultNav{}
 
 	switch args[0] {
 	case "search", "s":
@@ -432,10 +432,10 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 
 		if guildData[env.Guild.ID].SpotifyResults == nil {
-			guildData[env.Guild.ID].SpotifyResults = make(map[string]*SpotifyResultNav)
+			guildData[env.Guild.ID].SpotifyResults = make(map[string]*VoiceServiceSpotifyResultNav)
 		}
 
-		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &SpotifyResultNav{}
+		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &VoiceServiceSpotifyResultNav{}
 
 		page = guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID]
 		err := page.Search(query)
@@ -449,10 +449,10 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 		}
 
 		if guildData[env.Guild.ID].SpotifyResults == nil {
-			guildData[env.Guild.ID].SpotifyResults = make(map[string]*SpotifyResultNav)
+			guildData[env.Guild.ID].SpotifyResults = make(map[string]*VoiceServiceSpotifyResultNav)
 		}
 
-		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &SpotifyResultNav{}
+		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID] = &VoiceServiceSpotifyResultNav{}
 		guildData[env.Guild.ID].SpotifyResults[env.Message.Author.ID].GuildID = env.Guild.ID
 
 		waitEmbed := NewEmbed().

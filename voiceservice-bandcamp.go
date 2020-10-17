@@ -20,28 +20,28 @@ import (
 
 var regexBandcampArtist *regexp.Regexp = regexp.MustCompile("(?i)http(?:.*)://(.*).bandcamp.com(?:.*)")
 
-// Bandcamp exports the methods required to access the Bandcamp service
-type Bandcamp struct {
+// VoiceServiceBandcamp exports the methods required to access the Bandcamp service
+type VoiceServiceBandcamp struct {
 }
 
 // GetName returns the service's name
-func (*Bandcamp) GetName() string {
+func (*VoiceServiceBandcamp) GetName() string {
 	return "Bandcamp"
 }
 
 // GetColor returns the service's color
-func (*Bandcamp) GetColor() int {
+func (*VoiceServiceBandcamp) GetColor() int {
 	return 0x629AA9
 }
 
 // TestURL tests if the given URL is a Bandcamp album or track URL
-func (*Bandcamp) TestURL(url string) (bool, error) {
+func (*VoiceServiceBandcamp) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^https://[a-z0-9\\\\-]+?\\.bandcamp\\.com/(track|album)/[a-z0-9\\\\-]+?/?$", url)
 	return test, err
 }
 
 // GetMetadata returns the metadata for a given Bandcamp track URL
-func (*Bandcamp) GetMetadata(url string) (*Metadata, error) {
+func (*VoiceServiceBandcamp) GetMetadata(url string) (*Metadata, error) {
 	album, err := bandcampGetAlbum(url)
 	if err != nil {
 		return nil, err
@@ -71,17 +71,19 @@ func (*Bandcamp) GetMetadata(url string) (*Metadata, error) {
 	return metadata, nil
 }
 
-type bandcampAlbum struct {
+//VoiceServiceBandcampAlbum holds a Bandcamp album
+type VoiceServiceBandcampAlbum struct {
 	Artist string `json:"artist"`
 	ArtID  int    `json:"art_id"`
 	Info   struct {
 		Title string `json:"title"`
 	} `json:"current"`
-	Tracks []*bandcampTrack `json:"trackinfo"`
-	URL    string           `json:"url"`
+	Tracks []*VoiceServiceBandcampTrack `json:"trackinfo"`
+	URL    string                       `json:"url"`
 }
 
-type bandcampTrack struct {
+//VoiceServiceBandcampTrack holds a Bandcamp track
+type VoiceServiceBandcampTrack struct {
 	Duration float64 `json:"duration"`
 	Files    struct {
 		MP3128 string `json:"mp3-128"`
@@ -90,7 +92,7 @@ type bandcampTrack struct {
 	TitleLink string `json:"title_link"`
 }
 
-func bandcampGetAlbum(url string) (*bandcampAlbum, error) {
+func bandcampGetAlbum(url string) (*VoiceServiceBandcampAlbum, error) {
 	_, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -115,7 +117,7 @@ func bandcampGetAlbum(url string) (*bandcampAlbum, error) {
 		return nil, err
 	}
 
-	var album *bandcampAlbum
+	var album *VoiceServiceBandcampAlbum
 
 	albumInfoJSON, err := json.MarshalIndent(albumInfo, "", "\t")
 	if err != nil {

@@ -8,28 +8,28 @@ import (
 	"github.com/JoshuaDoes/goprobe"
 )
 
-// SoundCloud exports the methods required to access the SoundCloud service
-type SoundCloud struct {
+// VoiceServiceSoundCloud exports the methods required to access the SoundCloud service
+type VoiceServiceSoundCloud struct {
 }
 
 // GetName returns the service's name
-func (*SoundCloud) GetName() string {
+func (*VoiceServiceSoundCloud) GetName() string {
 	return "SoundCloud"
 }
 
 // GetColor returns the service's color
-func (*SoundCloud) GetColor() int {
+func (*VoiceServiceSoundCloud) GetColor() int {
 	return 0xFF7700
 }
 
 // TestURL tests if the given URL is a SoundCloud track URL
-func (*SoundCloud) TestURL(url string) (bool, error) {
+func (*VoiceServiceSoundCloud) TestURL(url string) (bool, error) {
 	test, err := regexp.MatchString("^(https?:\\/\\/)?(www.)?(m\\.)?soundcloud\\.com\\/[\\w\\-\\.]+(\\/)+[\\w\\-\\.]+/?$", url)
 	return test, err
 }
 
 // GetMetadata returns the metadata for a given SoundCloud track URL
-func (*SoundCloud) GetMetadata(url string) (*Metadata, error) {
+func (*VoiceServiceSoundCloud) GetMetadata(url string) (*Metadata, error) {
 	trackInfo, err := botData.BotClients.SoundCloud.GetTrackInfo(url)
 	if err != nil {
 		return nil, err
