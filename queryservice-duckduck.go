@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -46,6 +47,10 @@ func (*QueryServiceDuckDuckGo) Query(query string, env *QueryEnvironment) (*disc
 	if result == "" {
 		Debug.Println("[DuckDuckGo] Error getting allowed result from response")
 		return nil, errors.New("error getting allowed result from response")
+	}
+
+	for old, new := range botData.BotOptions.QueryResponseReplacements {
+		result = strings.ReplaceAll(result, old, new)
 	}
 
 	ddgEmbed := NewEmbed().

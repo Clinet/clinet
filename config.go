@@ -84,27 +84,28 @@ type BotKeys struct {
 
 // BotOptions stores all bot options
 type BotOptions struct {
-	MaxPingCount       int                `json:"maxPingCount"` //How many pings to test to determine the average ping
-	HelpMaxResults     int                `json:"helpMaxResults"`
-	SendTypingEvent    bool               `json:"sendTypingEvent"`
-	UseCustomResponses bool               `json:"useCustomResponses"`
-	UseDuckDuckGo      bool               `json:"useDuckDuckGo"`
-	UseFeed            bool               `json:"useFeed"`
-	UseGitHub          bool               `json:"useGitHub"`
-	UseImgur           bool               `json:"useImgur"`
-	UseLyrics          bool               `json:"useLyrics"`
-	UseNinty           bool               `json:"useNinty"`
-	UseSoundCloud      bool               `json:"useSoundCloud"`
-	UseSpotify         bool               `json:"useSpotify"`
-	UseWolframAlpha    bool               `json:"useWolframAlpha"`
-	UseXKCD            bool               `json:"useXKCD"`
-	UseYouTube         bool               `json:"useYouTube"`
-	WolframDeniedPods  []string           `json:"wolframDeniedPods"`
-	YouTubeMaxResults  int                `json:"youtubeMaxResults"`
-	SpotifyMaxResults  int                `json:"spotifyMaxResults"`
-	AudioEncoding      *dca.EncodeOptions `json:"audioEncoding"`
-	API                APIConfig          `json:"api"`
-	FeedFrequency      int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
+	QueryResponseReplacements map[string]string  `json:"queryResponseReplacements"` //The personal tidbits to censor with your choice of replacement, must be self-filled
+	MaxPingCount              int                `json:"maxPingCount"`              //How many pings to test to determine the average ping
+	HelpMaxResults            int                `json:"helpMaxResults"`
+	SendTypingEvent           bool               `json:"sendTypingEvent"`
+	UseCustomResponses        bool               `json:"useCustomResponses"`
+	UseDuckDuckGo             bool               `json:"useDuckDuckGo"`
+	UseFeed                   bool               `json:"useFeed"`
+	UseGitHub                 bool               `json:"useGitHub"`
+	UseImgur                  bool               `json:"useImgur"`
+	UseLyrics                 bool               `json:"useLyrics"`
+	UseNinty                  bool               `json:"useNinty"`
+	UseSoundCloud             bool               `json:"useSoundCloud"`
+	UseSpotify                bool               `json:"useSpotify"`
+	UseWolframAlpha           bool               `json:"useWolframAlpha"`
+	UseXKCD                   bool               `json:"useXKCD"`
+	UseYouTube                bool               `json:"useYouTube"`
+	WolframDeniedPods         []string           `json:"wolframDeniedPods"`
+	YouTubeMaxResults         int                `json:"youtubeMaxResults"`
+	SpotifyMaxResults         int                `json:"spotifyMaxResults"`
+	AudioEncoding             *dca.EncodeOptions `json:"audioEncoding"`
+	API                       APIConfig          `json:"api"`
+	FeedFrequency             int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
 }
 
 // APIConfig stores configurations for the API

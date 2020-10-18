@@ -53,8 +53,14 @@ func (service *QueryServiceWolframAlpha) Query(query string, env *QueryEnvironme
 		conversationResult.Result += "."
 	}
 
+	result := conversationResult.Result
+
+	for old, new := range botData.BotOptions.QueryResponseReplacements {
+		result = strings.ReplaceAll(result, old, new)
+	}
+
 	wolframEmbed := NewEmbed().
-		AddField(query, conversationResult.Result).MessageEmbed
+		AddField(query, result).MessageEmbed
 
 	return wolframEmbed, nil
 }

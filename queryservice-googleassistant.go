@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -47,6 +48,10 @@ func (*QueryServiceGoogleAssistant) Query(query string, env *QueryEnvironment) (
 	if result == "" {
 		Debug.Println("[Google Assistant] Error getting allowed result from response")
 		return nil, errors.New("error getting allowed result from response")
+	}
+
+	for old, new := range botData.BotOptions.QueryResponseReplacements {
+		result = strings.ReplaceAll(result, old, new)
 	}
 
 	gaEmbed := NewEmbed().
