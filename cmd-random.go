@@ -71,6 +71,30 @@ func commandZalgo(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 	return NewGenericEmbed("Zalgo", zalgo)
 }
 
+func commandTranslate(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	if getLanguageCode(args[0]) != "" {
+		if getLanguageCode(args[1]) != "" {
+			if len(args) > 2 {
+				translation, err := translateFrom(args[0], args[1], strings.Join(args[2:], " "))
+				if err != nil {
+					return NewErrorEmbed("Translate Error", fmt.Sprintf("Failed to translate: %v", err))
+				}
+				return NewGenericEmbed("Translation from "+getLanguageName(args[0])+" to "+getLanguageName(args[1]), translation)
+			}
+
+			return NewErrorEmbed("Translate Error", "You must specify the message to translate!")
+		}
+
+		translation, err := translate(args[0], strings.Join(args[1:], " "))
+		if err != nil {
+			return NewErrorEmbed("Translate Error", fmt.Sprintf("Failed to translate: %v", err))
+		}
+		return NewGenericEmbed("Translation to "+getLanguageName(args[0]), translation)
+	}
+
+	return NewErrorEmbed("Translate Error", "Unknown target language: "+args[0])
+}
+
 func commandScreenshot(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	if env.UpdatedMessageEvent {
 		return nil

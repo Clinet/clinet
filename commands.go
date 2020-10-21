@@ -85,6 +85,19 @@ func initCommands() {
 			{Name: "command", Description: "The command to view help for", ArgType: "string"},
 		},
 	}
+	botData.Commands["translate"] = &Command{
+		Function: commandTranslate,
+		HelpText: "Translates a given message to the specified language.",
+		RequiredArguments: []string{
+			"[source language]",
+			"(target language) message",
+		},
+		Arguments: []CommandArgument{
+			{Name: "source language", Description: "Optional, the language to translate from", ArgType: "string"},
+			{Name: "target language", Description: "The language to translate to", ArgType: "string"},
+			{Name: "message", Description: "The message to translate", ArgType: "string"},
+		},
+	}
 	botData.Commands["nnid"] = &Command{
 		Function: commandNNID,
 		HelpText: "Checks whether the specified NNID exists or not.",
@@ -552,6 +565,8 @@ func initCommands() {
 	botData.Commands["money"] = &Command{IsAlternateOf: "balance"}
 	botData.Commands["nightly"] = &Command{IsAlternateOf: "daily"}
 	botData.Commands["send"] = &Command{IsAlternateOf: "transfer"}
+	botData.Commands["googletranslate"] = &Command{IsAlternateOf: "translate"}
+	botData.Commands["gtranslate"] = &Command{IsAlternateOf: "translate"}
 
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
