@@ -59,7 +59,7 @@ func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
 	}
 
 	ytCall := youtube.NewVideosService(botData.BotClients.YouTube).
-		List("snippet,contentDetails").
+		List([]string{"snippet","contentDetails"}).
 		Id(videoInfo.ID)
 
 	ytResponse, err := ytCall.Do()
@@ -92,7 +92,7 @@ func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
 
 //YouTubeGetQuery returns YouTube search results
 func YouTubeGetQuery(query string) (string, error) {
-	call := botData.BotClients.YouTube.Search.List("id").
+	call := botData.BotClients.YouTube.Search.List([]string{"id"}).
 		Q(query).
 		MaxResults(50)
 
@@ -136,7 +136,7 @@ func (page *VoiceServiceYouTubeResultNav) Prev() error {
 	}
 
 	searchCall := botData.BotClients.YouTube.Search.
-		List("id").
+		List([]string{"id"}).
 		Q(page.Query).
 		MaxResults(page.MaxResults).
 		PageToken(page.PrevPageToken)
@@ -164,7 +164,7 @@ func (page *VoiceServiceYouTubeResultNav) Next() error {
 	}
 
 	searchCall := botData.BotClients.YouTube.Search.
-		List("id").
+		List([]string{"id"}).
 		Q(page.Query).
 		MaxResults(page.MaxResults).
 		PageToken(page.NextPageToken)
@@ -204,7 +204,7 @@ func (page *VoiceServiceYouTubeResultNav) Search(query string) error {
 	page.NextPageToken = ""
 
 	searchCall := botData.BotClients.YouTube.Search.
-		List("id").
+		List([]string{"id"}).
 		Q(query).
 		MaxResults(page.MaxResults).
 		Type("video")
