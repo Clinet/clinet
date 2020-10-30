@@ -388,6 +388,16 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 		}
 	}
 
+	if gcpAuthURL := botData.BotClients.GoogleAssistant.GetAuthURL(); gcpAuthURL != "" {
+		ownerPrivChannel, err := botData.DiscordSession.UserChannelCreate(botData.BotOwnerID)
+		if err != nil {
+			debugLog("An error occurred creating a private channel with the bot owner.", false)
+		} else {
+			ownerPrivChannelID := ownerPrivChannel.ID
+			botData.DiscordSession.ChannelMessageSend(ownerPrivChannelID, "Authenticate with the Google Assistant: "+gcpAuthURL)
+		}
+	}
+
 	isReady = true
 	Info.Println("Discord is ready!")
 }
