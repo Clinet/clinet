@@ -46,6 +46,7 @@ type Voice struct {
 	//Miscellaneous
 	TextChannelID string     `json:"textChannelID"` //The channel that was last used to interact with the voice session
 	done          chan error `json:"-"`             //Used to signal when streaming is done or other actions are performed
+	Started       bool       `json:"-"`             //If the playback session has started
 }
 
 // Connect connects to a given voice channel
@@ -95,16 +96,15 @@ func (voice *Voice) Disconnect() error {
 
 		//Leave the voice channel
 		err := voice.VoiceConnection.Disconnect()
-		if err != nil {
-			//There was an error leaving the voice channel
-			return errVoiceLeaveChannel
-		}
 
 		//Clear the old voice connection in memory
 		voice.VoiceConnection = nil
 
-		//Leaving the voice channel worked out fine
-		return nil
+		//Mark the voice session as stopped
+		voice.Started = false
+
+		//Return our error, if any
+		return err
 	}
 
 	//We're not in a voice channel right now
@@ -137,6 +137,9 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 
 	voice.Lock()
 
+	//Let others know we're beginning to play something
+	voice.Started = true
+
 	//Set the requested entry as now playing
 	voice.NowPlaying = &VoiceNowPlaying{Entry: queueEntry}
 
@@ -153,11 +156,13 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 
 	if msg != nil {
 		if msg == errVoiceStoppedManually {
+			voice.Started = false
 			return nil
 		}
 	}
 
 	if err != nil {
+		voice.Started = false
 		switch err {
 		case io.ErrUnexpectedEOF:
 			if msg != errVoiceSkippedManually {
@@ -397,6 +402,11 @@ func (voice *Voice) IsConnected() bool {
 func (voice *Voice) IsStreaming() bool {
 	//Return false if a voice connection does not exist
 	if !voice.IsConnected() {
+		return false
+	}
+
+	//Return false if the playback session hasn't started
+	if !voice.Started {
 		return false
 	}
 
