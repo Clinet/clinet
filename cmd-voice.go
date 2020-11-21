@@ -574,14 +574,18 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				}
 				queueEntry.Requester = env.Member.User
 
-				go voiceData[env.Guild.ID].Play(queueEntry, false)
+				if voiceData[env.Guild.ID].IsStreaming() {
+					voiceData[env.Guild.ID].QueueAdd(queueEntry)
+				} else {
+					go voiceData[env.Guild.ID].Play(queueEntry, true)
+				}
 
 				page.AddedSoFar++
 			}
 
 			page.AddingAll = false
 
-			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks to the queue.", 0x1DB954)
+			return NewGenericEmbedAdvanced("Spotify", "Finished adding all "+strconv.Itoa(page.AddedSoFar)+" tracks from the results to the queue.", 0x1DB954)
 		case "view":
 			foundVoiceChannel := false
 			for _, voiceState := range env.Guild.VoiceStates {
@@ -628,7 +632,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 				}
 				queueEntry.Requester = env.Member.User
 
-				go voiceData[env.Guild.ID].Play(queueEntry, false)
+				if voiceData[env.Guild.ID].IsStreaming() {
+					voiceData[env.Guild.ID].QueueAdd(queueEntry)
+				} else {
+					go voiceData[env.Guild.ID].Play(queueEntry, true)
+				}
 
 				page.AddedSoFar++
 			}
@@ -704,7 +712,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 					}
 					queueEntry.Requester = env.Member.User
 
-					go voiceData[env.Guild.ID].Play(queueEntry, false)
+					if voiceData[env.Guild.ID].IsStreaming() {
+						voiceData[env.Guild.ID].QueueAdd(queueEntry)
+					} else {
+						go voiceData[env.Guild.ID].Play(queueEntry, true)
+					}
 
 					page.AddedSoFar++
 				}
@@ -749,7 +761,11 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 						}
 						queueEntry.Requester = env.Member.User
 
-						go voiceData[env.Guild.ID].Play(queueEntry, false)
+						if voiceData[env.Guild.ID].IsStreaming() {
+							voiceData[env.Guild.ID].QueueAdd(queueEntry)
+						} else {
+							go voiceData[env.Guild.ID].Play(queueEntry, true)
+						}
 
 						page.AddedSoFar++
 					}
