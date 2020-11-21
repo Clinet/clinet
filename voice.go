@@ -130,12 +130,12 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 		return nil
 	}
 
-	voice.Lock()
-
 	//Make sure we're allowed to speak
 	if voice.Muted {
 		return errVoicePlayMuted
 	}
+
+	voice.Lock()
 
 	//Set the requested entry as now playing
 	voice.NowPlaying = &VoiceNowPlaying{Entry: queueEntry}
