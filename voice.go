@@ -285,9 +285,6 @@ func (voice *Voice) updatePosition() {
 
 // Stop stops the playback of a media
 func (voice *Voice) Stop() error {
-	voice.Lock()
-	defer voice.Unlock()
-
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return errVoiceNotStreaming
@@ -308,9 +305,6 @@ func (voice *Voice) Stop() error {
 
 // Skip stops the encoding session of a playing media, allowing the play wrapper to continue to the next media in a queue
 func (voice *Voice) Skip() error {
-	voice.Lock()
-	defer voice.Unlock()
-
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return errVoiceNotStreaming
@@ -332,9 +326,6 @@ func (voice *Voice) Skip() error {
 
 // Pause pauses the playback of a media
 func (voice *Voice) Pause() (bool, error) {
-	voice.Lock()
-	defer voice.Unlock()
-
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return false, errVoiceNotStreaming
@@ -352,9 +343,6 @@ func (voice *Voice) Pause() (bool, error) {
 
 // Resume resumes the playback of a media
 func (voice *Voice) Resume() (bool, error) {
-	voice.Lock()
-	defer voice.Unlock()
-
 	//Make sure we're streaming first
 	if !voice.IsStreaming() {
 		return false, errVoiceNotStreaming
