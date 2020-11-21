@@ -553,10 +553,6 @@ func commandSpotify(args []string, env *CommandEnvironment) *discordgo.MessageEm
 			page.AddingAll = true
 
 			for i, result := range page.AllResults {
-				//Give a chance for other commands waiting in line to execute
-				guildData[env.Guild.ID].Unlock()
-				guildData[env.Guild.ID].Lock()
-
 				if page.Cancelled {
 					page.AddingAll = false
 					return nil

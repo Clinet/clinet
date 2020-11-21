@@ -400,6 +400,9 @@ func (voice *Voice) IsConnected() bool {
 
 // IsStreaming returns whether a media is playing
 func (voice *Voice) IsStreaming() bool {
+	voice.Lock()
+	defer voice.Unlock()
+
 	//Return false if a voice connection does not exist
 	if !voice.IsConnected() {
 		return false
