@@ -278,11 +278,13 @@ func commandRepeat(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 func commandShuffle(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	VoiceInit(env.Guild.ID)
 
+	//Toggle shuffle
 	voiceData[env.Guild.ID].Shuffle = !voiceData[env.Guild.ID].Shuffle
+
 	if voiceData[env.Guild.ID].Shuffle {
-		return NewGenericEmbed("Voice", "The queue will be shuffled around in a random order while playing.")
+		return NewGenericEmbed("Shuffle", "The queue will now play through entries at random.")
 	}
-	return NewGenericEmbed("Voice", "The queue will play through as normal.")
+	return NewGenericEmbed("Shuffle", "The queue will now play through entries in order.")
 }
 
 func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

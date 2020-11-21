@@ -337,12 +337,10 @@ func initCommands() {
 			{Name: "now playing", Description: "Enables repeat now playing mode", ArgType: "this"},
 		},
 	}
-	/* Disabled until a complete shuffle implementation is in place
 	botData.Commands["shuffle"] = &Command{
 		Function: commandShuffle,
 		HelpText: "Toggles queue shuffling during playback.",
 	}
-	*/
 	botData.Commands["youtube"] = &Command{
 		Function: commandYouTube,
 		HelpText: "Allows you to navigate YouTube search results to select what to add to the queue.",

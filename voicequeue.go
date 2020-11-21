@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,21 +13,8 @@ func (voice *Voice) QueueAdd(entry *QueueEntry) {
 	voice.Entries = append(voice.Entries, entry)
 }
 func (voice *Voice) QueueRemove(entry int) {
-	if voice.Shuffle {
-		//Remove the underlying queue entry
-		voice.queueRemoveNormal(voice.ShuffledPointers[entry])
-		//Remove the pointer from the shuffled queue entries
-		voice.queueRemovePointer(entry)
-	} else {
-		//Remove the queue entry
-		voice.queueRemoveNormal(entry)
-	}
-}
-func (voice *Voice) queueRemoveNormal(entry int) {
+	//Remove the queue entry
 	voice.Entries = append(voice.Entries[:entry], voice.Entries[entry+1:]...)
-}
-func (voice *Voice) queueRemovePointer(entry int) {
-	voice.ShuffledPointers = append(voice.ShuffledPointers[:entry], voice.ShuffledPointers[entry+1:]...)
 }
 func (voice *Voice) QueueRemoveRange(start, end int) {
 	if len(voice.Entries) == 0 {
@@ -46,23 +34,23 @@ func (voice *Voice) QueueRemoveRange(start, end int) {
 }
 func (voice *Voice) QueueClear() {
 	voice.Entries = nil
-	voice.ShuffledPointers = nil
 }
 func (voice *Voice) QueueGet(entry int) *QueueEntry {
 	if len(voice.Entries) < entry {
 		return nil
 	}
 
-	if voice.Shuffle {
-		return voice.Entries[voice.ShuffledPointers[entry]]
-	}
 	return voice.Entries[entry]
 }
-func (voice *Voice) QueueGetNext() *QueueEntry {
+func (voice *Voice) QueueGetNext() (entry *QueueEntry, index int) {
 	if len(voice.Entries) == 0 {
-		return nil
+		return nil, -1
 	}
-	return voice.Entries[0]
+	if voice.Shuffle {
+		index = rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(voice.Entries))
+	}
+	entry = voice.Entries[index]
+	return voice.Entries[index], index
 }
 
 // QueueEntry stores the data about a queue entry

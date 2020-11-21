@@ -29,7 +29,7 @@ type Voice struct {
 	//Voice configurations
 	EncodingOptions *dca.EncodeOptions `json:"encodingOptions"` //The settings that will be used for encoding the audio stream to Opus
 	RepeatLevel     RepeatLevel        `json:"repeatLevel"`     //0 = No Repeat, 1 = Repeat Playlist, 2 = Repeat Now Playing
-	Shuffle         bool               `json:"shuffle"`         //Whether to continue with a shuffled queue or not
+	Shuffle         bool               `json:"shuffle"`         //If enabled, entries will be pulled from the queue at random instead of in order
 	Muted           bool               `json:"muted"`           //Whether or not audio should be sent to Discord
 	Deafened        bool               `json:"deafened"`        //Whether or not audio should be received from Discord
 
@@ -40,9 +40,8 @@ type Voice struct {
 	AssistantSendAudio       bool `json:"assistantSendAudio"`       //Whether or not the Google Assistant responses should be played in the current voice channel
 
 	//Contains data about the current queue
-	Entries          []*QueueEntry    `json:"queueEntries"`               //Holds a list of queue entries
-	ShuffledPointers []int            `json:"shuffledQueueEntryPointers"` //Holds a list of numeric pointers to queue entries for shuffling around freely
-	NowPlaying       *VoiceNowPlaying `json:"nowPlaying"`                 //Holds the queue entry currently in the now playing slot
+	Entries    []*QueueEntry    `json:"queueEntries"` //Holds a list of queue entries
+	NowPlaying *VoiceNowPlaying `json:"nowPlaying"`   //Holds the queue entry currently in the now playing slot
 
 	//Miscellaneous
 	TextChannelID string     `json:"textChannelID"` //The channel that was last used to interact with the voice session
@@ -170,6 +169,7 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 	}
 
 	nextQueueEntry := &QueueEntry{}
+	index := 0
 
 	switch voice.RepeatLevel {
 	case RepeatNone:
@@ -179,12 +179,12 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 			botData.DiscordSession.ChannelMessageSendEmbed(voice.TextChannelID, NewGenericEmbed("Voice", "Finished playing the queue."))
 			return nil
 		}
-		nextQueueEntry = voice.QueueGet(0)
-		voice.QueueRemove(0)
+		nextQueueEntry, index = voice.QueueGetNext()
+		voice.QueueRemove(index)
 	case RepeatPlaylist:
 		voice.QueueAdd(voice.NowPlaying.Entry)
-		nextQueueEntry = voice.QueueGet(0)
-		voice.QueueRemove(0)
+		nextQueueEntry, index = voice.QueueGetNext()
+		voice.QueueRemove(index)
 	case RepeatNowPlaying:
 		nextQueueEntry = voice.NowPlaying.Entry
 	}
