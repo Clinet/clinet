@@ -28,7 +28,7 @@ import (
 	xkcd "github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
-	"github.com/rylio/ytdl"
+	ytdl "github.com/kkdai/youtube"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -410,6 +410,10 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 
 	session.UpdateStatusComplex(discordgo.UpdateStatusData{Game: botData.CustomStatuses[status]})
 	Debug.Printf("Presence: ", botData.CustomStatuses[status])
+}
+
+func updateListeningStatus(session *discordgo.Session, artist, title string) {
+	session.UpdateListeningStatus(artist + " - " + title)
 }
 
 func sendTipMessages() {

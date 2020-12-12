@@ -143,8 +143,11 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 	//Set the requested entry as now playing
 	voice.NowPlaying = &VoiceNowPlaying{Entry: queueEntry}
 
-	//Tell the world we're now playing this entry
+	//Tell the server we're now playing this entry
 	botData.DiscordSession.ChannelMessageSendEmbed(voice.TextChannelID, voice.GetNowPlayingEmbed(queueEntry))
+
+	//Tell the world we're now playing this entry
+	updateListeningStatus(botData.DiscordSession, voice.NowPlaying.Entry.Metadata.Artists[0].Name, voice.NowPlaying.Entry.Metadata.Title)
 
 	//Create a channel to signal when the voice stream is finished or stopped
 	voice.done = make(chan error)

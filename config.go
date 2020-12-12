@@ -18,7 +18,7 @@ import (
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
-	"github.com/rylio/ytdl"
+	ytdl "github.com/kkdai/youtube"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
 )

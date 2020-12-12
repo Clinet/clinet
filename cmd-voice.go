@@ -405,11 +405,11 @@ func commandYouTube(args []string, env *CommandEnvironment) *discordgo.MessageEm
 
 	fields := []*discordgo.MessageEmbedField{}
 	for i := 0; i < len(results); i++ {
-		videoInfo, err := botData.BotClients.YTDL.GetVideoInfo(bg, "https://youtube.com/watch?v="+results[i].Id.VideoId)
+		videoInfo, err := botData.BotClients.YTDL.GetVideo("https://youtube.com/watch?v="+results[i].Id.VideoId)
 		if err != nil {
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "Error fetching info for [this video](https://youtube.com/watch?v=" + results[i].Id.VideoId + ")"})
 		} else {
-			uploader := videoInfo.Uploader
+			uploader := videoInfo.Author
 			title := videoInfo.Title
 
 			fields = append(fields, &discordgo.MessageEmbedField{Name: "Result #" + strconv.Itoa(i+1), Value: "[" + title + "](https://youtube.com/watch?v=" + results[i].Id.VideoId + ") by **" + uploader + "**"})

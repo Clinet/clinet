@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	isoduration "github.com/channelmeter/iso8601duration"
-	//	"github.com/rylio/ytdl"
 	youtube "google.golang.org/api/youtube/v3"
 )
 
@@ -37,7 +36,7 @@ func (*VoiceServiceYouTube) TestURL(url string) (bool, error) {
 
 // GetMetadata returns the metadata for a given YouTube video URL
 func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
-	videoInfo, err := botData.BotClients.YTDL.GetVideoInfo(bg, url)
+	videoInfo, err := botData.BotClients.YTDL.GetVideo(url)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +47,12 @@ func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
 	}
 
 	sort.SliceStable(formats, func(i, j int) bool {
-		return formats[i].Itag.Number < formats[j].Itag.Number
+		return formats[i].ItagNo < formats[j].ItagNo
 	})
 
 	format := formats[0]
 
-	videoURL, err := botData.BotClients.YTDL.GetDownloadURL(bg, videoInfo, format)
+	videoURL, err := botData.BotClients.YTDL.GetStreamURL(videoInfo, &format)
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +74,8 @@ func (*VoiceServiceYouTube) GetMetadata(url string) (*Metadata, error) {
 	metadata := &Metadata{
 		Title:        videoInfo.Title,
 		DisplayURL:   url,
-		StreamURL:    videoURL.String(),
+		StreamURL:    videoURL,
 		Duration:     duration.ToDuration().Seconds(),
-		ArtworkURL:   videoInfo.GetThumbnailURL("maxresdefault").String(),
-		ThumbnailURL: videoInfo.GetThumbnailURL("default").String(),
 	}
 
 	videoAuthor := &MetadataArtist{
