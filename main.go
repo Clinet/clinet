@@ -408,17 +408,8 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	}
 	status--
 
-	switch botData.CustomStatuses[status].Type {
-	case 0:
-		Debug.Printf("Presence: Playing %s\n", botData.CustomStatuses[status].Status)
-		session.UpdateStatus(0, botData.CustomStatuses[status].Status)
-	case 1:
-		Debug.Printf("Presence: Listening to %s\n", botData.CustomStatuses[status].Status)
-		session.UpdateListeningStatus(botData.CustomStatuses[status].Status)
-	case 2:
-		Debug.Printf("Presence: Streaming %s at %s\n", botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
-		session.UpdateStreamingStatus(0, botData.CustomStatuses[status].Status, botData.CustomStatuses[status].URL)
-	}
+	session.UpdateStatusComplex(discordgo.UpdateStatusData{Game: botData.CustomStatuses[status]})
+	Debug.Printf("Presence: ", botData.CustomStatuses[status])
 }
 
 func sendTipMessages() {

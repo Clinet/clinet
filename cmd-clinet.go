@@ -222,6 +222,43 @@ func commandSudo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 	return callCommand(args[1], make([]string, 0), env)
 }
 
+func commandStatus(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	gameType := discordgo.GameTypeGame
+	name := args[1:]
+	url := ""
+
+	switch strings.ToLower(args[0]) {
+	case "0", "game", "play", "playing":
+		break
+	case "1", "streaming", "stream", "live", "livestream", "livestreaming":
+		if len(args) < 2 {
+			return NewErrorEmbed("Status Error", "You must specify the URL of the stream before the status message!")
+		}
+		gameType = discordgo.GameTypeStreaming
+		url = args[1]
+		name = args[2:]
+	case "2", "listening", "listeningto", "listen", "listento", "song", "music":
+		gameType = discordgo.GameTypeListening
+	case "3", "watching", "watch", "view":
+		gameType = discordgo.GameTypeWatching
+	default:
+		return NewErrorEmbed("Status Error", "Unknown status type: ", args[0])
+	}
+
+	err := botData.DiscordSession.UpdateStatusComplex(discordgo.UpdateStatusData{
+		Game: &discordgo.Game{
+			Name: strings.Join(name, " "),
+			Type: gameType,
+			URL:  url,
+		},
+	})
+	if err != nil {
+		return NewErrorEmbed("Status Error", "There was an error setting the new status!")
+	}
+
+	return NewGenericEmbed("Status", "Set the new status successfully!")
+}
+
 func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
 	return NewEmbed().
 		SetTitle(botData.BotName+" - About").

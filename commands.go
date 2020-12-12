@@ -584,6 +584,20 @@ func initCommands() {
 			{Name: "arguments", Description: "Optional additional arguments to pass to the command", ArgType: "N/A"},
 		},
 	}
+	botData.Commands["status"] = &Command{
+		Function:         commandStatus,
+		HelpText:         "Sets the bot's status message.",
+		IsAdministrative: true,
+		RequiredArguments: []string{
+			"type", "status",
+		},
+		Arguments: []CommandArgument{
+			{Name: "playing", Description: "Sets the playing status", ArgType: "string"},
+			{Name: "streaming", Description: "Sets the streaming status and the stream URL", ArgType: "url string"},
+			{Name: "listening", Description: "Sets the listening to status", ArgType: "string"},
+			{Name: "watching", Description: "Sets the watching status", ArgType: "string"},
+		},
+	}
 }
 
 func callCommand(commandName string, args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

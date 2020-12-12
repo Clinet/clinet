@@ -37,7 +37,7 @@ type BotData struct {
 	BotSourceURL         string                `json:"botSourceURL"`
 	CommandPrefix        string                `json:"cmdPrefix"`
 	CustomResponses      []CustomResponseQuery `json:"customResponses"`
-	CustomStatuses       []CustomStatus        `json:"customStatuses"`
+	CustomStatuses       []*discordgo.Game     `json:"customStatuses"`
 	TipMessages          []TipMessage          `json:"tipMessages"`
 	DebugMode            bool                  `json:"debugMode"`
 	SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
@@ -131,13 +131,6 @@ type CustomResponseReply struct {
 type CustomResponseReplyCmd struct {
 	CommandName string   `json:"commandName"`
 	Arguments   []string `json:"args"`
-}
-
-// CustomStatus stores a custom status for the bot's presence status
-type CustomStatus struct {
-	Type   int    `json:"type"`
-	Status string `json:"status"`
-	URL    string `json:"url,omitempty"`
 }
 
 // TipMessage stores a tip message for how to use a specific feature in the bot
