@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"math"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -172,4 +173,9 @@ func GetStringInBetween(str string, start string, end string) (result string) {
 func unmarshal(body *http.Response, target interface{}) error {
 	defer body.Body.Close()
 	return json.NewDecoder(body.Body).Decode(target)
+}
+
+func randomInRange(begin, end int) int {
+	randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return randomizer.Intn(end-begin) + begin
 }
