@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"gopkg.in/jdkato/prose.v2"
+	"github.com/jdkato/prose/v2"
 )
 
 var posMap = map[string]string{

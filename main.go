@@ -28,7 +28,7 @@ import (
 	xkcd "github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
-	ytdl "github.com/kkdai/youtube"
+	ytdl "github.com/kkdai/youtube/v2"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"

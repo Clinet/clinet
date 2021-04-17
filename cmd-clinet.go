@@ -240,7 +240,7 @@ func commandStatus(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 	case "2", "listening", "listeningto", "listen", "listento", "song", "music":
 		gameType = discordgo.ActivityTypeListening
 	case "3", "watching", "watch", "view":
-		gameType = discordgo.ActivityTypeWatching
+		gameType = 3
 	default:
 		return NewErrorEmbed("Status Error", "Unknown status type: ", args[0])
 	}
