@@ -289,7 +289,12 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		} else {
 			typingEvent(session, message.ChannelID, updatedMessageEvent)
 
-			responseMessage, err := session.ChannelMessageSendEmbed(message.ChannelID, responseEmbed)
+			msgSend := &discordgo.MessageSend{
+				Embed: responseEmbed,
+				Reference: message.Reference(),
+			}
+
+			responseMessage, err := session.ChannelMessageSendComplex(message.ChannelID, msgSend)
 			if err == nil {
 				debugEmbed(responseEmbed, botData.DiscordSession.State.User, channel, guild, updatedMessageEvent)
 				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID

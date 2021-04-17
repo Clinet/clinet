@@ -12,7 +12,7 @@ type Command struct {
 	HelpText            string                                                      //The text that will display in the help message
 	Arguments           []CommandArgument                                           //The arguments required for this command
 	RequiredArguments   []string                                                    //The minimum required arguments by name that must exist for the function to execute; default = 0
-	RequiredPermissions int                                                         //The permission(s) a user must have for the command to be executed by them
+	RequiredPermissions int64                                                       //The permission(s) a user must have for the command to be executed by them
 
 	IsAlternateOf string //If this is an alternate command, point to the original command
 
@@ -116,7 +116,7 @@ func initCommands() {
 		},
 		Arguments: []CommandArgument{
 			{Name: "message and time", Description: "The message to remind you with, including what time to remind you at", ArgType: "string"},
-			{Name: "list", Description: "Lists your remind entries on an optionally specified page", ArgType: "this/page"},
+			{Name: "list", Description: "Lists your remind entries on an optionally specified page", ArgType: "<page>"},
 			{Name: "remove", Description: "Deletes the specified remind entry or entries", ArgType: "number(s)"},
 		},
 	}
@@ -231,8 +231,8 @@ func initCommands() {
 			},
 			Arguments: []CommandArgument{
 				{Name: "comic number", Description: "The number of an existing XKCD comic", ArgType: "number"},
-				{Name: "latest", Description: "Fetches the latest XKCD comic", ArgType: "this"},
-				{Name: "random", Description: "Fetches a random XKCD comic", ArgType: "this"},
+				{Name: "latest", Description: "Fetches the latest XKCD comic", ArgType: ""},
+				{Name: "random", Description: "Fetches a random XKCD comic", ArgType: ""},
 			},
 		}
 	}
@@ -332,9 +332,9 @@ func initCommands() {
 		Function: commandRepeat,
 		HelpText: "Switches queue playback between three modes: no repeat, repeat queue, and repeat now playing.",
 		Arguments: []CommandArgument{
-			{Name: "disable", Description: "Disables repeat mode", ArgType: "this"},
-			{Name: "queue", Description: "Enables repeat queue mode", ArgType: "this"},
-			{Name: "now playing", Description: "Enables repeat now playing mode", ArgType: "this"},
+			{Name: "disable", Description: "Disables repeat mode", ArgType: ""},
+			{Name: "queue", Description: "Enables repeat queue mode", ArgType: ""},
+			{Name: "now playing", Description: "Enables repeat now playing mode", ArgType: ""},
 		},
 	}
 	botData.Commands["shuffle"] = &Command{
@@ -349,9 +349,9 @@ func initCommands() {
 		},
 		Arguments: []CommandArgument{
 			{Name: "search", Description: "Searches the specified query value", ArgType: "string"},
-			{Name: "next", Description: "Navigates forward in a search result's pages", ArgType: "this"},
-			{Name: "previous", Description: "Navigates backward in a search result's pages", ArgType: "this"},
-			{Name: "cancel", Description: "Cancels the search result", ArgType: "this"},
+			{Name: "next", Description: "Navigates forward in a search result's pages", ArgType: ""},
+			{Name: "previous", Description: "Navigates backward in a search result's pages", ArgType: ""},
+			{Name: "cancel", Description: "Cancels the search result", ArgType: ""},
 			{Name: "play", Description: "Plays the chosen search result from the current page", ArgType: "number"},
 		},
 	}
@@ -364,20 +364,20 @@ func initCommands() {
 		Arguments: []CommandArgument{
 			{Name: "search", Description: "Displays track results for the specified search query", ArgType: "string"},
 			{Name: "playlist", Description: "Displays track results for the specified playlist", ArgType: "playlist"},
-			{Name: "next", Description: "Navigates forward in a playlist's pages", ArgType: "this"},
-			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: "this"},
+			{Name: "next", Description: "Navigates forward in a playlist's pages", ArgType: ""},
+			{Name: "previous", Description: "Navigates backward in a playlist's pages", ArgType: ""},
 			{Name: "page/jump", Description: "Jumps to the specified page", ArgType: "number"},
-			{Name: "cancel", Description: "Cancels the search/playlist session", ArgType: "this"},
+			{Name: "cancel", Description: "Cancels the search/playlist session", ArgType: ""},
 			{Name: "play", Description: "Plays the chosen result (single track, 10 popular artist tracks, full album, or list a playlist)", ArgType: "number"},
-			{Name: "play all", Description: "Plays every track result", ArgType: "this"},
-			{Name: "play view", Description: "Plays every track result on the current page", ArgType: "this"},
+			{Name: "play all", Description: "Plays every track result", ArgType: ""},
+			{Name: "play view", Description: "Plays every track result on the current page", ArgType: ""},
 		},
 	}
 	botData.Commands["queue"] = &Command{
 		Function: commandQueue,
 		HelpText: "Lists and manages entries in the queue.",
 		Arguments: []CommandArgument{
-			{Name: "clear", Description: "Clears the queue", ArgType: "this"},
+			{Name: "clear", Description: "Clears the queue", ArgType: ""},
 			{Name: "remove", Description: "Removes the specified queue entry or entries", ArgType: "number"},
 		},
 	}
@@ -451,13 +451,13 @@ func initCommands() {
 			"setting (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "filter", Description: "Manages the swear filter", ArgType: "this"},
+			{Name: "filter", Description: "Manages the swear filter", ArgType: ""},
 			{Name: "joinmsg", Description: "Sets the join message for this channel", ArgType: "string"},
 			{Name: "leavemsg", Description: "Sets the leave message for this channel", ArgType: "string"},
-			{Name: "log", Description: "Manages the logging events", ArgType: "this"},
+			{Name: "log", Description: "Manages the logging events", ArgType: ""},
 			{Name: "tips", Description: "Enables or disables logging events for this channel", ArgType: "enable/disable"},
 			{Name: "autosendnowplaying", Description: "Enables or disables automatically sending now playing embeds without user interaction", ArgType: "enable/disable"},
-			{Name: "invitegen", Description: "Manages invite link generation via the API", ArgType: "this"},
+			{Name: "invitegen", Description: "Manages invite link generation via the API", ArgType: ""},
 			{Name: "reset", Description: "Resets the specified setting to the default/empty value", ArgType: "string"},
 		},
 	}
@@ -496,7 +496,7 @@ func initCommands() {
 		Arguments: []CommandArgument{
 			{Name: "about/aboutme/description/desc/info", Description: "Sets your aboutme or views the aboutme of another user", ArgType: "string/mention"},
 			{Name: "timezone", Description: "Sets the timezone to use", ArgType: "timezone"},
-			{Name: "social", Description: "Manages your socials", ArgType: "this"},
+			{Name: "social", Description: "Manages your socials", ArgType: ""},
 		},
 	}
 
@@ -508,10 +508,10 @@ func initCommands() {
 			"setting (value)",
 		},
 		Arguments: []CommandArgument{
-			{Name: "enable", Description: "Enables the starboard", ArgType: "this"},
-			{Name: "disable", Description: "Disables the starboard", ArgType: "this"},
-			{Name: "channel (set/remove)", Description: "Either returns the current starboard channel or optionally sets it to the current channel or removes the current channel in place", ArgType: "this"},
-			{Name: "nsfwchannel (set/remove)", Description: "Either returns the current NSFW channel or optionally sets it to the current channel (if marked as NSFW) or removes the current channel in place", ArgType: "this"},
+			{Name: "enable", Description: "Enables the starboard", ArgType: ""},
+			{Name: "disable", Description: "Disables the starboard", ArgType: ""},
+			{Name: "channel (set/remove)", Description: "Either returns the current starboard channel or optionally sets it to the current channel or removes the current channel in place", ArgType: ""},
+			{Name: "nsfwchannel (set/remove)", Description: "Either returns the current NSFW channel or optionally sets it to the current channel (if marked as NSFW) or removes the current channel in place", ArgType: ""},
 			{Name: "emoji (emoji)", Description: "Either returns the current emoji or optionally sets it to the specified emoji", ArgType: "emoji"},
 			{Name: "nsfwemoji (emoji)", Description: "Either returns the current NSFW emoji or optionally sets it to the specified emoji", ArgType: "emoji"},
 			{Name: "selfstar", Description: "Sets whether or not selfstars are permitted", ArgType: "boolean"},
@@ -532,8 +532,8 @@ func initCommands() {
 			{Name: "edit", Description: "Edits a given feed entry", ArgType: "id"},
 			{Name: "remove", Description: "Removes a given feed entry", ArgType: "id"},
 			{Name: "frequency", Description: "How often in seconds to check for a new post, can be used with ``-edit``", ArgType: "seconds"},
-			{Name: "setchannel", Description: "When used with ``-edit``, sets the current channel as the feed's post channel", ArgType: "this"},
-			{Name: "list", Description: "Lists all active feeds", ArgType: "this"},
+			{Name: "setchannel", Description: "When used with ``-edit``, sets the current channel as the feed's post channel", ArgType: ""},
+			{Name: "list", Description: "Lists all active feeds", ArgType: ""},
 		},
 	}
 

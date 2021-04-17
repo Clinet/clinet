@@ -52,6 +52,7 @@ func getQueryResult(query string, env *QueryEnvironment) (*discordgo.MessageEmbe
 	for _, service := range botData.QueryServices {
 		queryResult, err := service.Query(query, env)
 		if err != nil {
+			Error.Println(err)
 			continue
 		}
 

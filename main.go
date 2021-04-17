@@ -408,7 +408,7 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	}
 	status--
 
-	session.UpdateStatusComplex(discordgo.UpdateStatusData{Game: botData.CustomStatuses[status]})
+	session.UpdateStatusComplex(discordgo.UpdateStatusData{Activities: []*discordgo.Activity{botData.CustomStatuses[status]}})
 	Debug.Printf("Presence: ", botData.CustomStatuses[status])
 }
 

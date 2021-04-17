@@ -3,7 +3,6 @@ package main
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	"4d63.com/tz"
 	"github.com/bwmarrin/discordgo"
@@ -219,31 +218,7 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 			default:
 				status = "Unknown"
 			}
-			if presence.Game != nil {
-				gameName := presence.Game.Name
-				if presence.Game.URL != "" {
-					gameName = "[" + presence.Game.Name + "](" + presence.Game.URL + ")"
-				}
-				switch presence.Game.Type {
-				case discordgo.GameTypeGame:
-					status += ", playing " + gameName
-				case discordgo.GameTypeStreaming:
-					status += ", streaming " + gameName
-				case discordgo.GameTypeListening:
-					status += ", listening to " + gameName
-				case discordgo.GameTypeWatching:
-					status += ", watching " + gameName
-				default:
-					if gameName == "Custom Status" {
-						status += ", " + presence.Game.State
-					} else {
-						status += ", " + gameName
-					}
-				}
-				if presence.Game.TimeStamps.StartTimestamp != 0 {
-					status += " as of " + humanize.Time(time.Unix(presence.Game.TimeStamps.StartTimestamp, 0).In(location))
-				}
-			}
+			//TODO: Implement presence.Activities
 			if presence.Since != nil {
 				since := *presence.Since
 				status += " since " + strconv.Itoa(since)

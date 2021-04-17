@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -182,18 +183,26 @@ func commandHackBan(args []CommandArgument, env *CommandEnvironment) *discordgo.
 	}
 
 	failedBans := make([]string, 0)
+	failedErrors := make([]error, 0)
 	for i := range usersToBan {
 		err := botData.DiscordSession.GuildBanCreateWithReason(env.Guild.ID, usersToBan[i], reasonMessage, messagesDaysToDelete)
 		if err != nil {
 			failedBans = append(failedBans, usersToBan[i])
+			failedErrors = append(failedErrors, err)
 		}
 	}
 
-	if len(failedBans) == len(usersToBan) {
-		return NewErrorEmbed("HackBan Error", "There was an error hackbanning the selected user ID(s).")
+	resp := "Successfully hackbanned the specified user!"
+	if len(usersToBan) > 1 {
+		resp = "Successfully hackbanned the specified users!"
 	}
-	if len(failedBans) < len(usersToBan) && len(failedBans) > 0 {
-		return NewErrorEmbed("HackBan Error", "There was an error hackbanning "+strconv.Itoa(len(failedBans))+" of the selected user ID(s):\n\n- "+strings.Join(failedBans, "\n- "))
+
+	if len(failedBans) > 0 {
+		resp = "There was an error hackbanning the following users:\n"
+		for i := 0; i < len(failedBans); i++ {
+			resp += fmt.Sprintf("\n- <!%s>: %v", failedBans[i], failedErrors[i])
+		}
+		return NewErrorEmbed("HackBan Error", resp)
 	}
-	return NewGenericEmbed("HackBan", "Successfully hackbanned the selected user ID(s).")
+	return NewGenericEmbed("HackBan", resp)
 }

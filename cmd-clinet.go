@@ -223,7 +223,7 @@ func commandSudo(args []string, env *CommandEnvironment) *discordgo.MessageEmbed
 }
 
 func commandStatus(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	gameType := discordgo.GameTypeGame
+	gameType := discordgo.ActivityTypeGame
 	name := args[1:]
 	url := ""
 
@@ -234,22 +234,24 @@ func commandStatus(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		if len(args) < 2 {
 			return NewErrorEmbed("Status Error", "You must specify the URL of the stream before the status message!")
 		}
-		gameType = discordgo.GameTypeStreaming
+		gameType = discordgo.ActivityTypeStreaming
 		url = args[1]
 		name = args[2:]
 	case "2", "listening", "listeningto", "listen", "listento", "song", "music":
-		gameType = discordgo.GameTypeListening
+		gameType = discordgo.ActivityTypeListening
 	case "3", "watching", "watch", "view":
-		gameType = discordgo.GameTypeWatching
+		gameType = discordgo.ActivityTypeWatching
 	default:
 		return NewErrorEmbed("Status Error", "Unknown status type: ", args[0])
 	}
 
 	err := botData.DiscordSession.UpdateStatusComplex(discordgo.UpdateStatusData{
-		Game: &discordgo.Game{
-			Name: strings.Join(name, " "),
-			Type: gameType,
-			URL:  url,
+		Activities: []*discordgo.Activity{
+			&discordgo.Activity{
+				Name: strings.Join(name, " "),
+				Type: gameType,
+				URL:  url,
+			},
 		},
 	})
 	if err != nil {

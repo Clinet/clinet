@@ -36,8 +36,12 @@ func (*VoiceServiceBandcamp) GetColor() int {
 
 // TestURL tests if the given URL is a Bandcamp album or track URL
 func (*VoiceServiceBandcamp) TestURL(url string) (bool, error) {
-	test, err := regexp.MatchString("^https://[a-z0-9\\\\-]+?\\.bandcamp\\.com/(track|album)/[a-z0-9\\\\-]+?/?$", url)
-	return test, err
+	//test, err := regexp.MatchString("^https://[a-z0-9\\\\-]+?\\.bandcamp\\.com/(track|album)/[a-z0-9\\\\-]+?/?$", url)
+	//return test, err
+	if strings.Contains(url, "bandcamp.com") {
+		return true, nil
+	}
+	return false, nil
 }
 
 // GetMetadata returns the metadata for a given Bandcamp track URL

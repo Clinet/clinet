@@ -26,21 +26,21 @@ import (
 // BotData stores all data for the bot
 type BotData struct {
 	BotClients           BotClients
-	BotKeys              BotKeys               `json:"botKeys"`
-	BotName              string                `json:"-"`
-	BotOwnerID           string                `json:"botOwnerID"`
-	BotOptions           BotOptions            `json:"botOptions"`
-	BotToken             string                `json:"botToken"`
-	BotInviteURL         string                `json:"botInviteURL"`
-	BotDiscordURL        string                `json:"botDiscordURL"`
-	BotDonationURL       string                `json:"botDonationURL"`
-	BotSourceURL         string                `json:"botSourceURL"`
-	CommandPrefix        string                `json:"cmdPrefix"`
-	CustomResponses      []CustomResponseQuery `json:"customResponses"`
-	CustomStatuses       []*discordgo.Game     `json:"customStatuses"`
-	TipMessages          []TipMessage          `json:"tipMessages"`
-	DebugMode            bool                  `json:"debugMode"`
-	SendOwnerStackTraces bool                  `json:"sendOwnerStackTraces"`
+	BotKeys              BotKeys                   `json:"botKeys"`
+	BotName              string                    `json:"-"`
+	BotOwnerID           string                    `json:"botOwnerID"`
+	BotOptions           BotOptions                `json:"botOptions"`
+	BotToken             string                    `json:"botToken"`
+	BotInviteURL         string                    `json:"botInviteURL"`
+	BotDiscordURL        string                    `json:"botDiscordURL"`
+	BotDonationURL       string                    `json:"botDonationURL"`
+	BotSourceURL         string                    `json:"botSourceURL"`
+	CommandPrefix        string                    `json:"cmdPrefix"`
+	CustomResponses      []CustomResponseQuery     `json:"customResponses"`
+	CustomStatuses       []*discordgo.Activity     `json:"customStatuses"`
+	TipMessages          []TipMessage              `json:"tipMessages"`
+	DebugMode            bool                      `json:"debugMode"`
+	SendOwnerStackTraces bool                      `json:"sendOwnerStackTraces"`
 
 	DiscordSession *discordgo.Session
 	Commands       map[string]*Command

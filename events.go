@@ -284,7 +284,6 @@ func discordGuildUpdate(session *discordgo.Session, guild *discordgo.GuildUpdate
 				AddField("AFK Channel", afkChannel).
 				AddField("Owner", "<@"+guild.OwnerID+">").
 				AddField("Verification Level", verificationLevel).
-				AddField("Embeds Enabled", strconv.FormatBool(guild.EmbedEnabled)).
 				AddField("Large Member Count", strconv.FormatBool(guild.Large)).
 				SetImage("https://cdn.discordapp.com/icons/"+guild.ID+"/"+guild.Icon+".jpg").
 				InlineAllFields().

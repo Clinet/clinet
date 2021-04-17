@@ -86,6 +86,12 @@ func initNLPCommands() {
 
 	//@Clinet Take a screensot of https://google.com/ please
 	addNLPCommand(nlpNew("screenshot", "", "", regexp.MustCompile("(?i)(?:.*)(?:screenshot)(?:.*)"), nil, regexp.MustCompile("((http|https)://([\\w_-]+(?:(?:\\.[\\w_-]+)+)[\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?)"), ""))
+
+	//@Clinet Translate "hello" to Spanish please and thanks!
+	addNLPCommand(nlpNew("translate", "", "", regexp.MustCompile("(?i)(?:.*)translate \"(.*)\" to \\b(.*)\\b(?:.*)"), nil, nil, "${2} ${1}"))
+
+	//@Clinet Translate "hello" from English to Spanish please! :D
+	addNLPCommand(nlpNew("translate", "", "", regexp.MustCompile("(?i)(?:.*)translate \"(.*)\" from (.*) to \\b(.*)\\b(?:.*)"), nil, nil, "${2} ${3} ${1}"))
 }
 
 func nlpNew(command, argPrefix, argSuffix string, regex, regexBadMatch, regexArguments *regexp.Regexp, regexReplace string) *NLP {

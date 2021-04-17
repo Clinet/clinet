@@ -25,7 +25,7 @@ import (
 //     userID     :  userID of the member you wish to retrieve
 //     channelID  :  channelID of the member who sent the message
 //     permission :  the permission you wish to check for
-func MemberHasPermission(s *discordgo.Session, guildID string, userID string, channelID string, permission int) (bool, error) {
+func MemberHasPermission(s *discordgo.Session, guildID string, userID string, channelID string, permission int64) (bool, error) {
 	member, err := s.State.Member(guildID, userID)
 	if err != nil {
 		if member, err = s.GuildMember(guildID, userID); err != nil {
@@ -53,7 +53,7 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 		}
 
 		for _, permissionOverwrite := range channel.PermissionOverwrites {
-			if permissionOverwrite.Type == "role" || permissionOverwrite.ID == roleID {
+			if permissionOverwrite.Type == discordgo.PermissionOverwriteTypeRole || permissionOverwrite.ID == roleID {
 				if permissionOverwrite.Allow&permission != 0 {
 					return true, nil
 				}
@@ -65,7 +65,7 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, ch
 	}
 
 	for _, permissionOverwrite := range channel.PermissionOverwrites {
-		if permissionOverwrite.Type == "member" || permissionOverwrite.ID == userID {
+		if permissionOverwrite.Type == discordgo.PermissionOverwriteTypeMember || permissionOverwrite.ID == userID {
 			if permissionOverwrite.Allow&permission != 0 {
 				return true, nil
 			}
