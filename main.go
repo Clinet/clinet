@@ -104,7 +104,7 @@ func main() {
 	defer recoverPanic()
 	defer logFile.Close()
 
-	Info.Println("Clinet © JoshuaDoes: 2017-2018.")
+	Info.Println("Clinet © JoshuaDoes: 2017-2021.")
 	Info.Println("Build ID: " + BuildID)
 	Info.Println("Current PID: " + strconv.Itoa(os.Getpid()))
 
