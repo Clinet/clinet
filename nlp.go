@@ -103,6 +103,12 @@ func addNLPCommand(nlp ...*NLP) {
 }
 
 func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
+	//Hotfix for missing command prefix in NLP responses
+	env.BotPrefix = guildSettings[env.Guild.ID].BotPrefix
+	if env.BotPrefix == "" {
+		env.BotPrefix = botData.CommandPrefix
+	}
+
 	for i, command := range botData.NLPCommands {
 		for j := 0; j < len(command.Commands); j++ {
 			Debug.Printf("Testing NLP %d, command %d...", i, j)

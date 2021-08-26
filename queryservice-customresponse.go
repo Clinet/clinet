@@ -47,7 +47,22 @@ func (*QueryServiceCustomResponse) Query(query string, env *QueryEnvironment) (*
 			if len(response.CmdResponses) > 0 {
 				randomCmd := rand.Intn(len(response.CmdResponses))
 
-				commandEnvironment := &CommandEnvironment{Channel: env.Channel, Guild: env.Guild, Message: env.Message, User: env.User, Member: env.Member, Command: response.CmdResponses[randomCmd].CommandName, UpdatedMessageEvent: env.UpdatedMessageEvent}
+				//Hotfix for missing command prefix in custom command responses
+				prefix := guildSettings[env.Guild.ID].BotPrefix
+				if prefix == "" {
+					prefix = botData.CommandPrefix
+				}
+
+				commandEnvironment := &CommandEnvironment{
+					Channel: env.Channel,
+					Guild: env.Guild,
+					Message: env.Message,
+					User: env.User,
+					Member: env.Member,
+					Command: response.CmdResponses[randomCmd].CommandName,
+					UpdatedMessageEvent: env.UpdatedMessageEvent,
+					BotPrefix: prefix,
+				}
 				return callCommand(response.CmdResponses[randomCmd].CommandName, response.CmdResponses[randomCmd].Arguments, commandEnvironment), nil
 			}
 			if len(response.Responses) > 0 {
