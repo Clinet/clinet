@@ -12,10 +12,24 @@ func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCr
 
 	message, err := session.ChannelMessage(event.ChannelID, event.ID) //Make it easier to keep track of what's happening
 	if err != nil {
+		Error.Println("Error finding message:", event.ChannelID, ":", event.ID)
 		return //Error finding message
 	}
 	if message.Author.ID == session.State.User.ID {
+		Warning.Println("Bot cannot reply to itself")
 		return //The bot should never reply to itself
+	}
+	channel, err := session.Channel(event.ChannelID)
+	if err != err || channel == nil {
+		Error.Println("Error finding channel:", event.ChannelID)
+		return //Error finding channel
+	}
+	if channel.OwnerID != "" {
+		channel, err = session.UserChannelCreate(channel.OwnerID)
+		if err != nil {
+			Error.Println("Error creating DM channel:", channel.OwnerID)
+			return //Error creating DM channel
+		}
 	}
 
 	go handleMessage(session, message, false)

@@ -17,6 +17,10 @@ type Query struct {
 }
 
 func debugMessage(session *discordgo.Session, message *discordgo.Message, channel *discordgo.Channel, guild *discordgo.Guild, updatedMessageEvent bool) {
+	if guild == nil {
+		guild = &discordgo.Guild{Name: "Direct!"}
+	}
+
 	content := message.Content
 	if content == "" {
 		if len(message.Embeds) > 0 {
@@ -74,9 +78,12 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	if err != nil {
 		return //Error finding the channel
 	}
-	guild, err := session.State.Guild(channel.GuildID)
-	if err != nil {
-		return //Error finding the guild
+	guild := &discordgo.Guild{Name: "Direct!"}
+	if channel.GuildID != "" {
+		guild, err = session.State.Guild(channel.GuildID)
+		if err != nil {
+			return //Error finding the guild
+		}
 	}
 	content := message.Content
 	if content == "" {

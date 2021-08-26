@@ -69,6 +69,7 @@ var (
 var (
 	configFile       string
 	gcpAuthTokenFile string
+	gcpToken         *gassist.Token
 
 	configIsBot string
 	masterPID   int
@@ -143,12 +144,12 @@ func main() {
 			if err != nil {
 				Error.Printf("Error initializing Google Assistant: %v", err)
 			} else {
-				token := &gassist.Token{}
-				err = json.Unmarshal(tokenJSON, &token)
+				gcpToken = &gassist.Token{}
+				err = json.Unmarshal(tokenJSON, &gcpToken)
 				if err != nil {
 					Error.Printf("Error initializing Google Assistant: %v", err)
 				} else {
-					googleAssistant, err := gassist.NewAssistant(token, nil, "en-US", gassist.NewDevice("254636LIVE0001", "assistant-for-clinet"), gassist.NewAudioSettings(1, 1, 16000, 16000, 100))
+					googleAssistant, err := gassist.NewAssistant(gcpToken, nil, "en-US", gassist.NewDevice("254636LIVE0001", "assistant-for-clinet"), gassist.NewAudioSettings(1, 1, 16000, 16000, 100))
 					if err != nil {
 						Error.Printf("Error initializing Google Assistant: %v", err)
 					} else {
@@ -194,7 +195,8 @@ func main() {
 				botData.BotClients.YouTube = youtubeClient
 			}
 			botData.BotClients.YTDL = &ytdl.Client{
-				HTTPClient: httpClient,
+				Debug: true,
+			//	HTTPClient: httpClient,
 			}
 		}
 		if botData.BotOptions.UseGitHub {

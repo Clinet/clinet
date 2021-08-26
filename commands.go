@@ -566,6 +566,9 @@ func initCommands() {
 	botData.Commands["googletranslate"] = &Command{IsAlternateOf: "translate"}
 	botData.Commands["gtranslate"] = &Command{IsAlternateOf: "translate"}
 
+	//Google settings and controls
+	botData.Commands["gcpauth"] = &Command{Function: commandGCPAuth, HelpText: "Manages Google Cloud Platform authentication.", IsAdministrative: true}
+
 	//Administrative commands for bot owners
 	botData.Commands["reload"] = &Command{Function: commandReload, HelpText: "Reloads the bot configuration.", IsAdministrative: true}
 	botData.Commands["restart"] = &Command{Function: commandRestart, HelpText: "Restarts the bot in case something goes awry.", IsAdministrative: true}
