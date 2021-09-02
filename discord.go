@@ -1,10 +1,39 @@
-package bot
+package main
 
 import (
-	discord "github.com/bwmarrin/discordgo"
+	//Discord-related essentials
+	discord "github.com/bwmarrin/discordgo" //Used to communicate with Discord
 )
 
-/*
+//Configuration for Discord sessions
+type CfgDiscord struct {
+	//Stuff for communication with Discord
+	Token string `json:"token"`
+
+	//Trust for Discord communication
+	DisplayName   string `json:"displayName"`   //The display name for communicating on Discord
+	OwnerID       string `json:"ownerID"`       //The user ID of the bot owner on Discord
+	CommandPrefix string `json:"commandPrefix"` //The command prefix to use when invoking the bot on Discord
+}
+
+var Discord *discord.Session
+
+func startDiscord() {
+	log.Trace("--- startDiscord() ---")
+
+	log.Debug("Creating Discord struct")
+	Discord, err = discord.New("Bot " + cfg.Discord.Token)
+	if err != nil {
+		log.Fatal("Unable to connect to Discord!")
+	}
+
+	//Only enable informational Discord logging if we're tracing
+	if log.Verbosity == 2 {
+		log.Debug("Setting Discord log level to informational")
+		Discord.LogLevel = discord.LogInformational
+	}
+
+	log.Info("Registering Discord event handlers")
 	Discord.AddHandler(discordReady)
 	Discord.AddHandler(discordChannelCreate)
 	Discord.AddHandler(discordChannelUpdate)
@@ -27,92 +56,106 @@ import (
 	Discord.AddHandler(discordMessageReactionAdd)
 	Discord.AddHandler(discordMessageReactionRemove)
 	Discord.AddHandler(discordMessageReactionRemoveAll)
-*/
+
+	log.Info("Connecting to Discord")
+	err = Discord.Open()
+	if err != nil {
+		log.Fatal("Unable to connect to Discord!", err)
+	}
+	log.Info("Connected to Discord!")
+}
+
+func closeDiscord() {
+	log.Trace("--- closeDiscord() ---")
+
+	log.Info("Closing connection to Discord...")
+	Discord.Close()
+}
 
 func discordReady(session *discord.Session, event *discord.Ready) {
-	Log.Trace("--- discordReady(", event, ") ---")
+	log.Trace("--- discordReady(", event, ") ---")
 }
 
 func discordChannelCreate(session *discord.Session, event *discord.ChannelCreate) {
-	Log.Trace("--- discordChannelCreate(", event, ") ---")
+	log.Trace("--- discordChannelCreate(", event, ") ---")
 }
 
 func discordChannelUpdate(session *discord.Session, event *discord.ChannelUpdate) {
-	Log.Trace("--- discordChannelUpdate(", event, ") ---")
+	log.Trace("--- discordChannelUpdate(", event, ") ---")
 }
 
 func discordChannelDelete(session *discord.Session, event *discord.ChannelDelete) {
-	Log.Trace("--- discordChannelDelete(", event, ") ---")
+	log.Trace("--- discordChannelDelete(", event, ") ---")
 }
 
 func discordGuildUpdate(session *discord.Session, event *discord.GuildUpdate) {
-	Log.Trace("--- discordGuildUpdate(", event, ") ---")
+	log.Trace("--- discordGuildUpdate(", event, ") ---")
 }
 
 func discordGuildBanAdd(session *discord.Session, event *discord.GuildBanAdd) {
-	Log.Trace("--- discordGuildBanAdd(", event, ") ---")
+	log.Trace("--- discordGuildBanAdd(", event, ") ---")
 }
 
 func discordGuildBanRemove(session *discord.Session, event *discord.GuildBanRemove) {
-	Log.Trace("--- discordGuildBanRemove(", event, ") ---")
+	log.Trace("--- discordGuildBanRemove(", event, ") ---")
 }
 
 func discordGuildMemberAdd(session *discord.Session, event *discord.GuildMemberAdd) {
-	Log.Trace("--- discordGuildMemberAdd(", event, ") ---")
+	log.Trace("--- discordGuildMemberAdd(", event, ") ---")
 }
 
 func discordGuildMemberRemove(session *discord.Session, event *discord.GuildMemberRemove) {
-	Log.Trace("--- discordGuildMemberRemove(", event, ") ---")
+	log.Trace("--- discordGuildMemberRemove(", event, ") ---")
 }
 
 func discordGuildRoleCreate(session *discord.Session, event *discord.GuildRoleCreate) {
-	Log.Trace("--- discordGuildRoleCreate(", event, ") ---")
+	log.Trace("--- discordGuildRoleCreate(", event, ") ---")
 }
 
 func discordGuildRoleUpdate(session *discord.Session, event *discord.GuildRoleUpdate) {
-	Log.Trace("--- discordGuildRoleUpdate(", event, ") ---")
+	log.Trace("--- discordGuildRoleUpdate(", event, ") ---")
 }
 
 func discordGuildRoleDelete(session *discord.Session, event *discord.GuildRoleDelete) {
-	Log.Trace("--- discordGuildRoleDelete(", event, ") ---")
+	log.Trace("--- discordGuildRoleDelete(", event, ") ---")
 }
 
 func discordGuildEmojisUpdate(session *discord.Session, event *discord.GuildEmojisUpdate) {
-	Log.Trace("--- discordGuildEmojisUpdate(", event, ") ---")
+	log.Trace("--- discordGuildEmojisUpdate(", event, ") ---")
 }
 
 func discordUserUpdate(session *discord.Session, event *discord.UserUpdate) {
-	Log.Trace("--- discordUserUpdate(", event, ") ---")
+	log.Trace("--- discordUserUpdate(", event, ") ---")
 }
 
 func discordVoiceStateUpdate(session *discord.Session, event *discord.VoiceStateUpdate) {
-	Log.Trace("--- discordVoiceStateUpdate(", event, ") ---")
+	log.Trace("--- discordVoiceStateUpdate(", event, ") ---")
 }
 
 func discordMessageCreate(session *discord.Session, event *discord.MessageCreate) {
-	Log.Trace("--- discordMessageCreate(", event, ") ---")
+	log.Trace("--- discordMessageCreate(", event, ") ---")
 }
 
 func discordMessageDelete(session *discord.Session, event *discord.MessageDelete) {
-	Log.Trace("--- discordMessageDelete(", event, ") ---")
+	log.Trace("--- discordMessageDelete(", event, ") ---")
 }
 
 func discordMessageDeleteBulk(session *discord.Session, event *discord.MessageDeleteBulk) {
-	Log.Trace("--- discordMessageDeleteBulkage(", event, ") ---")
+	log.Trace("--- discordMessageDeleteBulkage(", event, ") ---")
 }
 
 func discordMessageUpdate(session *discord.Session, event *discord.MessageUpdate) {
-	Log.Trace("--- discordMessageUpdate(", event, ") ---")
+	log.Trace("--- discordMessageUpdate(", event, ") ---")
 }
 
 func discordMessageReactionAdd(session *discord.Session, event *discord.MessageReactionAdd) {
-	Log.Trace("--- discordMessageReactionAdd(", event, ") ---")
+	log.Trace("--- discordMessageReactionAdd(", event, ") ---")
 }
 
 func discordMessageReactionRemove(session *discord.Session, event *discord.MessageReactionRemove) {
-	Log.Trace("--- discordMessageReactionRemove(", event, ") ---")
+	log.Trace("--- discordMessageReactionRemove(", event, ") ---")
 }
 
 func discordMessageReactionRemoveAll(session *discord.Session, event *discord.MessageReactionRemoveAll) {
-	Log.Trace("--- discordMessageReactionRemoveAll(", event, ") ---")
+	log.Trace("--- discordMessageReactionRemoveAll(", event, ") ---")
 }

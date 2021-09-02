@@ -9,13 +9,15 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/keybase/go-ps"
 )
 
-var sig = syscall.SIGINT
+var sig1 = syscall.SIGINT
+var sig2 = syscall.SIGKILL
 var watchdogDelay = (5 * time.Second)
 
 func doWatchdog() {
@@ -25,27 +27,35 @@ func doWatchdog() {
 	botPID := spawnBot()
 	log.Debug("Creating signal channel")
 	sc := make(chan os.Signal, 1)
-	log.Debug("Registering notification for ", sig, " on signal channel")
-	signal.Notify(sc, sig)
+	log.Debug("Registering notification for ", sig1, " on signal channel")
+	signal.Notify(sc, sig1)
+	log.Debug("Registering notification for ", sig2, " on signal channel")
+	signal.Notify(sc, sig2)
 	log.Debug("Creating watchdog ticker for ", watchdogDelay)
 	watchdogTicker := time.Tick(watchdogDelay)
 
 	for {
 		select {
-		case _, ok := <-sc:
+		case <-watchdogTicker:
+			if !isProcessRunning(botPID) {
+				log.Debug("Failed to find process for bot PID ", botPID, ", spawning new bot process")
+				botPID = spawnBot()
+			}
+		case sig, ok := <-sc:
 			if ok {
-				log.Debug("Finding process for bot PID ", botPID)
-				botProcess, _ := os.FindProcess(botPID)
-				log.Debug("Sending ", sig, " signal to bot process")
-				_ = botProcess.Signal(sig)
-				log.Debug("Waiting for bot process to exit gracefully")
-				waitProcess(botPID)
+				log.Trace("SIGNAL: ", sig)
+				if isProcessRunning(botPID) {
+					log.Debug("Finding process for bot PID ", botPID)
+					botProcess, err := os.FindProcess(botPID)
+					if err == nil {
+						log.Debug("Sending ", sig, " signal to bot process")
+						_ = botProcess.Signal(sig)
+						log.Debug("Waiting for bot process to exit gracefully")
+						waitProcess(botPID)
+					}
+				}
 				log.Debug("Exiting")
 				os.Exit(0)
-			}
-		case <- watchdogTicker:
-			if !isProcessRunning(botPID) {
-				botPID = spawnBot()
 			}
 		}
 	}
@@ -60,7 +70,7 @@ func spawnBot() int {
 			for _, process := range processList {
 				if process.Pid() != os.Getpid() && process.Pid() != watchdogPID && process.Executable() == filepath.Base(os.Args[0]) {
 					oldProcess, err := os.FindProcess(process.Pid())
-					if err == nil {
+					if oldProcess != nil && err == nil {
 						oldProcess.Signal(syscall.SIGKILL)
 					}
 				}
@@ -71,6 +81,7 @@ func spawnBot() int {
 	botProcess := exec.Command(os.Args[0], "--isBot", "--watchdogPID", strconv.Itoa(os.Getpid()), "--verbosity", strconv.Itoa(verbosity), "--token", token, "--config", cfgPath)
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
+	botProcess.Stdin = os.Stdin
 
 	log.Debug("Spawning bot process")
 	err := botProcess.Start()
@@ -85,31 +96,13 @@ func spawnBot() int {
 func isProcessRunning(pid int) bool {
 	log.Trace("--- isProcessRunning(pid: ", pid, ") ---")
 
-	process, err := os.FindProcess(pid)
+	process, err := ps.FindProcess(pid)
 	if err != nil {
-		log.Debug("Error finding process with PID ", pid)
+		log.Error(err)
 		return false
 	}
 
-	if runtime.GOOS != "windows" {
-		log.Debug("Not running Windows, using alternative checker")
-
-		isRunning := process.Signal(syscall.Signal(0)) == nil
-		log.Debug("Process signal 0 response: ", isRunning)
-		return isRunning
-	}
-
-	processState, err := process.Wait()
-	if err != nil {
-		log.Debug("Error waiting on process")
-		return false
-	}
-	if processState.Exited() {
-		log.Debug("Process exited")
-		return false
-	}
-
-	return true
+	return process != nil
 }
 
 func waitProcess(pid int) {
