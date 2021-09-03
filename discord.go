@@ -3,6 +3,8 @@ package main
 import (
 	//Discord-related essentials
 	discord "github.com/bwmarrin/discordgo" //Used to communicate with Discord
+
+	"math/rand"
 )
 
 //Configuration for Discord sessions
@@ -134,6 +136,32 @@ func discordVoiceStateUpdate(session *discord.Session, event *discord.VoiceState
 
 func discordMessageCreate(session *discord.Session, event *discord.MessageCreate) {
 	log.Trace("--- discordMessageCreate(", event, ") ---")
+	message, err := session.ChannelMessage(event.ChannelID, event.ID)
+	if err != nil {
+		log.Error(message, err)
+	}
+
+	cmdBuilder, err := CmdBuild(session, message)
+	if err != nil {
+		log.Error(cmdBuilder, err)
+		return
+	}
+
+	resps := cmdBuilder.Run()
+	if len(resps) == 0 {
+		//log.Error("no responses")
+		return
+	}
+
+	for _, resp := range resps {
+		random := rand.Intn(len(resp.Messages))
+		message := resp.Messages[random]
+
+		respMessage, err := session.ChannelMessageSend(event.ChannelID, message)
+		if err != nil {
+			log.Error(respMessage, err)
+		}
+	}
 }
 
 func discordMessageDelete(session *discord.Session, event *discord.MessageDelete) {

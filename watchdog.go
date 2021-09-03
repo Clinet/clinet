@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/keybase/go-ps"
 )
 
 var sig1 = syscall.SIGINT
@@ -78,7 +76,7 @@ func spawnBot() int {
 		}
 	}
 
-	botProcess := exec.Command(os.Args[0], "--isBot", "--watchdogPID", strconv.Itoa(os.Getpid()), "--verbosity", strconv.Itoa(verbosity), "--token", token, "--config", cfgPath)
+	botProcess := exec.Command(os.Args[0], "--isBot", "--watchdogPID", strconv.Itoa(os.Getpid()), "--verbosity", strconv.Itoa(verbosity), "--config", config)
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	botProcess.Stdin = os.Stdin
@@ -94,7 +92,7 @@ func spawnBot() int {
 }
 
 func isProcessRunning(pid int) bool {
-	log.Trace("--- isProcessRunning(pid: ", pid, ") ---")
+	//log.Trace("--- isProcessRunning(pid: ", pid, ") ---")
 
 	process, err := ps.FindProcess(pid)
 	if err != nil {
