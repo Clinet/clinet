@@ -5,6 +5,14 @@ import (
 	"math/rand"
 )
 
+func init() {
+	Commands = append(Commands, &Cmd{
+		Handler: cmdHelloDolly,
+		Matches: []string{"hellodolly", "hd", "hidolly", "dolly"},
+		Description: "This is not just a command, it symbolizes the hope and enthusiasm of an entire generation summed up in two words sung most famously by Louis Armstrong: Hello, Dolly. When executed, you will randomly receive a lyric from Hello, Dolly as your response.",
+	})
+}
+
 var cmdHelloDollyLyrics = `Hello, Dolly
 Well, hello, Dolly
 It's so nice to have you back where you belong
@@ -34,7 +42,7 @@ Dolly'll never go away
 Dolly'll never go away
 Dolly'll never go away again`
 
-func HelloDolly(ctx *CmdCtx) *CmdResp {
+func cmdHelloDolly(ctx *CmdCtx) *CmdResp {
 	//Split the lyrics by line into a slice
 	lyrics := strings.Split(cmdHelloDollyLyrics, "\n")
 
@@ -42,5 +50,5 @@ func HelloDolly(ctx *CmdCtx) *CmdResp {
 	line := rand.Intn(len(lyrics))
 
 	//Return the chosen line
-	return &CmdResp{Messages: []string{lyrics[line]}}
+	return makeCmdResp(lyrics[line])
 }

@@ -76,7 +76,7 @@ func spawnBot() int {
 		}
 	}
 
-	botProcess := exec.Command(os.Args[0], "--isBot", "--watchdogPID", strconv.Itoa(os.Getpid()), "--verbosity", strconv.Itoa(verbosity), "--config", config)
+	botProcess := exec.Command(os.Args[0], "--isBot", "--watchdogPID", strconv.Itoa(os.Getpid()), "--verbosity", strconv.Itoa(verbosity), "--config", configFile)
 	botProcess.Stdout = os.Stdout
 	botProcess.Stderr = os.Stderr
 	botProcess.Stdin = os.Stdin

@@ -5,13 +5,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/Clinet/clinet/discord"
+	"github.com/Clinet/clinet/config"
 )
 
 //Global error value because functions are mean
 var err error
 
 var (
-	cfg *Config //Stores the configuration for the bot
+	cfg     *config.Config
+	Discord *discord.DiscordSession
 )
 
 func doBot() {
@@ -20,15 +24,15 @@ func doBot() {
 	log.Trace("--- doBot() ---")
 
 	log.Info("Loading configuration...")
-	cfg, err = loadConfig(config, ConfigTypeJSON)
+	cfg, err = config.LoadConfig(configFile, config.ConfigTypeJSON)
 	if err != nil {
 		log.Error("Error loading configuration: ", err)
 	}
 
 	if writeConfigTemplate {
 		log.Info("Updating configuration template...")
-		var templateCfg *Config = &Config{}
-		templateCfg.SaveTo("config.template.json", ConfigTypeJSON)
+		var templateCfg *config.Config = &config.Config{}
+		templateCfg.SaveTo("config.template.json", config.ConfigTypeJSON)
 	}
 
 	//Load modules
@@ -37,8 +41,8 @@ func doBot() {
 
 	//Start Discord
 	log.Info("Starting Discord...")
-	startDiscord()
-	defer closeDiscord()
+	Discord = discord.StartDiscord(cfg.Discord)
+	defer Discord.Close()
 
 	log.Debug("Waiting for SIGINT syscall signal")
 	sc := make(chan os.Signal, 1)
