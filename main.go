@@ -120,23 +120,9 @@ func main() {
 		Debug.Printf("Max Process Count: %d\n", numCPU*2)
 
 		Info.Println("Loading settings...")
-		configFileHandle, err := os.Open(configFile)
-		defer configFileHandle.Close()
-		if err != nil {
-			Error.Println(err)
+		if err := botData.LoadConfig(configFile); err != nil {
+			Error.Println("Error loading config: %v", err)
 			os.Exit(1)
-		} else {
-			configParser := json.NewDecoder(configFileHandle)
-			if err = configParser.Decode(&botData); err != nil {
-				Error.Println(err)
-				os.Exit(1)
-			} else {
-				configErr := botData.PrepConfig() //Check the configuration for any errors or inconsistencies, then prepare it for usage
-				if configErr != nil {
-					Error.Println(configErr)
-					os.Exit(1)
-				}
-			}
 		}
 
 		Info.Println("Initializing clients for external services...")

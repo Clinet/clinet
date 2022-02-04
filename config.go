@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"regexp"
 	"strconv"
 
@@ -142,6 +144,22 @@ type TipMessage struct {
 	DidYouKnow  string   `json:"didYouKnow"`
 	HowTo       string   `json:"howTo"`
 	Examples    []string `json:"examples"`
+}
+
+// LoadConfig loads the given configuration
+func (configData *BotData) LoadConfig(path string) error {
+	configFile, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer configFile.Close()
+
+	configParser := json.NewDecoder(configFile)
+	if err = configParser.Decode(&configData); err != nil {
+		return err
+	}
+
+	return configData.PrepConfig()
 }
 
 // PrepConfig checks the configuration for consistency and invalid errors

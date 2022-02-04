@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,20 +24,8 @@ import (
 )
 
 func commandReload(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	configFileHandle, err := os.Open(configFile)
-	defer configFileHandle.Close()
-	if err != nil {
-		return NewErrorEmbed("Reload Error", "There was an error loading the bot configuration file.")
-	}
-
-	configParser := json.NewDecoder(configFileHandle)
-	if err = configParser.Decode(&botData); err != nil {
-		return NewErrorEmbed("Reload Error", "There was an error applying the bot configuration to memory. State and/or configuration may be corrupted, consider checking the configuration and restarting the bot process.")
-	}
-
-	err = botData.PrepConfig()
-	if err != nil {
-		return NewErrorEmbed("Reload Error", "There were some inconsistencies with the bot configuration. State and/or configuration may be corrupted, consider checking the configuration and restarting the bot process.")
+	if err := botData.LoadConfig(configFile); err != nil {
+		return NewErrorEmbed("Reload Error", "There was an error reloading the bot configuration:\n`%v`", err)
 	}
 
 	if botData.BotOptions.UseDuckDuckGo {
