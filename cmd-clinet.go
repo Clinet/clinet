@@ -253,12 +253,12 @@ func commandAbout(args []string, env *CommandEnvironment) *discordgo.MessageEmbe
 		SetTitle(botData.BotName+" - About").
 		SetDescription(botData.BotName+" is a Discord bot written in Google's Go programming language, intended for conversation and fact-based queries.").
 		AddField("How can I use "+botData.BotName+" in my server?", "Simply open the Invite Link at the end of this message and follow the on-screen instructions.").
-		AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either donate using the Donation Link or contribute to the source code using the Source Code Link, both at the end of this message.").
+		AddField("How can I help keep "+botData.BotName+" running?", "The best ways to help keep "+botData.BotName+" running are to either subscribe to Clinet+ using the Clinet+ Link or contribute to the source code using the Source Code Link, both at the end of this message.").
 		AddField("How can I use "+botData.BotName+"?", "There are many ways to make use of "+botData.BotName+".\n1) Type ``"+env.BotPrefix+"help`` and try using some of the available commands.\n2) Ask "+botData.BotName+" a question, ex: ``@"+botData.DiscordSession.State.User.String()+", what time is it?`` or ``@"+botData.DiscordSession.State.User.String()+", what is DiscordApp?``.").
 		AddField("Where can I join the "+botData.BotName+" Discord server?", "If you would like to get help and support with "+botData.BotName+" or experiment with the latest and greatest of "+botData.BotName+", use the Discord Server Invite Link at the end of this message.").
 		AddField("Bot Invite Link", botData.BotInviteURL).
 		AddField("Discord Server Invite Link", botData.BotDiscordURL).
-		AddField("Donation Link", botData.BotDonationURL).
+		AddField("Clinet+ Link", botData.BotDonationURL).
 		AddField("Source Code Link", botData.BotSourceURL).
 		SetColor(0x1C1C1C).MessageEmbed
 }
@@ -268,13 +268,6 @@ func commandInvite(args []string, env *CommandEnvironment) *discordgo.MessageEmb
 		SetDescription("Below are the available invite links for "+botData.BotName+".").
 		AddField("Bot Invite", botData.BotInviteURL).
 		AddField("Discord Server (Support/Development/Testing)", botData.BotDiscordURL).
-		SetColor(0x1C1C1C).MessageEmbed
-}
-func commandDonate(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	return NewEmbed().
-		SetTitle(botData.BotName+" - Donate").
-		SetDescription("Below are the available donation links for "+botData.BotName+".").
-		AddField("PayPal", botData.BotDonationURL).
 		SetColor(0x1C1C1C).MessageEmbed
 }
 func commandSource(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {

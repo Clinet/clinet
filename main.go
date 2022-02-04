@@ -38,6 +38,10 @@ import (
 var (
 	//Contains all bot configurations
 	botData *BotData = &BotData{}
+	patreonBotData *BotData = &BotData{}
+
+	//Patreon notices, because no one wants to be nagged
+	patreonNotices = make(map[string]time.Time) //[userID] = time since last notice
 
 	//Contains guild-specific data in a string map, where key = guild ID
 	guildData = make(map[string]*GuildData)
@@ -68,9 +72,10 @@ var (
 )
 
 var (
-	configFile       string
-	gcpAuthTokenFile string
-	gcpToken         *gassist.Token
+	configFile        string
+	patreonConfigFile string
+	gcpAuthTokenFile  string
+	gcpToken          *gassist.Token
 
 	configIsBot string
 	masterPID   int
@@ -80,6 +85,7 @@ var (
 
 func init() {
 	flag.StringVar(&configFile, "config", "config.json", "The path to the JSON-structured configuration file")
+	flag.StringVar(&patreonConfigFile, "patreonConfig", "config.patreon.json", "The path to the JSON-structured configuration file that will override global options for Patrons")
 	flag.StringVar(&gcpAuthTokenFile, "gcptoken", "client_secret_XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com.json", "The path to the JSON-structured Google Cloud Platform authentication token")
 	flag.StringVar(&configIsBot, "bot", "false", "Whether or not to act as a bot")
 	flag.IntVar(&masterPID, "masterpid", -1, "The bot master's PID")
@@ -119,10 +125,17 @@ func main() {
 		Debug.Printf("CPU Core Count: %d\n", numCPU)
 		Debug.Printf("Max Process Count: %d\n", numCPU*2)
 
-		Info.Println("Loading settings...")
+		Info.Println("Loading global configuration...")
 		if err := botData.LoadConfig(configFile); err != nil {
-			Error.Println("Error loading config: %v", err)
+			Error.Printf("Unable to load global config: %v", err)
 			os.Exit(1)
+		}
+
+		Info.Println("Loading Patreon configuration...")
+		if err := patreonBotData.LoadConfig(patreonConfigFile); err != nil {
+			Warning.Printf("Unable to load Patreon config: %v", err)
+			Warning.Printf("Falling back to global config for Patrons")
+			patreonBotData = botData
 		}
 
 		Info.Println("Initializing clients for external services...")
@@ -466,7 +479,12 @@ func stateSaveAll() {
 		os.Mkdir("state", 0744)
 	}
 
-	err := stateSaveRaw(guildData, "state/guildData.json")
+	err := stateSaveRaw(patreonNotices, "state/patreonNotices.json")
+	if err != nil {
+		Error.Printf("Error saving Patreon notices state: %s\n", err)
+	}
+
+	err = stateSaveRaw(guildData, "state/guildData.json")
 	if err != nil {
 		Error.Printf("Error saving guildData state: %s\n", err)
 	}
@@ -507,7 +525,12 @@ func stateSaveRaw(data interface{}, file string) error {
 }
 
 func stateRestoreAll() {
-	err := stateRestoreRaw("state/guildData.json", &guildData)
+	err := stateRestoreRaw("state/patreonNotices.json", &patreonNotices)
+	if err != nil {
+		Error.Printf("Error loading Patreon notices state: %s\n", err)
+	}
+
+	err = stateRestoreRaw("state/guildData.json", &guildData)
 	if err != nil {
 		Error.Printf("Error loading guildData state: %s\n", err)
 	}

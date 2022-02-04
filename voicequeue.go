@@ -106,6 +106,10 @@ func (voice *Voice) getQueueEmbed(entry *QueueEntry, embedType int) *discordgo.M
 		embed.AddField("Duration", duration)
 	}
 
+	if cyclePatreonNotice(entry.Requester.ID) && entry.ServiceName != "YouTube" {
+		embed.SetFooter("Clinet+ doesn't limit your audio quality to 160Kbps. Type " + botData.CommandPrefix + "patreon to learn more.")
+	}
+
 	embed.SetColor(entry.ServiceColor)
 	embed.SetThumbnail(entry.Metadata.ArtworkURL)
 

@@ -111,6 +111,11 @@ type BotOptions struct {
 	AudioEncoding             *dca.EncodeOptions `json:"audioEncoding"`
 	API                       APIConfig          `json:"api"`
 	FeedFrequency             int                `json:"feedFrequency"` //Default interval in seconds for checking for new feed entries
+
+	RoleRequired struct { //Can be used to limit this configuration to a specific role on a specific server
+		GuildID string `json:"guildID"`
+		RoleID string `json:"roleID"`
+	} `json:"roleRequired"`
 }
 
 // APIConfig stores configurations for the API

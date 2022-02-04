@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -54,7 +55,6 @@ func initCommands() {
 	//All user-accessible commands with no parameters
 	botData.Commands["about"] = &Command{Function: commandAbout, HelpText: "Displays information about " + botData.BotName + " and how to use it."}
 	botData.Commands["invite"] = &Command{Function: commandInvite, HelpText: "Displays available invite links for " + botData.BotName + "."}
-	botData.Commands["donate"] = &Command{Function: commandDonate, HelpText: "Displays available donation links for " + botData.BotName + "."}
 	botData.Commands["source"] = &Command{Function: commandSource, HelpText: "Displays available source code links for " + botData.BotName + "."}
 	botData.Commands["version"] = &Command{Function: commandVersion, HelpText: "Displays the current version of " + botData.BotName + "."}
 	botData.Commands["credits"] = &Command{Function: commandCredits, HelpText: "Displays a list of credits for the creation and functionality of " + botData.BotName + "."}
@@ -550,6 +550,23 @@ func initCommands() {
 	botData.Commands["au3"] = &Command{IsAlternateOf: "autoit"}
 	botData.Commands["autoit3"] = &Command{IsAlternateOf: "autoit"}
 	botData.Commands["autogo"] = &Command{IsAlternateOf: "autoit"}*/
+
+	botData.Commands["pluspro"] = &Command{
+		Function: func(args []string, env *CommandEnvironment) *discordgo.MessageEmbed {
+			patreonTxt, err := os.ReadFile("patreon.txt")
+			if err != nil {
+				return NewErrorEmbed("Clinet+ Error", "Error reading the latest about Clinet+: %v", err)
+			}
+			return NewGenericEmbed("Clinet+", string(patreonTxt))
+		},
+		HelpText: "Explains the Clinet+ subscription offered via Patreon.",
+	}
+	botData.Commands["donate"] = &Command{IsAlternateOf: "pluspro"}
+	botData.Commands["patreon"] = &Command{IsAlternateOf: "pluspro"}
+	botData.Commands["paypal"] = &Command{IsAlternateOf: "pluspro"}
+	botData.Commands["plus"] = &Command{IsAlternateOf: "pluspro"}
+	botData.Commands["pro"] = &Command{IsAlternateOf: "pluspro"}
+	botData.Commands["pp"] = &Command{IsAlternateOf: "pluspro"}
 
 	//Alternate commands for pre-established commands
 	botData.Commands["?"] = &Command{IsAlternateOf: "help"}

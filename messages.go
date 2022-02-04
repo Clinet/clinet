@@ -74,15 +74,21 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		return //We don't want bots to interact with our bot
 	}
 
-	channel, err := session.Channel(message.ChannelID)
+	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil {
-		//return //Error finding the channel
+		channel, err = session.Channel(message.ChannelID)
+		if err != nil {
+			return
+		}
 	}
 	guild := &discordgo.Guild{Name: "Direct!", ID: "dm"}
 	if channel.GuildID != "" {
-		guild, err = session.Guild(channel.GuildID)
+		guild, err = session.State.Guild(channel.GuildID)
 		if err != nil {
-			//return //Error finding the guild
+			guild, err = session.Guild(channel.GuildID)
+			if err != nil {
+				return
+			}
 		}
 	}
 	content := message.Content

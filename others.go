@@ -13,6 +13,46 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+//returns true if it's time to notify the user
+func cyclePatreonNotice(userID string) bool {
+	if MemberIsPatron(botData.DiscordSession, userID) {
+		return false
+	}
+
+	if timeSince, exists := patreonNotices[userID]; exists {
+		if time.Now().Sub(timeSince).Hours() < 24 {
+			return false
+		}
+	}
+
+	patreonNotices[userID] = time.Now()
+	return true
+}
+
+func MemberIsPatron(s *discordgo.Session, userID string) bool {
+	if hasRole, err := MemberHasRole(s, patreonBotData.BotOptions.RoleRequired.GuildID, userID, patreonBotData.BotOptions.RoleRequired.RoleID); err == nil {
+		return hasRole
+	}
+	return false
+}
+
+func MemberHasRole(s *discordgo.Session, guildID, userID, roleID string) (bool, error) {
+	member, err := s.State.Member(guildID, userID)
+	if err != nil {
+		if member, err = s.GuildMember(guildID, userID); err != nil {
+			return false, err
+		}
+	}
+
+	for _, memberRoleID := range member.Roles {
+		if roleID == memberRoleID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // MemberHasPermission checks if a member has the given permission
 // for example, If you would like to check if user has the administrator
 // permission you would use

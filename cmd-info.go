@@ -165,7 +165,11 @@ func commandUserInfo(args []string, env *CommandEnvironment) *discordgo.MessageE
 
 	userInfoEmbed := NewEmbed().
 		SetColor(0x1C1C1C).
-		SetFooter(user.ID)
+		SetFooter("No active Clinet+ subscription")
+
+	if MemberIsPatron(botData.DiscordSession, user.ID) {
+		userInfoEmbed.SetFooter("Clinet+ subscription active")
+	}
 
 	author := user.Username + "#" + user.Discriminator
 

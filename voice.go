@@ -155,7 +155,7 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 	voice.Unlock()
 
 	//Start playing this entry
-	msg, err := voice.playRaw(voice.NowPlaying.Entry.Metadata.StreamURL)
+	msg, err := voice.playRaw(voice.NowPlaying.Entry.Metadata.StreamURL, MemberIsPatron(botData.DiscordSession, queueEntry.Requester.ID))
 
 	if msg != nil {
 		if msg == errVoiceStoppedManually {
@@ -202,7 +202,7 @@ func (voice *Voice) Play(queueEntry *QueueEntry, announceQueueAdded bool) error 
 }
 
 // playRaw plays a given media URL in a connected voice channel
-func (voice *Voice) playRaw(mediaURL string) (error, error) {
+func (voice *Voice) playRaw(mediaURL string, isPatron bool) (error, error) {
 	/*
 		Just in case things change before playRaw is ran, these checks must stay
 	*/
@@ -229,8 +229,14 @@ func (voice *Voice) playRaw(mediaURL string) (error, error) {
 		return nil, errVoicePlayInvalidURL
 	}
 
+	//Decide which options to use
+	encodingOptions := voice.EncodingOptions
+	if isPatron {
+		encodingOptions = patreonBotData.BotOptions.AudioEncoding
+	}
+
 	//Create the encoding session to encode the audio stream as DCA
-	voice.EncodingSession, err = dca.EncodeFile(mediaURL, voice.EncodingOptions)
+	voice.EncodingSession, err = dca.EncodeFile(mediaURL, encodingOptions)
 	if err != nil {
 		return nil, err
 	}

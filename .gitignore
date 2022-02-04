@@ -1,6 +1,6 @@
 # Bot configuration
 google-assistant-token.json
-config.json
+config*.json
 
 # Bot save states
 state/
