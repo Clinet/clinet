@@ -1,13 +1,14 @@
 Say hello to **Clinet+**, the new best way to support Clinet's development!
 
-It's been over four years since Clinet was launched on Discord (October 27th, 2017), and in that time every feature under Clinet's toolbelt has been provided to you for free. It's had minimal operating costs for most of the run, but recent revelations have led to the decision to either begin profiting off of Clinet's continued usage or risk being unable to give it the development attention it deserves. I'd rather not have to put Clinet on hiatus and in a future unstable state, so this is your chance to show me your support for the bot and to help it continue to grow!
+It's been over four years since Clinet was launched on Discord (October 27th, 2017), and in that time every feature under Clinet's toolbelt has been provided to you for free. It's had low operating costs for most of the run, but recent revelations have led to the need to begin making enough to support Clinet's continued usage, development, and maintenance. Otherwise, we run the risk of being unable to give it the development attention it deserves, and I'd rather not have to put Clinet on hiatus and in a future unstable state. This is your chance to show me your support for Clinet and to help it continue growing in features and scale!
 
-__The following benefits will be granted to you after you subscribe:__
+**The following benefits will be granted to you after you subscribe:**
 • You'll be able to play music at higher qualities without restriction (384Kbps at 48KHz theoretical maximum instead of 160Kbps at 44.1KHz)
 • You'll be able to direct message <@!374546169755598849> with your commands and queries instead of having to use a server
+***And more to be added at a later date!***
 
 [Click here to open the Patreon page for JoshuaDoes](https://patreon.com/JoshuaDoes), then subscribe to the $6 `Clinet+` tier to activate your Clinet+ subscription.
 
-Please note that you ***MUST*** stay in the [Clinet support server](https://discord.gg/zx2ns2J) to keep your Patron role and continue receiving the benefits of your Clinet+ subscription. If you leave the server for any reason, your benefits will be unavailable until you return. Upon returning, you may direct message <@!127184346334494721> for help if your benefits are not restored.
+Please note that you **MUST** stay in the [Clinet support server](https://discord.gg/zx2ns2J) to keep your Patron role and continue receiving the benefits of your Clinet+ subscription. If you leave the server for any reason, your benefits will be unavailable until you return. Upon returning, you may direct message <@!127184346334494721> for help if your benefits are not restored.
 
 *If you're looking for the old PayPal method for a one-time donation, and don't want the benefits of Clinet+, [click here to do that instead](https://paypal.me/JoshuaDoes).*
