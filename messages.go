@@ -74,15 +74,15 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		return //We don't want bots to interact with our bot
 	}
 
-	channel, err := session.State.Channel(message.ChannelID)
+	channel, err := session.Channel(message.ChannelID)
 	if err != nil {
-		return //Error finding the channel
+		//return //Error finding the channel
 	}
-	guild := &discordgo.Guild{Name: "Direct!"}
+	guild := &discordgo.Guild{Name: "Direct!", ID: "dm"}
 	if channel.GuildID != "" {
-		guild, err = session.State.Guild(channel.GuildID)
+		guild, err = session.Guild(channel.GuildID)
 		if err != nil {
-			return //Error finding the guild
+			//return //Error finding the guild
 		}
 	}
 	content := message.Content
@@ -91,7 +91,7 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 	}
 	member, err := botData.DiscordSession.GuildMember(guild.ID, message.Author.ID)
 	if err != nil {
-		return //Error finding the guild member
+		//return //Error finding the guild member
 	}
 
 	//Initialize various datapoints
@@ -133,6 +133,9 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			prefix = botData.CommandPrefix
 		}
 	}
+	if guild.ID == "dm" && prefix == "" {
+		regexpBotName = true
+	}
 
 	if regexpBotName {
 		if botData.BotOptions.UseWolframAlpha || botData.BotOptions.UseDuckDuckGo || botData.BotOptions.UseCustomResponses {
@@ -154,8 +157,35 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 				}
 			}
 
-			commandEnvironment := &CommandEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, UpdatedMessageEvent: updatedMessageEvent}
-			responseEmbed = callNLP(query, commandEnvironment)
+			queryLanguage := "" //Empty means "don't translate response"
+			detectedLanguage, detected := botData.Languager.DetectLanguageOf(query)
+			if !detected || detectedLanguage.String() == "English" {
+				queryLanguage = ""
+				Debug.Println("Detected English")
+			} else {
+				queryLanguage = detectedLanguage.String()
+				Debug.Println("Detected " + queryLanguage)
+				translation, err := translateFrom(queryLanguage, "English", query)
+				if err != nil {
+					Error.Println("Failed to translate query to English:", err)
+					queryLanguage = ""
+				} else {
+					Info.Println("Translated query to English:", translation)
+					query = translation
+				}
+			}
+
+			commandEnvironment := &CommandEnvironment{
+				Channel: channel,
+				Guild: guild,
+				Message: message,
+				User: message.Author,
+				Member: member,
+				UpdatedMessageEvent: updatedMessageEvent,
+				BotPrefix: prefix,
+			}
+			nlpEmbed, blockTranslation := callNLP(query, commandEnvironment)
+			responseEmbed = nlpEmbed //This is dirty and gross
 
 			if responseEmbed == nil {
 				typingEvent(session, message.ChannelID, updatedMessageEvent)
@@ -173,10 +203,34 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 					guildData[guild.ID].WolframConversations[message.Author.ID] = &wolfram.Conversation{}
 				}
 
-				queryEnvironment := &QueryEnvironment{Channel: channel, Guild: guild, Message: message, User: message.Author, Member: member, WolframConversation: previousConversation}
+				queryEnvironment := &QueryEnvironment{
+					Channel: channel,
+					Guild: guild,
+					Message: message,
+					User: message.Author,
+					Member: member,
+					WolframConversation: previousConversation,
+					BotPrefix: prefix,
+				}
 				responseEmbed, err = getQueryResult(query, queryEnvironment)
 				if err != nil {
 					responseEmbed = NewErrorEmbed("Query Error", "We couldn't find a service to handle your query.\nMake sure you're using proper grammar and query structure where applicable.")
+				}
+			}
+
+			if queryLanguage != "" {
+				responseEmbed.Title, _ = translate("English", queryLanguage, responseEmbed.Title, 256)
+				if !blockTranslation {
+					responseEmbed.Description, _ = translate("English", queryLanguage, responseEmbed.Description, 2048)
+				}
+				if responseEmbed.Footer != nil {
+					responseEmbed.Footer.Text, _ = translate("English", queryLanguage, responseEmbed.Footer.Text, 2048)
+				}
+				if len(responseEmbed.Fields) > 0 {
+					for i := 0; i < len(responseEmbed.Fields); i++ {
+						responseEmbed.Fields[i].Name, _ = translate("English", queryLanguage, responseEmbed.Fields[i].Name, 256)
+						responseEmbed.Fields[i].Value, _ = translate("English", queryLanguage, responseEmbed.Fields[i].Value, 1024)
+					}
 				}
 			}
 		}
@@ -291,7 +345,10 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 		}
 
 		if canUpdateMessage {
-			session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
+			_, err = session.ChannelMessageEditEmbed(message.ChannelID, responseID, responseEmbed)
+			if err != nil {
+				Error.Println("Failed to update response:", err)
+			}
 			debugEmbed(responseEmbed, botData.DiscordSession.State.User, channel, guild, updatedMessageEvent)
 		} else {
 			typingEvent(session, message.ChannelID, updatedMessageEvent)
@@ -305,6 +362,8 @@ func handleMessage(session *discordgo.Session, message *discordgo.Message, updat
 			if err == nil {
 				debugEmbed(responseEmbed, botData.DiscordSession.State.User, channel, guild, updatedMessageEvent)
 				guildData[guild.ID].Queries[message.ID].ResponseMessageID = responseMessage.ID
+			} else {
+				Error.Println("Failed to respond:", err)
 			}
 		}
 

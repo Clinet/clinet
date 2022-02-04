@@ -57,7 +57,7 @@ func (*QueryServiceDuckDuckGo) Query(query string, env *QueryEnvironment) (*disc
 		AddField(queryResult.Heading, result).MessageEmbed
 
 	if queryResult.Image != "" {
-		ddgEmbed.Image = &discordgo.MessageEmbedImage{URL: queryResult.Image}
+		ddgEmbed.Image = &discordgo.MessageEmbedImage{URL: "https://duckduckgo.com" + queryResult.Image}
 	}
 
 	return ddgEmbed, nil

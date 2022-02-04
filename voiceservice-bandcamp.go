@@ -134,7 +134,7 @@ func bandcampGetAlbum(url string) (*VoiceServiceBandcampAlbum, error) {
 	}
 
 	if album == nil {
-		return nil, fmt.Errorf("error finding album")
+		return nil, fmt.Errorf("error finding album: %v", albumInfo)
 	}
 
 	if len(album.Tracks) == 0 {

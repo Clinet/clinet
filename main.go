@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+//	"bufio"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/mmcdole/gofeed"
+	"github.com/pemistahl/lingua-go"
 
 	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	soundcloud "github.com/JoshuaDoes/go-soundcloud"
@@ -28,7 +29,7 @@ import (
 	xkcd "github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
 	"github.com/robfig/cron"
-	ytdl "github.com/kkdai/youtube/v2"
+	ytdl "github.com/kkdai/youtube"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -158,7 +159,7 @@ func main() {
 						if googleAssistant.GetAuthURL() != "" {
 							Warning.Println("Please open the following URL to authenticate with Google Cloud Platform:", googleAssistant.GetAuthURL())
 							Warning.Println("When you've authenticated successfully, press enter to continue.")
-							bufio.NewReader(os.Stdin).ReadLine()
+//							bufio.NewReader(os.Stdin).ReadLine()
 						}
 					}
 				}
@@ -216,6 +217,9 @@ func main() {
 		if botData.BotOptions.UseFeed {
 			botData.BotClients.FeedParser = gofeed.NewParser()
 		}
+
+		Info.Println("Building language detector...")
+		botData.Languager = lingua.NewLanguageDetectorBuilder().FromAllLanguages().Build()
 
 		Info.Println("Creating a Discord session...")
 		discord, err := discordgo.New("Bot " + botData.BotToken)
@@ -410,8 +414,20 @@ func updateRandomStatus(session *discordgo.Session, status int) {
 	}
 	status--
 
-	session.UpdateStatusComplex(discordgo.UpdateStatusData{Activities: []*discordgo.Activity{botData.CustomStatuses[status]}})
-	Debug.Printf("Presence: ", botData.CustomStatuses[status])
+	setStatus := botData.CustomStatuses[status]
+	session.UpdateStatusComplex(discordgo.UpdateStatusData{Activities: []*discordgo.Activity{setStatus}})
+	switch setStatus.Type {
+	case discordgo.ActivityTypeGame:
+		Debug.Printf("Presence: Playing %s", setStatus.Name)
+	case discordgo.ActivityTypeStreaming:
+		Debug.Printf("Presence: Streaming %s at %s", setStatus.Name, setStatus.URL)
+	case discordgo.ActivityTypeListening:
+		Debug.Printf("Presence: Listening to %s", setStatus.Name)
+	case discordgo.ActivityType(3): //discordgo.ActivityTypeWatching:
+		Debug.Printf("Presence: Watching %s", setStatus.Name)
+	case discordgo.ActivityTypeCustom:
+		Debug.Printf("Presence: [%s] %s", setStatus.URL, setStatus.Name)
+	}
 }
 
 func updateListeningStatus(session *discordgo.Session, artist, title string) {

@@ -35,8 +35,8 @@ func (e *Embed) SetTitle(name string) *Embed {
 
 //SetDescription [desc]
 func (e *Embed) SetDescription(description string) *Embed {
-	if len(description) > 2048 {
-		description = description[:2048]
+	if len(description) > 4096 {
+		description = description[:4096]
 	}
 	e.Description = description
 	return e

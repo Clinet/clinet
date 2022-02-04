@@ -88,7 +88,7 @@ func initNLPCommands() {
 	addNLPCommand(nlpNew("screenshot", "", "", regexp.MustCompile("(?i)(?:.*)(?:screenshot)(?:.*)"), nil, regexp.MustCompile("((http|https)://([\\w_-]+(?:(?:\\.[\\w_-]+)+)[\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?)"), ""))
 
 	//@Clinet Translate "hello" to Spanish please and thanks!
-	addNLPCommand(nlpNew("translate", "", "", regexp.MustCompile("(?i)(?:.*)translate \"(.*)\" to \\b(.*)\\b(?:.*)"), nil, nil, "${2} ${1}"))
+	addNLPCommand(nlpNew("translate", "", "", regexp.MustCompile("(?i)(?:.*)(?:translate|translation) \"(.*)\" (?:in|to|into|from) \\b(.*)\\b(?:.*)"), nil, nil, "${2} ${1}"))
 
 	//@Clinet Translate "hello" from English to Spanish please! :D
 	addNLPCommand(nlpNew("translate", "", "", regexp.MustCompile("(?i)(?:.*)translate \"(.*)\" from (.*) to \\b(.*)\\b(?:.*)"), nil, nil, "${2} ${3} ${1}"))
@@ -102,13 +102,8 @@ func addNLPCommand(nlp ...*NLP) {
 	botData.NLPCommands = append(botData.NLPCommands, &CommandNLP{Commands: nlp})
 }
 
-func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
-	//Hotfix for missing command prefix in NLP responses
-	env.BotPrefix = guildSettings[env.Guild.ID].BotPrefix
-	if env.BotPrefix == "" {
-		env.BotPrefix = botData.CommandPrefix
-	}
-
+//returns response and if the translation of the response should be blocked
+func callNLP(message string, env *CommandEnvironment) (*discordgo.MessageEmbed, bool) {
 	for i, command := range botData.NLPCommands {
 		for j := 0; j < len(command.Commands); j++ {
 			Debug.Printf("Testing NLP %d, command %d...", i, j)
@@ -177,17 +172,21 @@ func callNLP(message string, env *CommandEnvironment) *discordgo.MessageEmbed {
 			Debug.Printf("Matches (%d): %v", len(matches), matches)
 
 			embed := callCommand(nlp.Command, matches, env)
+			blockTranslation := false
+			if nlp.Command == "translate" {
+				blockTranslation = true
+			}
 			if j == (len(command.Commands) - 1) {
 				if embed == nil {
-					return InternalEmbedActionCompleted
+					return InternalEmbedActionCompleted, blockTranslation
 				}
-				return embed
+				return embed, blockTranslation
 			} else {
 				if strings.Contains(embed.Title, "Error") {
-					return embed
+					return embed, blockTranslation
 				}
 			}
 		}
 	}
-	return nil
+	return nil, false
 }

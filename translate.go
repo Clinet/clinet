@@ -3,18 +3,30 @@ package main
 import (
 	"errors"
 	"strings"
-	"time"
+	//"time"
 
-	"github.com/bregydoc/gtranslate"
+	//"github.com/bregydoc/gtranslate"
+	gt "github.com/bas24/googletranslatefree"
 )
 
 //translate translates a message from the detected language to the specified language
-func translate(toLang, msg string) (translated string, err error) {
-	return translateFrom("auto", toLang, msg)
+func translate(fromLang, toLang, msg string, limit int) (translated string, err error) {
+	translated, err = translateFrom("auto", toLang, msg)
+	if err == nil && msg != "" && limit > 0 {
+		if limit > len(msg) {
+			limit = len(msg)
+		} else {
+			translated = string(translated[:limit-5]) + "{...}"
+		}
+	}
+	return translated, err
 }
 
 //translateFrom translates a message from the specified language to the specified language
 func translateFrom(fromLang, toLang, msg string) (translated string, err error) {
+	if msg == "" {
+		return "", nil
+	}
 	if fromLang == "" || toLang == "" {
 		return msg + " (translation failed)", errors.New("translator: language not specified")
 	}
@@ -33,10 +45,12 @@ func translateFrom(fromLang, toLang, msg string) (translated string, err error) 
 		return msg, nil
 	}
 
-	translated, err = gtranslate.TranslateWithParams(msg, gtranslate.TranslationParams{From: fromLang, To: toLang, Tries: 5, Delay: time.Second * 1, GoogleHost: "google.com"})
+	//translated, err = gtranslate.TranslateWithParams(msg, gtranslate.TranslationParams{From: fromLang, To: toLang, Tries: 1, Delay: 0, GoogleHost: "google.co.uk"})
+	translated, err = gt.Translate(msg, fromLang, toLang)
 	if err != nil {
 		return msg + " (translation failed)", err
 	}
+	Debug.Println("Translated '" + msg + "' from " + fromLang + " to " + toLang + ": " + translated)
 	return translated, nil
 }
 

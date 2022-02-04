@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/mmcdole/gofeed"
+	"github.com/pemistahl/lingua-go"
 
 	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-soundcloud"
@@ -18,7 +19,7 @@ import (
 	"github.com/koffeinsource/go-imgur"
 	"github.com/nishanths/go-xkcd"
 	lyrics "github.com/rhnvrm/lyric-api-go"
-	ytdl "github.com/kkdai/youtube/v2"
+	ytdl "github.com/kkdai/youtube"
 	"github.com/superwhiskers/fennel"
 	"google.golang.org/api/youtube/v3"
 )
@@ -48,6 +49,8 @@ type BotData struct {
 	VoiceServices  []VoiceService
 	QueryServices  []QueryService
 	LastTipMessage int
+
+	Languager lingua.LanguageDetector
 
 	Updating bool
 }

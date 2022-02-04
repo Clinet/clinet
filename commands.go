@@ -537,6 +537,20 @@ func initCommands() {
 		},
 	}
 
+	/*botData.Commands["autoit"] = &Command{
+		Function: commandAutoIt,
+		HelpText: "Executes AutoIt code using the [AutoGo](https://github.com/JoshuaDoes/autogo) VM.",
+		RequiredArguments: []string{
+			"script",
+		},
+		Arguments: []CommandArgument{
+			{Name: "script", Description: "The AutoIt code to run", ArgType: "string"},
+		},
+	}
+	botData.Commands["au3"] = &Command{IsAlternateOf: "autoit"}
+	botData.Commands["autoit3"] = &Command{IsAlternateOf: "autoit"}
+	botData.Commands["autogo"] = &Command{IsAlternateOf: "autoit"}*/
+
 	//Alternate commands for pre-established commands
 	botData.Commands["?"] = &Command{IsAlternateOf: "help"}
 	botData.Commands["commands"] = &Command{IsAlternateOf: "help"}

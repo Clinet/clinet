@@ -85,7 +85,7 @@ func commandTranslate(args []string, env *CommandEnvironment) *discordgo.Message
 			return NewErrorEmbed("Translate Error", "You must specify the message to translate!")
 		}
 
-		translation, err := translate(args[0], strings.Join(args[1:], " "))
+		translation, err := translate("auto", args[0], strings.Join(args[1:], " "), 4096)
 		if err != nil {
 			return NewErrorEmbed("Translate Error", fmt.Sprintf("Failed to translate: %v", err))
 		}
