@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 
 	"github.com/Clinet/clinet/discord"
+	"github.com/Clinet/clinet/features"
+	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/JoshuaDoes/json"
 	"github.com/JoshuaDoes/logger"
 )
@@ -19,7 +21,9 @@ const (
 )
 
 type Config struct {
-	Discord *discord.CfgDiscord `json:"discord"`
+	Features     []*features.Feature `json:"features"`
+	Discord      *discord.CfgDiscord `json:"discord"`
+	WolframAlpha *wolfram.Client     `json:"wolframAlpha"`
 
 	path string //The path to the configuration file
 }

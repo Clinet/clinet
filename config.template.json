@@ -1,3 +1,10 @@
 {
-	"discord": null
+	"features": [],
+	"discord": {
+		"token": "",
+		"ownerID": ""
+	},
+	"wolframAlpha": {
+		"AppID": ""
+	}
 }

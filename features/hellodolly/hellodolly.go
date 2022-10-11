@@ -1,19 +1,19 @@
-package cmds
+package hellodolly
 
 import (
-	"strings"
 	"math/rand"
+	"strings"
+
+	"github.com/Clinet/clinet/cmds"
 )
 
+var CmdRoot *cmds.Cmd
+
 func init() {
-	Commands = append(Commands, &Cmd{
-		Handler: cmdHelloDolly,
-		Matches: []string{"hellodolly", "hd", "hidolly", "dolly"},
-		Description: "This is not just a command, it symbolizes the hope and enthusiasm of an entire generation summed up in two words sung most famously by Louis Armstrong: Hello, Dolly. When executed, you will randomly receive a lyric from Hello, Dolly as your response.",
-	})
+	CmdRoot = cmds.NewCmd("hellodolly", "Responds with a random lyric from Louis Armstrong's Hello, Dolly", handlerHelloDolly)
 }
 
-var cmdHelloDollyLyrics = `Hello, Dolly
+var lyrics = `Hello, Dolly
 Well, hello, Dolly
 It's so nice to have you back where you belong
 You're lookin' swell, Dolly
@@ -42,13 +42,13 @@ Dolly'll never go away
 Dolly'll never go away
 Dolly'll never go away again`
 
-func cmdHelloDolly(ctx *CmdCtx) *CmdResp {
+func handlerHelloDolly(ctx *cmds.CmdCtx) *cmds.CmdResp {
 	//Split the lyrics by line into a slice
-	lyrics := strings.Split(cmdHelloDollyLyrics, "\n")
+	lines := strings.Split(lyrics, "\n")
 
 	//Choose a random line
-	line := rand.Intn(len(lyrics))
+	line := rand.Intn(len(lines))
 
 	//Return the chosen line
-	return makeCmdResp(lyrics[line])
+	return cmds.NewCmdRespEmbed("Hello Dolly", lines[line]).SetColor(0x1C1C1C)
 }

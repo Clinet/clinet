@@ -1,18 +1,22 @@
 package discord
 
 import (
-	"math/rand"
+	"fmt"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/Clinet/clinet/cmds"
+	"github.com/Clinet/discordgo-embed"
 	"github.com/JoshuaDoes/logger"
 )
 
 var Log *logger.Logger
+var Discord *ClientDiscord
 
-//DiscordSession holds a Discord session
-type DiscordSession struct {
+//ClientDiscord holds a Discord session
+type ClientDiscord struct {
 	*discordgo.Session
+
+	User *discordgo.User
 }
 
 var DiscordCfg *CfgDiscord
@@ -23,249 +27,211 @@ type CfgDiscord struct {
 	Token string `json:"token"`
 
 	//Trust for Discord communication
-	DisplayName   string `json:"displayName"`   //The display name for communicating on Discord
-	OwnerID       string `json:"ownerID"`       //The user ID of the bot owner on Discord
-	CommandPrefix string `json:"commandPrefix"` //The command prefix to use when invoking the bot on Discord
+	OwnerID string `json:"ownerID"` //The user ID of the bot owner on Discord
 }
 
-//StartDiscord returns a connected DiscordSession, up to caller to close it
-func StartDiscord(cfg *CfgDiscord) *DiscordSession {
+func StartDiscord(cfg *CfgDiscord) {
 	DiscordCfg = cfg
 	Log.Trace("--- StartDiscord(" + DiscordCfg.Token + ") ---") //Maybe I should sensor the bot token? Protect your logs and your config
 
-	Log.Debug("Creating Discord struct")
-	Discord, err := discordgo.New("Bot " + DiscordCfg.Token)
+	Log.Debug("Creating Discord struct...")
+	discord, err := discordgo.New("Bot " + DiscordCfg.Token)
 	if err != nil {
 		Log.Fatal("Unable to connect to Discord!")
 	}
 
 	//Only enable informational Discord logging if we're tracing
 	if Log.Verbosity == 2 {
-		Log.Debug("Setting Discord log level to informational")
-		Discord.LogLevel = discordgo.LogInformational
+		Log.Debug("Setting Discord log level to informational...")
+		discord.LogLevel = discordgo.LogInformational
 	}
 
-	Log.Info("Registering Discord event handlers")
-	Discord.AddHandler(discordReady)
-	Discord.AddHandler(discordChannelCreate)
-	Discord.AddHandler(discordChannelUpdate)
-	Discord.AddHandler(discordChannelDelete)
-	Discord.AddHandler(discordGuildUpdate)
-	Discord.AddHandler(discordGuildBanAdd)
-	Discord.AddHandler(discordGuildBanRemove)
-	Discord.AddHandler(discordGuildMemberAdd)
-	Discord.AddHandler(discordGuildMemberRemove)
-	Discord.AddHandler(discordGuildRoleCreate)
-	Discord.AddHandler(discordGuildRoleUpdate)
-	Discord.AddHandler(discordGuildRoleDelete)
-	Discord.AddHandler(discordGuildEmojisUpdate)
-	Discord.AddHandler(discordUserUpdate)
-	Discord.AddHandler(discordVoiceStateUpdate)
-	Discord.AddHandler(discordMessageCreate)
-	Discord.AddHandler(discordMessageDelete)
-	Discord.AddHandler(discordMessageDeleteBulk)
-	Discord.AddHandler(discordMessageUpdate)
-	Discord.AddHandler(discordMessageReactionAdd)
-	Discord.AddHandler(discordMessageReactionRemove)
-	Discord.AddHandler(discordMessageReactionRemoveAll)
+	Log.Info("Registering Discord event handlers...")
+	discord.AddHandler(discordReady)
+	discord.AddHandler(discordMessageCreate)
+	discord.AddHandler(discordInteractionCreate)
 
-	Log.Info("Connecting to Discord")
-	err = Discord.Open()
+	Log.Info("Connecting to Discord...")
+	err = discord.Open()
 	if err != nil {
 		Log.Fatal("Unable to connect to Discord!", err)
-		return nil
+		return
 	}
 
 	Log.Info("Connected to Discord!")
-	return &DiscordSession{Discord}
-}
+	Discord = &ClientDiscord{discord, nil}
 
-func cmdDiscord(session *discordgo.Session, message *discordgo.Message) ([]*cmds.CmdResp, error) {
-	if message == nil {
-		return nil, cmds.ErrCmdEmptyMsg
-	}
-	if message.Author.Bot {
-		return nil, nil
-	}
-	content := message.Content
-	if content == "" {
-		return nil, nil
-	}
-	if content[:len(DiscordCfg.CommandPrefix)] != DiscordCfg.CommandPrefix {
-		return nil, nil
-	}
-	content = content[len(DiscordCfg.CommandPrefix):]
-
-	//Prepare cmd context
-	contentDisplay, err := message.ContentWithMoreMentionsReplaced(session)
-	if err != nil {
-		return nil, err
-	}
-	channel, err := session.State.Channel(message.ChannelID)
-	if err != nil {
-		return nil, err
-	}
-	guild, err := session.State.Guild(channel.GuildID)
-	if err != nil {
-		return nil, err
-	}
-	author := message.Author
-	member, err := session.GuildMember(guild.ID, author.ID)
-	if err != nil {
-		return nil, err
+	Log.Info("Recycling old application commands...")
+	if oldAppCmds, err := Discord.ApplicationCommands(Discord.State.User.ID, ""); err == nil {
+		for _, cmd := range oldAppCmds {
+			Log.Trace("Deleting application command for ", cmd.Name)
+			if err := Discord.ApplicationCommandDelete(Discord.State.User.ID, "", cmd.ID); err != nil {
+				Log.Error(err)
+			}
+		}
 	}
 
-	//Build cmd context
-	ctx := &cmds.CmdCtx{
-		Content: content,
-		ContentDisplay: contentDisplay,
-		CmdPrefix: DiscordCfg.CommandPrefix,
-		CmdEdited: false,
-		Server: guild,
-		Channel: channel,
-		Message: message,
-		User: author,
-		Member: member,
+	Log.Info("Registering application commands...")
+	Log.Warn("TODO: Batch overwrite commands, then get a list of commands from Discord that aren't in memory and delete them")
+	for _, cmd := range CmdsToAppCommands() {
+		Log.Trace("Registering cmd: ", cmd)
+		_, err := Discord.ApplicationCommandCreate(Discord.State.User.ID, "", cmd)
+		if err != nil {
+			Log.Fatal(fmt.Sprintf("Unable to register cmd '%s': %v", cmd.Name, err))
+		}
 	}
-
-	//Build cmd list
-	cmdList := make([]*cmds.CmdBuilderCommand, 0)
-	cmd, err := cmds.CmdMessage(ctx, content)
-	if err != nil {
-		return nil, err
-	}
-	cmdList = append(cmdList, cmd)
-
-	//Build cmd builder
-	cmdRuntime := cmds.CmdBatch(cmdList...)
-
-	//Run cmds and get their responses
-	cmdResps := cmdRuntime.Run()
-	if len(cmdResps) == 0 {
-		Log.Error("no responses")
-		return nil, cmds.ErrCmdNoResp
-	}
-
-	//Return their responses
-	return cmdResps, nil
+	Log.Info("Application commands ready for use!")
 }
 
 func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 	Log.Trace("--- discordReady(", event, ") ---")
-}
-
-func discordChannelCreate(session *discordgo.Session, event *discordgo.ChannelCreate) {
-	Log.Trace("--- discordChannelCreate(", event, ") ---")
-}
-
-func discordChannelUpdate(session *discordgo.Session, event *discordgo.ChannelUpdate) {
-	Log.Trace("--- discordChannelUpdate(", event, ") ---")
-}
-
-func discordChannelDelete(session *discordgo.Session, event *discordgo.ChannelDelete) {
-	Log.Trace("--- discordChannelDelete(", event, ") ---")
-}
-
-func discordGuildUpdate(session *discordgo.Session, event *discordgo.GuildUpdate) {
-	Log.Trace("--- discordGuildUpdate(", event, ") ---")
-}
-
-func discordGuildBanAdd(session *discordgo.Session, event *discordgo.GuildBanAdd) {
-	Log.Trace("--- discordGuildBanAdd(", event, ") ---")
-}
-
-func discordGuildBanRemove(session *discordgo.Session, event *discordgo.GuildBanRemove) {
-	Log.Trace("--- discordGuildBanRemove(", event, ") ---")
-}
-
-func discordGuildMemberAdd(session *discordgo.Session, event *discordgo.GuildMemberAdd) {
-	Log.Trace("--- discordGuildMemberAdd(", event, ") ---")
-}
-
-func discordGuildMemberRemove(session *discordgo.Session, event *discordgo.GuildMemberRemove) {
-	Log.Trace("--- discordGuildMemberRemove(", event, ") ---")
-}
-
-func discordGuildRoleCreate(session *discordgo.Session, event *discordgo.GuildRoleCreate) {
-	Log.Trace("--- discordGuildRoleCreate(", event, ") ---")
-}
-
-func discordGuildRoleUpdate(session *discordgo.Session, event *discordgo.GuildRoleUpdate) {
-	Log.Trace("--- discordGuildRoleUpdate(", event, ") ---")
-}
-
-func discordGuildRoleDelete(session *discordgo.Session, event *discordgo.GuildRoleDelete) {
-	Log.Trace("--- discordGuildRoleDelete(", event, ") ---")
-}
-
-func discordGuildEmojisUpdate(session *discordgo.Session, event *discordgo.GuildEmojisUpdate) {
-	Log.Trace("--- discordGuildEmojisUpdate(", event, ") ---")
-}
-
-func discordUserUpdate(session *discordgo.Session, event *discordgo.UserUpdate) {
-	Log.Trace("--- discordUserUpdate(", event, ") ---")
-}
-
-func discordVoiceStateUpdate(session *discordgo.Session, event *discordgo.VoiceStateUpdate) {
-	Log.Trace("--- discordVoiceStateUpdate(", event, ") ---")
+	for Discord == nil {
+		//Wait for Discord to finish connecting on our end
+		if Discord != nil {
+			break
+		}
+	}
+	Discord.User = event.User
+	Log.Info("Logged into Discord as ", Discord.User, "!")
 }
 
 func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
-	Log.Trace("--- discordMessageCreate(", event, ") ---")
+	Log.Trace("--- discordMessageCreate(", event, ") ---", event.ID, event.GuildID, event.ChannelID, event.Member, event.Member.User)
 	message, err := session.ChannelMessage(event.ChannelID, event.ID)
 	if err != nil {
 		Log.Error(message, err)
 	}
 
-	resps, err := cmdDiscord(session, message)
+	cmdResps, err := convoHandler(session, message)
 	if err != nil {
-		Log.Error(resps, err)
+		Log.Error(err, cmdResps)
 		return
 	}
 
-	for _, resp := range resps {
-		random := rand.Intn(len(resp.Messages))
-		message := resp.Messages[random]
+	for i := 0; i < len(cmdResps); i++ {
+		if cmdResps[i] == nil || cmdResps[i].Text == "" {
+			continue
+		}
 
-		respMessage, err := session.ChannelMessageSend(event.ChannelID, message)
+		cmdResps[i].OnReady(func(r *cmds.CmdResp) {
+			Log.Trace("Response to message for convo: " + r.String())
+			if r.Title != "" || r.Color != nil || r.Image != "" {
+				respEmbed := embed.NewEmbed().
+					SetDescription(r.Text)
+					if r.Title != "" {
+					respEmbed.SetTitle(r.Title)
+				}
+
+				if r.Color != nil {
+					respEmbed.SetColor(*r.Color)
+				}
+				if r.Image != "" {
+					respEmbed.SetImage(r.Image)
+				}
+
+				_, err := session.ChannelMessageSendComplex(event.ChannelID, &discordgo.MessageSend{
+					Embed: respEmbed.MessageEmbed,
+				})
+				if err != nil {
+					Log.Error(err)
+				}
+			} else {
+				_, err := session.ChannelMessageSend(event.ChannelID, r.Text)
+				if err != nil {
+					Log.Error(err)
+				}
+			}
+		})
+	}
+}
+
+func discordInteractionCreate(session *discordgo.Session, event *discordgo.InteractionCreate) {
+	Log.Trace("--- discordInteractionCreate(", event, ") ---", event.ID, event.Type, event.GuildID, event.ChannelID, event.Member, event.User, event.Token, event.Version)
+
+	switch event.Type {
+	case discordgo.InteractionApplicationCommand:
+		eventData := event.ApplicationCommandData()
+		eventOpts := eventData.Options
+
+		cmd := cmds.GetCmd(eventData.Name)
+		if cmd == nil {
+			Log.Error("Unable to find command " + eventData.Name)
+			return
+		}
+
+		cmdAlias, cmdResps := cmdHandler(cmd, eventData.Name, eventOpts)
+		for i := 0; i < len(cmdResps); i++ {
+			if cmdResps[i] == nil || cmdResps[i].Text == "" {
+				continue
+			}
+
+			cmdResps[i].OnReady(func(r *cmds.CmdResp) {
+				Log.Trace("Response to interaction for cmd " + cmdAlias + ": " + r.String())
+				resp := &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{},
+				}
+
+				if r.Title != "" || r.Color != nil || r.Image != "" {
+					respEmbed := embed.NewEmbed().
+						SetDescription(r.Text)
+
+					if r.Title != "" {
+						respEmbed.SetTitle(r.Title)
+					}
+					if r.Color != nil {
+						respEmbed.SetColor(*r.Color)
+					}
+					if r.Image != "" {
+						respEmbed.SetImage(r.Image)
+					}
+
+					resp.Data.Embeds = []*discordgo.MessageEmbed{respEmbed.MessageEmbed}
+				} else {
+					resp.Data.Content = r.Text
+				}
+
+				session.InteractionRespond(event.Interaction, resp)
+			})
+		}
+	case discordgo.InteractionMessageComponent:
+		msgData := event.MessageComponentData()
+		if msgData.ComponentType != discordgo.ButtonComponent {
+			return
+		}
+
+		switch msgData.CustomID {
+		case "example1":
+			//do something when this button is pressed
+		}
+
+		respEmbed := embed.NewGenericEmbed("Feature Name", "Example response embed from feature")
+		featureComponents := []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label: "Example 1",
+						Style: discordgo.SuccessButton,
+						CustomID: "example1",
+					},
+				},
+			},
+		}
+		resp := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				CustomID: "featureName",
+				Embeds: []*discordgo.MessageEmbed{respEmbed},
+				Components: featureComponents,
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		}
+
+		err := session.InteractionRespond(event.Interaction, resp)
 		if err != nil {
-			Log.Error(respMessage, err)
+			Log.Error(err)
+		} else {
+			Log.Debug("Responded to button ", msgData.CustomID, " with response: ", fmt.Sprintf("%v", respEmbed))
 		}
 	}
-}
-
-func discordMessageDelete(session *discordgo.Session, event *discordgo.MessageDelete) {
-	Log.Trace("--- discordMessageDelete(", event, ") ---")
-}
-
-func discordMessageDeleteBulk(session *discordgo.Session, event *discordgo.MessageDeleteBulk) {
-	Log.Trace("--- discordMessageDeleteBulkage(", event, ") ---")
-}
-
-func discordMessageUpdate(session *discordgo.Session, event *discordgo.MessageUpdate) {
-	Log.Trace("--- discordMessageUpdate(", event, ") ---")
-	/*message, err := session.ChannelMessage(event.ChannelID, event.ID)
-	if err != nil {
-		Log.Error(message, err)
-	}
-
-	resps, err := cmdDiscord(session, message)
-	if err != nil {
-		Log.Error(resps, err)
-		return
-	}*/
-
-	//update messages
-}
-
-func discordMessageReactionAdd(session *discordgo.Session, event *discordgo.MessageReactionAdd) {
-	Log.Trace("--- discordMessageReactionAdd(", event, ") ---")
-}
-
-func discordMessageReactionRemove(session *discordgo.Session, event *discordgo.MessageReactionRemove) {
-	Log.Trace("--- discordMessageReactionRemove(", event, ") ---")
-}
-
-func discordMessageReactionRemoveAll(session *discordgo.Session, event *discordgo.MessageReactionRemoveAll) {
-	Log.Trace("--- discordMessageReactionRemoveAll(", event, ") ---")
 }
