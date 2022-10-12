@@ -3,23 +3,21 @@ package cmds
 import (
 	//"image/color"
 
+	"github.com/Clinet/clinet/services"
 	"github.com/JoshuaDoes/json"
 )
 
 type CmdResp struct {
-	Ready  bool //When not ready, a typing event should be sent and a goroutine should wait on a response
-	//Color  color.Color
-	Color  *int
-	Title  string
-	Text   string
-	Image  string
-	Errors []error
+	*services.Message //Take on the fields of a service message
+	Ready  bool       //When not ready, a typing event should be sent and a goroutine should wait on a response
 }
-func NewCmdRespMsg(text string) *CmdResp {
-	return &CmdResp{Ready: true, Text: text}
+func NewCmdRespMsg(content string) *CmdResp {
+	resp := &CmdResp{&services.Message{Content: content}, true}
+	return resp
 }
-func NewCmdRespEmbed(title, text string) *CmdResp {
-	return &CmdResp{Ready: true, Title: title, Text: text}
+func NewCmdRespEmbed(title, content string) *CmdResp {
+	resp := &CmdResp{&services.Message{Title: title, Content: content}, true}
+	return resp
 }
 func (resp *CmdResp) String() string {
 	jsonData, err := json.Marshal(resp, true)
@@ -50,8 +48,8 @@ func (resp *CmdResp) SetColor(clr int) *CmdResp {
 	resp.Color = &clr
 	return resp
 }
-func (resp *CmdResp) SetText(text string) *CmdResp {
-	resp.Text = text
+func (resp *CmdResp) SetContent(content string) *CmdResp {
+	resp.Content = content
 	return resp
 }
 func (resp *CmdResp) SetTitle(title string) *CmdResp {
@@ -60,9 +58,5 @@ func (resp *CmdResp) SetTitle(title string) *CmdResp {
 }
 func (resp *CmdResp) SetImage(image string) *CmdResp {
 	resp.Image = image
-	return resp
-}
-func (resp *CmdResp) AddError(err error) *CmdResp {
-	resp.Errors = append(resp.Errors, err)
 	return resp
 }

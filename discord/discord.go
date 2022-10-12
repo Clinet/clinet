@@ -8,14 +8,6 @@ import (
 )
 
 var Log *logger.Logger
-var Discord *ClientDiscord
-
-//ClientDiscord holds a Discord session
-type ClientDiscord struct {
-	*discordgo.Session
-
-	User *discordgo.User
-}
 
 func StartDiscord(cfg *CfgDiscord) {
 	DiscordCfg = cfg

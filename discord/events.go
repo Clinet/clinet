@@ -34,38 +34,21 @@ func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCr
 	}
 
 	for i := 0; i < len(cmdResps); i++ {
-		if cmdResps[i] == nil || cmdResps[i].Text == "" {
+		if cmdResps[i] == nil {
 			continue
 		}
 
 		cmdResps[i].OnReady(func(r *cmds.CmdResp) {
 			Log.Trace("Response to message for convo: " + r.String())
-			if r.Title != "" || r.Color != nil || r.Image != "" {
-				respEmbed := embed.NewEmbed().
-					SetDescription(r.Text)
-					if r.Title != "" {
-					respEmbed.SetTitle(r.Title)
-				}
-
-				if r.Color != nil {
-					respEmbed.SetColor(*r.Color)
-				}
-				if r.Image != "" {
-					respEmbed.SetImage(r.Image)
-				}
-
-				_, err := session.ChannelMessageSendComplex(event.ChannelID, &discordgo.MessageSend{
-					Embed: respEmbed.MessageEmbed,
-				})
-				if err != nil {
-					Log.Error(err)
-				}
-			} else {
-				_, err := session.ChannelMessageSend(event.ChannelID, r.Text)
-				if err != nil {
-					Log.Error(err)
-				}
+			r.Context = event.Message
+			r.ChannelID = event.ChannelID
+				
+			msg, err := Discord.MsgSend(r.Message)
+			if err != nil {
+				Log.Error(err)
+				return
 			}
+			Log.Trace("Sent message: ", msg)
 		})
 	}
 }
@@ -86,37 +69,20 @@ func discordInteractionCreate(session *discordgo.Session, event *discordgo.Inter
 
 		cmdAlias, cmdResps := cmdHandler(cmd, eventData.Name, eventOpts)
 		for i := 0; i < len(cmdResps); i++ {
-			if cmdResps[i] == nil || cmdResps[i].Text == "" {
+			if cmdResps[i] == nil {
 				continue
 			}
 
 			cmdResps[i].OnReady(func(r *cmds.CmdResp) {
 				Log.Trace("Response to interaction for cmd " + cmdAlias + ": " + r.String())
-				resp := &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{},
+				r.Context = event.Interaction
+				
+				msg, err := Discord.MsgSend(r.Message)
+				if err != nil {
+					Log.Error(err)
+					return
 				}
-
-				if r.Title != "" || r.Color != nil || r.Image != "" {
-					respEmbed := embed.NewEmbed().
-						SetDescription(r.Text)
-
-					if r.Title != "" {
-						respEmbed.SetTitle(r.Title)
-					}
-					if r.Color != nil {
-						respEmbed.SetColor(*r.Color)
-					}
-					if r.Image != "" {
-						respEmbed.SetImage(r.Image)
-					}
-
-					resp.Data.Embeds = []*discordgo.MessageEmbed{respEmbed.MessageEmbed}
-				} else {
-					resp.Data.Content = r.Text
-				}
-
-				session.InteractionRespond(event.Interaction, resp)
+				Log.Trace("Sent message: ", msg)
 			})
 		}
 	case discordgo.InteractionMessageComponent:
