@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/Clinet/clinet/cmds"
-	"github.com/Clinet/discordgo-embed"
 	"github.com/JoshuaDoes/logger"
 )
 
@@ -21,7 +19,7 @@ type ClientDiscord struct {
 
 func StartDiscord(cfg *CfgDiscord) {
 	DiscordCfg = cfg
-	Log.Trace("--- StartDiscord(" + DiscordCfg.Token + ") ---") //Maybe I should sensor the bot token? Protect your logs and your config
+	Log.Trace("--- StartDiscord() ---")
 
 	Log.Debug("Creating Discord struct...")
 	discord, err := discordgo.New("Bot " + DiscordCfg.Token)
