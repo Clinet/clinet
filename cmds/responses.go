@@ -19,6 +19,9 @@ func NewCmdRespEmbed(title, content string) *CmdResp {
 	resp := &CmdResp{&services.Message{Title: title, Content: content}, true}
 	return resp
 }
+func CmdRespFromMsg(msg *services.Message) *CmdResp {
+	return &CmdResp{msg, false}
+}
 func (resp *CmdResp) String() string {
 	jsonData, err := json.Marshal(resp, true)
 	if err != nil {

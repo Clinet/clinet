@@ -3,24 +3,45 @@ package discord
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/Clinet/clinet/cmds"
+	"github.com/Clinet/clinet/services"
 )
 
-func cmdHandler(cmd *cmds.Cmd, cmdAlias string, eventOpts []*discordgo.ApplicationCommandInteractionDataOption) (string, []*cmds.CmdResp) {
-	if len(eventOpts) == 1 && eventOpts[0].Type == discordgo.ApplicationCommandOptionSubCommand {
+func cmdHandler(cmd *cmds.Cmd, interaction *discordgo.Interaction, eventOpts []*discordgo.ApplicationCommandInteractionDataOption, subCmd bool) (string, []*cmds.CmdResp) {
+	cmdAlias := interaction.ApplicationCommandData().Name
+
+	if !subCmd && len(eventOpts) == 1 && eventOpts[0].Type == discordgo.ApplicationCommandOptionSubCommand {
+		Log.Trace("Checking subcommands for " + cmd.Name + " using subcommand " + eventOpts[0].Name)
 		for i := 0; i < len(cmd.Subcommands); i++ {
+			Log.Trace("- " + cmd.Subcommands[i].Name + " == " + eventOpts[0].Name)
 			if cmd.Subcommands[i].Name == eventOpts[0].Name {
-				return cmdHandler(cmd.Subcommands[i], eventOpts[0].Name, eventOpts[0].Options)
+				Log.Trace("> Testing subcommand " + cmd.Subcommands[i].Name)
+				return cmdHandler(cmd.Subcommands[i], interaction, eventOpts[0].Options, true)
 			}
 		}
 		Log.Error("Command " + cmd.Name + " has no subcommand " + eventOpts[0].Name)
 		return cmdAlias, nil
 	}
 
-	cmdArgs := discordCmdArgs(cmd, eventOpts)
+	user := &services.User{
+		ServerID: interaction.GuildID,
+		UserID: interaction.Member.User.ID,
+	}
+	channel := &services.Channel{
+		ServerID: interaction.GuildID,
+		ChannelID: interaction.ChannelID,
+	}
+	server := &services.Server{
+		ServerID: interaction.GuildID,
+	}
+
 	cmdCtx := cmds.NewCmdCtx().
 		SetAlias(cmdAlias).
-		AddArgs(cmdArgs...).
+		SetUser(user).
+		SetChannel(channel).
+		SetServer(server).
 		SetService(Discord)
+	cmdArgs := discordCmdArgs(cmd, cmdCtx, eventOpts)
+	cmdCtx.AddArgs(cmdArgs...)
 	cmdBuilder := &cmds.CmdBuilderCommand{Command: cmd, Context: cmdCtx} //Build up a command builder
 	cmdRuntime := cmds.CmdBatch(cmdBuilder) //Prepare a command runtime with just this command (but can be supplied additional cmdBuilders)
 
@@ -31,7 +52,7 @@ func cmdHandler(cmd *cmds.Cmd, cmdAlias string, eventOpts []*discordgo.Applicati
 	return cmdAlias, cmdResps
 }
 
-func discordCmdArgs(cmd *cmds.Cmd, eventArgs []*discordgo.ApplicationCommandInteractionDataOption) []*cmds.CmdArg {
+func discordCmdArgs(cmd *cmds.Cmd, cmdCtx *cmds.CmdCtx, eventArgs []*discordgo.ApplicationCommandInteractionDataOption) []*cmds.CmdArg {
 	cmdArgs := cmd.Args
 	finalArgs := make([]*cmds.CmdArg, 0)
 
@@ -39,20 +60,30 @@ func discordCmdArgs(cmd *cmds.Cmd, eventArgs []*discordgo.ApplicationCommandInte
 		foundArg := false
 		for j := 0; j < len(eventArgs); j++ {
 			if cmdArgs[i].Name == eventArgs[j].Name {
-				cmdArg := &cmdArgs[i]
+				cmdArg := cmdArgs[i]
 				switch eventArgs[j].Type {
 				case discordgo.ApplicationCommandOptionString:
 					cmdArg.Value = eventArgs[j].StringValue()
+				case discordgo.ApplicationCommandOptionInteger:
+					cmdArg.Value = eventArgs[j].IntValue()
+				case discordgo.ApplicationCommandOptionUser:
+					user := eventArgs[j].UserValue(Discord.Session)
+					cmdArg.Value = &services.User{
+						ServerID: cmdCtx.Server.ServerID,
+						UserID: user.ID,
+					}
 				default:
 					cmdArg.Value = eventArgs[j].Value
 				}
+				Log.Trace("Filled in cmdArg: ", cmdArg)
 				finalArgs = append(finalArgs, cmdArg)
 				foundArg = true
 				break
 			}
 		}
 		if !foundArg {
-			finalArgs = append(finalArgs, &cmdArgs[i])
+			Log.Trace("Failed to find cmdArg: ", cmdArgs[i])
+			finalArgs = append(finalArgs, cmdArgs[i])
 		}
 	}
 

@@ -16,7 +16,8 @@ func StartDiscord(cfg *CfgDiscord) {
 	Log.Debug("Creating Discord struct...")
 	discord, err := discordgo.New("Bot " + DiscordCfg.Token)
 	if err != nil {
-		Log.Fatal("Unable to connect to Discord!")
+		Log.Error("Unable to connect to Discord!")
+		return
 	}
 
 	//Only enable informational Discord logging if we're tracing
@@ -33,7 +34,7 @@ func StartDiscord(cfg *CfgDiscord) {
 	Log.Info("Connecting to Discord...")
 	err = discord.Open()
 	if err != nil {
-		Log.Fatal("Unable to connect to Discord!", err)
+		Log.Error("Unable to connect to Discord!", err)
 		return
 	}
 

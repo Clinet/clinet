@@ -13,6 +13,12 @@ type Service interface {
 	MsgEdit(msg *Message) (ret *Message, err error) //Edits any type of message
 	MsgRemove(msg *Message) (err error)             //Removes a message
 	MsgSend(msg *Message) (ret *Message, err error) //Sends any type of message
+
+	//Users are who can send and receive messages, and can be actioned upon through various commands.
+	// Messages are returned that can be safely sent back to a service if a command was used.
+	UserBan(user *User, reason string, rule int)  (msg *Message, err error) //Bans a user for a given reason and/or rule
+	UserKick(user *User, reason string, rule int) (msg *Message, err error) //Kicks a user for a given reason and/or rule
+	UserWarn(user *User, reason string, rule int) (msg *Message, err error) //Warns a user for a given reason and/or rule
 }
 
 func Error(format string, replacements ...interface{}) error {
@@ -32,7 +38,29 @@ type Message struct {
 	Context   interface{}     `json:"context,omitempty"`
 }
 
+func NewMessage() *Message {
+	return &Message{}
+}
+func (msg *Message) SetContent(content string) *Message {
+	msg.Content = content
+	return msg
+}
+
 type MessageField struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+type User struct {
+	ServerID string `json:"serverID,omitempty"`
+	UserID   string `json:"userID,omitempty"`
+}
+
+type Channel struct {
+	ServerID  string `json:"serverID,omitempty"`
+	ChannelID string `json:"channelID,omitempty"`
+}
+
+type Server struct {
+	ServerID string `json:"serverID,omitempty"`
 }

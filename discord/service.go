@@ -96,3 +96,23 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 	}
 	return ret, err
 }
+
+func (discord *ClientDiscord) UserBan(user *services.User, reason string, rule int) (msg *services.Message, err error) {
+	Log.Trace("Ban(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	err = discord.GuildBanCreateWithReason(user.ServerID, user.UserID, reason, 0)
+	if err != nil {
+		return services.NewMessage().SetContent("Something went wrong while trying to ban them..."), err
+	}
+	return services.NewMessage().SetContent("And they're gone!"), nil
+}
+func (discord *ClientDiscord) UserKick(user *services.User, reason string, rule int) (msg *services.Message, err error) {
+	Log.Trace("Kick(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	err = discord.GuildMemberDeleteWithReason(user.ServerID, user.UserID, reason)
+	if err != nil {
+		return services.NewMessage().SetContent("Something went wrong while trying to kick them..."), err
+	}
+	return services.NewMessage().SetContent("And they're gone!"), nil
+}
+func (discord *ClientDiscord) UserWarn(user *services.User, reason string, rule int) (msg *services.Message, err error) {
+	return services.NewMessage().SetContent("stub"), nil
+}

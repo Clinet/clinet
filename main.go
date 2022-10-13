@@ -3,8 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/Clinet/clinet/config"
-	"github.com/Clinet/clinet/discord"
 	"github.com/JoshuaDoes/logger"
 	flag "github.com/spf13/pflag"
 )
@@ -38,17 +36,13 @@ func init() {
 		logPrefix = "BOT" //We're the bot process, report as such
 	}
 	log = logger.NewLogger(logPrefix, verbosity)
-
-	//Assign the logger to each package
-	config.Log = log
-	discord.Log = log
 }
 
 func main() {
 	log.Trace("--- main() ---")
 
 	if watchdogPID == -1 {
-		log.Info("Clinet © JoshuaDoes: 2017-2021.")
+		log.Info("Clinet © JoshuaDoes 2017-2022.")
 	}
 
 	if isBot {

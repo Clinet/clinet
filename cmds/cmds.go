@@ -35,7 +35,7 @@ type Cmd struct {
 	Description string                 //Description for command lists and command usage
 	Aliases     []string               //Aliases to refer to command
 	Regexes     []regexp.Regexp        //Regular expressions to match command call with natural language ($1 is Args[0], $2 is Args[1], etc)
-	Args        []CmdArg               //Arguments for command
+	Args        []*CmdArg              //Arguments for command
 	Subcommands []*Cmd                 //Subcommands for command (nestable, i.e. "/minecraft server mc.hypixel.net" where server is subcommand to minecraft command)
 }
 func NewCmd(name, desc string, handler func(*CmdCtx) *CmdResp) *Cmd {
@@ -46,26 +46,33 @@ func NewCmd(name, desc string, handler func(*CmdCtx) *CmdResp) *Cmd {
 		Exec: handler,
 	}
 }
-func (cmd *Cmd) SetHandler(handler func(*CmdCtx) *CmdResp) {
+func (cmd *Cmd) SetHandler(handler func(*CmdCtx) *CmdResp) *Cmd {
 	cmd.Exec = handler
+	return cmd
 }
-func (cmd *Cmd) SetName(name string) {
+func (cmd *Cmd) SetName(name string) *Cmd {
 	cmd.Name = name
+	return cmd
 }
-func (cmd *Cmd) SetDescription(desc string) {
+func (cmd *Cmd) SetDescription(desc string) *Cmd {
 	cmd.Description = desc
+	return cmd
 }
-func (cmd *Cmd) AddAliases(alias ...string) {
+func (cmd *Cmd) AddAliases(alias ...string) *Cmd {
 	cmd.Aliases = append(cmd.Aliases, alias...)
+	return cmd
 }
-func (cmd *Cmd) AddRegexes(regex ...regexp.Regexp) {
+func (cmd *Cmd) AddRegexes(regex ...regexp.Regexp) *Cmd {
 	cmd.Regexes = append(cmd.Regexes, regex...)
+	return cmd
 }
-func (cmd *Cmd) AddArgs(arg ...CmdArg) {
+func (cmd *Cmd) AddArgs(arg ...*CmdArg) *Cmd {
 	cmd.Args = append(cmd.Args, arg...)
+	return cmd
 }
-func (cmd *Cmd) AddSubCmds(subCmd ...*Cmd) {
+func (cmd *Cmd) AddSubCmds(subCmd ...*Cmd) *Cmd {
 	cmd.Subcommands = append(cmd.Subcommands, subCmd...)
+	return cmd
 }
 func (cmd *Cmd) IsAlias(alias string) bool {
 	for i := 0; i < len(cmd.Aliases); i++ {

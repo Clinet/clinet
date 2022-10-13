@@ -10,7 +10,7 @@ import (
 var CmdRoot *cmds.Cmd
 
 func init() {
-	CmdRoot = cmds.NewCmd("hellodolly", "Responds with a random lyric from Louis Armstrong's Hello, Dolly", handlerHelloDolly)
+	CmdRoot = cmds.NewCmd("hellodolly", "Responds with a random lyric from Louis Armstrong's Hello, Dolly", handleHelloDolly)
 }
 
 var lyrics = `Hello, Dolly
@@ -42,7 +42,7 @@ Dolly'll never go away
 Dolly'll never go away
 Dolly'll never go away again`
 
-func handlerHelloDolly(ctx *cmds.CmdCtx) *cmds.CmdResp {
+func handleHelloDolly(ctx *cmds.CmdCtx) *cmds.CmdResp {
 	//Split the lyrics by line into a slice
 	lines := strings.Split(lyrics, "\n")
 

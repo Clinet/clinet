@@ -13,6 +13,7 @@ import (
 	"github.com/Clinet/clinet/features"
 	"github.com/Clinet/clinet/features/dumpctx"
 	"github.com/Clinet/clinet/features/hellodolly"
+	"github.com/Clinet/clinet/features/moderation"
 	"github.com/JoshuaDoes/go-wolfram"
 )
 
@@ -26,12 +27,19 @@ var (
 func doBot() {
 	//For some reason we don't automatically exit as planned when we return to main()
 	defer os.Exit(0)
+
+	//Assign the logger to each package
+	config.Log = log
+	discord.Log = log
+	moderation.Log = log
+
 	log.Trace("--- doBot() ---")
 
 	log.Info("Loading configuration...")
 	cfg, err = config.LoadConfig(configFile, config.ConfigTypeJSON)
 	if err != nil {
 		log.Error("Error loading configuration: ", err)
+		return
 	}
 
 	log.Info("Syncing configuration...")
@@ -57,10 +65,15 @@ func doBot() {
 	if features.IsEnabled("hellodolly") {
 		cmds.Commands = append(cmds.Commands, hellodolly.CmdRoot)
 	}
+	if features.IsEnabled("moderation") {
+		cmds.Commands = append(cmds.Commands, moderation.CmdRoot)
+	}
 
 	log.Debug("Enabling services...")
-	convos.AuthWolframAlpha(cfg.WolframAlpha)
-	log.Trace("- Wolfram|Alpha")
+	if features.IsEnabled("wolframalpha") {
+		convos.AuthWolframAlpha(cfg.WolframAlpha)
+		log.Trace("- Wolfram|Alpha")
+	}
 
 	//Load modules
 	log.Info("Loading modules...")

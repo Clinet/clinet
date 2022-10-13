@@ -58,16 +58,14 @@ func discordInteractionCreate(session *discordgo.Session, event *discordgo.Inter
 
 	switch event.Type {
 	case discordgo.InteractionApplicationCommand:
-		eventData := event.ApplicationCommandData()
-		eventOpts := eventData.Options
-
-		cmd := cmds.GetCmd(eventData.Name)
+		cmd := cmds.GetCmd(event.ApplicationCommandData().Name)
 		if cmd == nil {
-			Log.Error("Unable to find command " + eventData.Name)
+			Log.Error("Unable to find command " + event.ApplicationCommandData().Name)
 			return
 		}
 
-		cmdAlias, cmdResps := cmdHandler(cmd, eventData.Name, eventOpts)
+		eventOpts := event.ApplicationCommandData().Options
+		cmdAlias, cmdResps := cmdHandler(cmd, event.Interaction, eventOpts, false)
 		for i := 0; i < len(cmdResps); i++ {
 			if cmdResps[i] == nil {
 				continue

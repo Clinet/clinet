@@ -1,5 +1,13 @@
 package cmds
 
+import (
+	"github.com/Clinet/clinet/services"
+)
+
+var (
+	ArgTypeUser = &services.User{}
+)
+
 type CmdArg struct {
 	Name        string      //Display name for argument
 	Description string      //Description for command usage
@@ -13,9 +21,22 @@ func NewCmdArg(name, desc string, value interface{}) *CmdArg {
 		Value: value,
 	}
 }
+func (arg *CmdArg) GetInt() int {
+	return arg.Value.(int)
+}
 func (arg *CmdArg) GetString() string {
 	return arg.Value.(string)
 }
-func (arg *CmdArg) SetRequired() {
+func (arg *CmdArg) GetUser() *services.User {
+	switch arg.Value.(type) {
+	case string:
+		return &services.User{UserID: arg.Value.(string)}
+	case *services.User:
+		return arg.Value.(*services.User)
+	}
+	return nil
+}
+func (arg *CmdArg) SetRequired() *CmdArg {
 	arg.Required = true
+	return arg
 }

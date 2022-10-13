@@ -3,11 +3,12 @@ package discord
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/Clinet/clinet/cmds"
+	"github.com/Clinet/clinet/services"
 )
 
 func CmdToAppCommand(cmd *cmds.Cmd) *discordgo.ApplicationCommand {
 	appCmd := &discordgo.ApplicationCommand{
-		Name: cmd.Aliases[0],
+		Name: cmd.Name,
 		Description: cmd.Description,
 	}
 
@@ -27,8 +28,11 @@ func CmdToAppCommand(cmd *cmds.Cmd) *discordgo.ApplicationCommand {
 				appCmdOpt.Type = discordgo.ApplicationCommandOptionInteger
 			case bool:
 				appCmdOpt.Type = discordgo.ApplicationCommandOptionBoolean
+			case *services.User:
+				appCmdOpt.Type = discordgo.ApplicationCommandOptionUser
 			}
 
+			Log.Trace("- Built appCmdOpt: ", appCmdOpt)
 			appCmd.Options = append(appCmd.Options, appCmdOpt)
 		}
 	}
@@ -40,13 +44,14 @@ func CmdToAppCommand(cmd *cmds.Cmd) *discordgo.ApplicationCommand {
 		}
 	}
 
+	Log.Trace("- Built cmd: ", appCmd)
 	return appCmd
 }
 
 func CmdToAppSubCommand(cmd *cmds.Cmd) *discordgo.ApplicationCommandOption {
 	appSubCmd := &discordgo.ApplicationCommandOption{
 		Type: discordgo.ApplicationCommandOptionSubCommand,
-		Name: cmd.Aliases[0],
+		Name: cmd.Name,
 		Description: cmd.Description,
 	}
 
@@ -66,12 +71,16 @@ func CmdToAppSubCommand(cmd *cmds.Cmd) *discordgo.ApplicationCommandOption {
 				appCmdOpt.Type = discordgo.ApplicationCommandOptionInteger
 			case bool:
 				appCmdOpt.Type = discordgo.ApplicationCommandOptionBoolean
+			case *services.User:
+				appCmdOpt.Type = discordgo.ApplicationCommandOptionUser
 			}
 
+			Log.Trace("- Built appSubCmdOpt: ", appCmdOpt)
 			appSubCmd.Options = append(appSubCmd.Options, appCmdOpt)
 		}
 	}
 
+	Log.Trace("- Built subcmd: ", appSubCmd)
 	return appSubCmd
 }
 
