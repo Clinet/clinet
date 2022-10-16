@@ -18,7 +18,6 @@ type Service interface {
 	// Messages are returned that can be safely sent back to a service if a command was used.
 	UserBan(user *User, reason string, rule int)  (msg *Message, err error) //Bans a user for a given reason and/or rule
 	UserKick(user *User, reason string, rule int) (msg *Message, err error) //Kicks a user for a given reason and/or rule
-	UserWarn(user *User, reason string, rule int) (msg *Message, err error) //Warns a user for a given reason and/or rule
 }
 
 func Error(format string, replacements ...interface{}) error {

@@ -24,6 +24,9 @@ func NewCmdArg(name, desc string, value interface{}) *CmdArg {
 func (arg *CmdArg) GetInt() int {
 	return arg.Value.(int)
 }
+func (arg *CmdArg) GetInt64() int {
+	return arg.Value.(int)
+}
 func (arg *CmdArg) GetString() string {
 	return arg.Value.(string)
 }

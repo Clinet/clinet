@@ -67,7 +67,7 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 			err = discord.InteractionRespond(interaction, interactionResp)
 		}
 	} else {
-		if msg.Content != "" {
+		if msg.Content == "" {
 			return nil, services.Error("discord: MsgSend(msg: %v): missing content", msg)
 		}
 
@@ -112,7 +112,4 @@ func (discord *ClientDiscord) UserKick(user *services.User, reason string, rule 
 		return services.NewMessage().SetContent("Something went wrong while trying to kick them..."), err
 	}
 	return services.NewMessage().SetContent("And they're gone!"), nil
-}
-func (discord *ClientDiscord) UserWarn(user *services.User, reason string, rule int) (msg *services.Message, err error) {
-	return services.NewMessage().SetContent("stub"), nil
 }

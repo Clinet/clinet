@@ -31,7 +31,6 @@ func doBot() {
 	//Assign the logger to each package
 	config.Log = log
 	discord.Log = log
-	moderation.Log = log
 
 	log.Trace("--- doBot() ---")
 
@@ -66,6 +65,11 @@ func doBot() {
 		cmds.Commands = append(cmds.Commands, hellodolly.CmdRoot)
 	}
 	if features.IsEnabled("moderation") {
+		err = moderation.Init(log)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Trace(moderation.Storage)
 		cmds.Commands = append(cmds.Commands, moderation.CmdRoot)
 	}
 

@@ -1,8 +1,10 @@
 # Bot configuration
 config.json
+config.json.bak
 
 # Bot save states
 state/
+states/
 
 # Bot temporaries
 .update
