@@ -9,11 +9,11 @@ import (
 	"github.com/Clinet/clinet/cmds"
 	"github.com/Clinet/clinet/config"
 	"github.com/Clinet/clinet/convos"
-	"github.com/Clinet/clinet/discord"
 	"github.com/Clinet/clinet/features"
 	"github.com/Clinet/clinet/features/dumpctx"
 	"github.com/Clinet/clinet/features/hellodolly"
 	"github.com/Clinet/clinet/features/moderation"
+	"github.com/Clinet/clinet/services/discord"
 	"github.com/JoshuaDoes/go-wolfram"
 )
 

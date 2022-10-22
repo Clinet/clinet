@@ -4,8 +4,8 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/Clinet/clinet/discord"
 	"github.com/Clinet/clinet/features"
+	"github.com/Clinet/clinet/services/discord"
 	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/JoshuaDoes/json"
 	"github.com/JoshuaDoes/logger"
