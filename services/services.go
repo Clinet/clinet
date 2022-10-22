@@ -10,9 +10,9 @@ type Service interface {
 	//Messages are the backbone of how the command framework responds to interactions and interacts with the service.
 	// For services only able to process text messages, you can use Message.String() to get a preformatted text when necessary.
 	// In the case of other concepts such as Discord's interaction events, use Message.Context to track the alternative type.
-	MsgEdit(msg *Message) (ret *Message, err error) //Edits any type of message
-	MsgRemove(msg *Message) (err error)             //Removes a message
-	MsgSend(msg *Message) (ret *Message, err error) //Sends any type of message
+	MsgEdit(msg *Message)   (ret *Message, err error) //Edits any type of message
+	MsgRemove(msg *Message) (err error)               //Removes a message
+	MsgSend(msg *Message)   (ret *Message, err error) //Sends any type of message
 
 	//Users are who can send and receive messages, and can be actioned upon through various commands.
 	// Messages are returned that can be safely sent back to a service if a command was used.
@@ -24,6 +24,10 @@ func Error(format string, replacements ...interface{}) error {
 	return fmt.Errorf(format, replacements)
 }
 
+//Message holds a message from a service.
+// A text message should only hold content.
+// Adding fields, a title, an image, or a color creates a rich message.
+// If ServerID is not specified, presume ChannelID to be a DM channel with a user.
 type Message struct {
 	AuthorID  string          `json:"authorID,omitempty"`
 	MessageID string          `json:"messageID,omitempty"`
