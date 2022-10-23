@@ -20,10 +20,10 @@ func CmdHandler(serviceMsg *services.Message, service services.Service) (string,
 	rawMsg := msgs[0]
 	if cmdPrefix != "" {
 		if len(rawMsg) <= len(cmdPrefix) {
-			return "", nil, services.Error("no command possible")
+			return "", nil, nil
 		}
 		if string(rawMsg[:len(cmdPrefix)]) != cmdPrefix {
-			return "", nil, services.Error("no command prefix")
+			return "", nil, nil
 		}
 		rawMsg = strings.Replace(rawMsg, cmdPrefix, "", 1) //Replace only the leftmost instance of the cmdPrefix
 	}
@@ -31,7 +31,7 @@ func CmdHandler(serviceMsg *services.Message, service services.Service) (string,
 	msg := strings.Split(rawMsg, " ")
 	cmd := GetCmd(msg[0])
 	if cmd == nil {
-		return "", nil, services.Error("unknown command %s", msg[0])
+		return "", nil, nil
 	}
 
 	cmdArgs := cmd.Args
@@ -62,16 +62,18 @@ func CmdHandler(serviceMsg *services.Message, service services.Service) (string,
 				}
 			}
 
-			setValue := false
-			for j := 0; j < len(cmdArgs); j++ {
-				if cmdArgs[j].Name == kv[0] {
-					cmdArgs[j].Value = kv[1]
-					setValue = true
-					break
+			if len(kv) != 0 {
+				setValue := false
+				for j := 0; j < len(cmdArgs); j++ {
+					if cmdArgs[j].Name == kv[0] {
+						cmdArgs[j].Value = kv[1]
+						setValue = true
+						break
+					}
 				}
-			}
-			if !setValue {
-				return "", nil, services.Error("cmd arg %s does not exist", kv[0])
+				if !setValue {
+					return "", nil, services.Error("cmd arg %s does not exist", kv[0])
+				}
 			}
 		}
 	}
@@ -103,6 +105,7 @@ func CmdHandler(serviceMsg *services.Message, service services.Service) (string,
 		SetUser(user).
 		SetChannel(channel).
 		SetServer(server).
+		SetMessage(serviceMsg).
 		SetService(service).
 		AddArgs(cmdArgs...)
 	cmdBuilder := &CmdBuilderCommand{Command: cmd, Context: cmdCtx}

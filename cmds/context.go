@@ -6,15 +6,14 @@ import (
 )
 
 type CmdCtx struct {
-	Content        string            //Raw message that triggered command
-	ContentDisplay string            //Displayable form of raw message
-	Alias          string            //Alias that triggered command
-	Args           []*CmdArg         //Arguments for command handler
-	Edited         bool              //True when called in response to edited call
-	User           *services.User    //User who called the command
-	Channel        *services.Channel //Channel where command was called
-	Server         *services.Server  //Server where command was called
-	Service        services.Service  //Service client for service callbacks
+	Alias          string                       //Alias that triggered command
+	Args           []*CmdArg                    //Arguments for command handler
+	Edited         bool                         //True when called in response to edited call
+	User           *services.User               //User who called the command
+	Channel        *services.Channel            //Channel where command was called
+	Server         *services.Server             //Server where command was called
+	Message        *services.Message            //Message that called this command
+	Service        services.Service  `json:"-"` //Service client for service callbacks
 }
 func NewCmdCtx() *CmdCtx {
 	return &CmdCtx{}
@@ -28,11 +27,6 @@ func (ctx *CmdCtx) String() string {
 }
 func (ctx *CmdCtx) SetAlias(alias string) *CmdCtx {
 	ctx.Alias = alias
-	return ctx
-}
-func (ctx *CmdCtx) SetContent(content, contentDisplay string) *CmdCtx {
-	ctx.Content        = content        //<@!xxxxxxxxxx> Hello, world!
-	ctx.ContentDisplay = contentDisplay //@Clinet Hello, world!
 	return ctx
 }
 func (ctx *CmdCtx) SetQuery(alias string) *CmdCtx {
@@ -53,6 +47,10 @@ func (ctx *CmdCtx) SetChannel(channel *services.Channel) *CmdCtx {
 }
 func (ctx *CmdCtx) SetServer(server *services.Server) *CmdCtx {
 	ctx.Server = server
+	return ctx
+}
+func (ctx *CmdCtx) SetMessage(message *services.Message) *CmdCtx {
+	ctx.Message = message
 	return ctx
 }
 func (ctx *CmdCtx) SetService(service services.Service) *CmdCtx {

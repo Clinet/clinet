@@ -36,6 +36,9 @@ func guildedChatMessageCreated(session *guildrone.Session, event *guildrone.Chat
 	cmdName, cmdResps, err := cmds.CmdHandler(msg, Guilded)
 	if err != nil {
 		Log.Error(err)
+		msgErr := msg
+		msgErr.Content = err.Error()
+		Guilded.MsgSend(msgErr)
 		return
 	}
 

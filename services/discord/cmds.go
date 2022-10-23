@@ -33,12 +33,16 @@ func cmdHandler(cmd *cmds.Cmd, interaction *discordgo.Interaction, eventOpts []*
 	server := &services.Server{
 		ServerID: interaction.GuildID,
 	}
+	message := &services.Message{
+		MessageID: interaction.ID,
+	}
 
 	cmdCtx := cmds.NewCmdCtx().
 		SetAlias(cmdAlias).
 		SetUser(user).
 		SetChannel(channel).
 		SetServer(server).
+		SetMessage(message).
 		SetService(Discord)
 	cmdArgs := discordCmdArgs(cmd, cmdCtx, eventOpts)
 	cmdCtx.AddArgs(cmdArgs...)
