@@ -9,6 +9,11 @@
 		"token": "",
 		"ownerID": ""
 	},
+	"guilded": {
+		"cmdPrefix": "",
+		"token": "",
+		"ownerID": ""
+	},
 	"wolframAlpha": {
 		"AppID": ""
 	}

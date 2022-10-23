@@ -7,6 +7,10 @@ import (
 //Service requires various methods for the rest of the command framework to function.
 // A dummy service can be used if you're looking to import a particular feature absent a service.
 type Service interface {
+	//Just bot things, yanno
+	CmdPrefix()            string      //Returns the command prefix to use on this service
+	Login(cfg interface{}) (err error) //Login to the service with the given configuration
+
 	//Messages are the backbone of how the command framework responds to interactions and interacts with the service.
 	// For services only able to process text messages, you can use Message.String() to get a preformatted text when necessary.
 	// In the case of other concepts such as Discord's interaction events, use Message.Context to track the alternative type.
@@ -21,7 +25,10 @@ type Service interface {
 }
 
 func Error(format string, replacements ...interface{}) error {
-	return fmt.Errorf(format, replacements)
+	if len(replacements) > 0 {
+		return fmt.Errorf(format, replacements)
+	}
+	return fmt.Errorf(format)
 }
 
 //Message holds a message from a service.

@@ -1,6 +1,8 @@
 package cmds
 
 import (
+	"strconv"
+
 	"github.com/Clinet/clinet/services"
 )
 
@@ -22,10 +24,26 @@ func NewCmdArg(name, desc string, value interface{}) *CmdArg {
 	}
 }
 func (arg *CmdArg) GetInt() int {
+	switch arg.Value.(type) {
+	case string:
+		num, err := strconv.Atoi(arg.Value.(string))
+		if err != nil {
+			return 0
+		}
+		return num
+	}
 	return arg.Value.(int)
 }
-func (arg *CmdArg) GetInt64() int {
-	return arg.Value.(int)
+func (arg *CmdArg) GetInt64() int64 {
+	switch arg.Value.(type) {
+	case string:
+		num, err := strconv.Atoi(arg.Value.(string))
+		if err != nil {
+			return 0
+		}
+		return int64(num)
+	}
+	return arg.Value.(int64)
 }
 func (arg *CmdArg) GetString() string {
 	return arg.Value.(string)

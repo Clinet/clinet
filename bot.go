@@ -14,6 +14,7 @@ import (
 	"github.com/Clinet/clinet/features/hellodolly"
 	"github.com/Clinet/clinet/features/moderation"
 	"github.com/Clinet/clinet/services/discord"
+	"github.com/Clinet/clinet/services/guilded"
 	"github.com/JoshuaDoes/go-wolfram"
 )
 
@@ -31,6 +32,7 @@ func doBot() {
 	//Assign the logger to each package
 	config.Log = log
 	discord.Log = log
+	guilded.Log = log
 
 	log.Trace("--- doBot() ---")
 
@@ -49,6 +51,7 @@ func doBot() {
 		var templateCfg *config.Config = &config.Config{
 			Features: []*features.Feature{&features.Feature{Name: "example", Toggle: true}},
 			Discord: &discord.CfgDiscord{},
+			Guilded: &guilded.CfgGuilded{},
 			WolframAlpha: &wolfram.Client{},
 		}
 		templateCfg.SaveTo("config.template.json", config.ConfigTypeJSON)
@@ -85,8 +88,17 @@ func doBot() {
 
 	//Start Discord
 	log.Info("Starting Discord...")
-	discord.StartDiscord(cfg.Discord)
+	if err := discord.Discord.Login(cfg.Discord); err != nil {
+		log.Fatal(err)
+	}
 	defer discord.Discord.Close()
+
+	//Start Guilded
+	log.Info("Starting Guilded...")
+	if err := guilded.Guilded.Login(cfg.Guilded); err != nil {
+		log.Fatal(err)
+	}
+	defer guilded.Guilded.Close()
 
 	log.Debug("Waiting for SIGINT syscall signal...")
 	sc := make(chan os.Signal, 1)

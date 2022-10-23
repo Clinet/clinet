@@ -4,15 +4,73 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/Clinet/clinet/services"
 	"github.com/Clinet/discordgo-embed"
+	"github.com/JoshuaDoes/logger"
 )
 
+var Log *logger.Logger
 var Discord *ClientDiscord
 
 //ClientDiscord implements services.Service and holds a Discord session
 type ClientDiscord struct {
 	*discordgo.Session
-
 	User *discordgo.User
+}
+
+func (discord *ClientDiscord) CmdPrefix() string {
+	return "/"
+}
+
+func (discord *ClientDiscord) Login(cfg interface{}) (err error) {
+	DiscordCfg = cfg.(*CfgDiscord)
+	Log.Trace("--- StartDiscord() ---")
+
+	Log.Debug("Creating Discord struct...")
+	discordClient, err := discordgo.New("Bot " + DiscordCfg.Token)
+	if err != nil {
+		return err
+	}
+
+	//Only enable informational Discord logging if we're tracing
+	if Log.Verbosity == 2 {
+		Log.Debug("Setting Discord log level to informational...")
+		discordClient.LogLevel = discordgo.LogInformational
+	}
+
+	Log.Info("Registering Discord event handlers...")
+	discordClient.AddHandler(discordReady)
+	discordClient.AddHandler(discordMessageCreate)
+	discordClient.AddHandler(discordInteractionCreate)
+
+	Log.Info("Connecting to Discord...")
+	err = discordClient.Open()
+	if err != nil {
+		return err
+	}
+
+	Log.Info("Connected to Discord!")
+	Discord = &ClientDiscord{discordClient, nil}
+
+	Log.Info("Recycling old application commands...")
+	if oldAppCmds, err := Discord.ApplicationCommands(Discord.State.User.ID, ""); err == nil {
+		for _, cmd := range oldAppCmds {
+			Log.Trace("Deleting application command for ", cmd.Name)
+			if err := Discord.ApplicationCommandDelete(Discord.State.User.ID, "", cmd.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	Log.Info("Registering application commands...")
+	Log.Warn("TODO: Batch overwrite commands, then get a list of commands from Discord that aren't in memory and delete them")
+	for _, cmd := range CmdsToAppCommands() {
+		Log.Trace("Registering cmd: ", cmd)
+		_, err := Discord.ApplicationCommandCreate(Discord.State.User.ID, "", cmd)
+		if err != nil {
+			Log.Fatal(services.Error("Unable to register cmd '%s': %v", cmd.Name, err))
+		}
+	}
+	Log.Info("Application commands ready for use!")
+	return nil
 }
 
 func (discord *ClientDiscord) MsgEdit(msg *services.Message) (ret *services.Message, err error) {
@@ -93,6 +151,16 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 	if discordMsg != nil {
 		ret.AuthorID = discordMsg.Author.ID
 		ret.ServerID = discordMsg.GuildID
+	}
+	if discordMsg != nil {
+		ret = &services.Message{
+			AuthorID: discordMsg.Author.ID,
+			MessageID: discordMsg.ID,
+			ChannelID: discordMsg.ChannelID,
+			ServerID: discordMsg.GuildID,
+			Content: discordMsg.Content,
+			Context: discordMsg,
+		}
 	}
 	return ret, err
 }

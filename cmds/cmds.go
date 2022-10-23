@@ -28,6 +28,20 @@ func GetCmd(match string) *Cmd {
 	}
 	return nil
 }
+//GetSubCmd returns a subcmd that matches the given alias
+func (cmd *Cmd) GetSubCmd(match string) *Cmd {
+	for _, subCmd := range cmd.Subcommands {
+		if match == subCmd.Name {
+			return subCmd
+		}
+		for _, alias := range subCmd.Aliases {
+			if match == alias {
+				return subCmd
+			}
+		}
+	}
+	return nil
+}
 
 type Cmd struct {
 	Exec        func(*CmdCtx) *CmdResp //Go function to handle command
