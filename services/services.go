@@ -8,6 +8,7 @@ import (
 // A dummy service can be used if you're looking to import a particular feature absent a service.
 type Service interface {
 	//Just bot things, yanno
+	Shutdown()                         //Shuts down the service as gracefully as possible
 	CmdPrefix()            string      //Returns the command prefix to use on this service
 	Login(cfg interface{}) (err error) //Login to the service with the given configuration
 
@@ -26,6 +27,10 @@ type Service interface {
 
 	//Servers are organizations of channels, and contain their own global settings and features.
 	GetServer(serverID string) (ret *Server, err error) //Returns the specified server
+
+	//Voice connections are crucial for things like music and voice assistants
+	VoiceJoin(serverID, channelID string, muted, deafened bool) (err error) //Joins a voice channel
+	VoiceLeave(serverID string)                                 (err error) //Leaves the active voice channel
 }
 
 func Error(format string, replacements ...interface{}) error {
@@ -111,9 +116,20 @@ type Channel struct {
 }
 
 type Server struct {
-	ServerID       string `json:"serverID,omitempty"`
-	Name           string `json:"name,omitempty"`
-	Region         string `json:"region,omitempty"`
-	OwnerID        string `json:"ownerID,omitempty"`
-	DefaultChannel string `json:"defaultChannelID,omitempty"`
+	ServerID       string        `json:"serverID,omitempty"`
+	Name           string        `json:"name,omitempty"`
+	Region         string        `json:"region,omitempty"`
+	OwnerID        string        `json:"ownerID,omitempty"`
+	DefaultChannel string        `json:"defaultChannelID,omitempty"`
+	VoiceStates    []*VoiceState `json:"voiceStates,omitempty"`
+}
+
+type VoiceState struct {
+	ChannelID string `json:"channelID,omitempty"`
+	UserID    string `json:"userID,omitempty"`
+	SessionID string `json:"sessionID,omitempty"`
+	Deaf      bool   `json:"deaf,omitempty"`
+	Mute      bool   `json:"mute,omitempty"`
+	SelfDeaf  bool   `json:"selfDeaf,omitempty"`
+	SelfMute  bool   `json:"selfMeaf,omitempty"`
 }

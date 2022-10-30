@@ -19,6 +19,10 @@ type ClientGuilded struct {
 	User      guildrone.BotUser
 }
 
+func (guilded *ClientGuilded) Shutdown() {
+	_ = guilded.Close()
+}
+
 func (guilded *ClientGuilded) CmdPrefix() string {
 	return guilded.cmdPrefix
 }
@@ -159,5 +163,13 @@ func (guilded *ClientGuilded) GetServer(serverID string) (server *services.Serve
 		Region: srv.Timezone,
 		OwnerID: srv.OwnerID,
 		DefaultChannel: srv.DefaultChannelID,
+		VoiceStates: make([]*services.VoiceState, 0), //TODO: Voice states from Guilded
 	}, nil
+}
+
+func (guilded *ClientGuilded) VoiceJoin(serverID, channelID string, muted, deafened bool) (err error) {
+	return services.Error("guilded: VoiceJoin: stub")
+}
+func (guilded *ClientGuilded) VoiceLeave(serverID string) (err error) {
+	return services.Error("guilded: VoiceLeave: stub")
 }

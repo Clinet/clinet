@@ -13,6 +13,7 @@ import (
 	"github.com/Clinet/clinet/features/dumpctx"
 	"github.com/Clinet/clinet/features/hellodolly"
 	"github.com/Clinet/clinet/features/moderation"
+	"github.com/Clinet/clinet/features/voice"
 	"github.com/Clinet/clinet/services/discord"
 	"github.com/Clinet/clinet/services/guilded"
 	"github.com/JoshuaDoes/go-wolfram"
@@ -33,6 +34,8 @@ func doBot() {
 	config.Log = log
 	discord.Log = log
 	guilded.Log = log
+	moderation.Log = log
+	voice.Log = log
 
 	log.Trace("--- doBot() ---")
 
@@ -68,11 +71,18 @@ func doBot() {
 		cmds.Commands = append(cmds.Commands, hellodolly.Cmds...)
 	}
 	if features.IsEnabled("moderation") {
-		err = moderation.Init(log)
+		err = moderation.Init()
 		if err != nil {
 			log.Fatal(err)
 		}
 		cmds.Commands = append(cmds.Commands, moderation.Cmds...)
+	}
+	if features.IsEnabled("voice") {
+		err = voice.Init()
+		if err != nil {
+			log.Fatal(err)
+		}
+		cmds.Commands = append(cmds.Commands, voice.Cmds...)
 	}
 
 	log.Debug("Enabling services...")
@@ -90,14 +100,14 @@ func doBot() {
 	if err := discord.Discord.Login(cfg.Discord); err != nil {
 		log.Fatal(err)
 	}
-	defer discord.Discord.Close()
+	defer discord.Discord.Shutdown()
 
 	//Start Guilded
 	log.Info("Starting Guilded...")
 	if err := guilded.Guilded.Login(cfg.Guilded); err != nil {
 		log.Fatal(err)
 	}
-	defer guilded.Guilded.Close()
+	defer guilded.Guilded.Shutdown()
 
 	log.Debug("Waiting for SIGINT syscall signal...")
 	sc := make(chan os.Signal, 1)

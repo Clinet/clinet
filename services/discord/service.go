@@ -14,6 +14,14 @@ var Discord *ClientDiscord
 type ClientDiscord struct {
 	*discordgo.Session
 	User *discordgo.User
+	VCs  []*discordgo.VoiceConnection
+}
+
+func (discord *ClientDiscord) Shutdown() {
+	for _, vc := range discord.VCs {
+		_ = vc.Disconnect()
+	}
+	_ = discord.Close()
 }
 
 func (discord *ClientDiscord) CmdPrefix() string {
@@ -48,7 +56,7 @@ func (discord *ClientDiscord) Login(cfg interface{}) (err error) {
 	}
 
 	Log.Info("Connected to Discord!")
-	Discord = &ClientDiscord{discordClient, nil}
+	Discord = &ClientDiscord{discordClient, nil, make([]*discordgo.VoiceConnection, 0)}
 
 	Log.Info("Recycling old application commands...")
 	if oldAppCmds, err := Discord.ApplicationCommands(Discord.State.User.ID, ""); err == nil {
@@ -292,15 +300,60 @@ func (discord *ClientDiscord) UserKick(user *services.User, reason string, rule 
 }
 
 func (discord *ClientDiscord) GetServer(serverID string) (server *services.Server, err error) {
-	guild, err := discord.Guild(serverID)
+	guild, err := discord.State.Guild(serverID)
 	if err != nil {
 		return nil, err
 	}
+
+	voiceStates := make([]*services.VoiceState, len(guild.VoiceStates))
+	for i := 0; i < len(voiceStates); i++ {
+		vs := guild.VoiceStates[i]
+		voiceStates[i] = &services.VoiceState{
+			ChannelID: vs.ChannelID,
+			UserID: vs.UserID,
+			SessionID: vs.SessionID,
+			Deaf: vs.Deaf,
+			Mute: vs.Mute,
+			SelfDeaf: vs.SelfDeaf,
+			SelfMute: vs.SelfMute,
+		}
+	}
+
 	return &services.Server{
 		ServerID: serverID,
 		Name: guild.Name,
 		Region: guild.Region,
 		OwnerID: guild.OwnerID,
 		DefaultChannel: guild.SystemChannelID,
+		VoiceStates: voiceStates,
 	}, nil
+}
+
+func (discord *ClientDiscord) VoiceJoin(serverID, channelID string, muted, deafened bool) (err error) {
+	for _, vc := range discord.VCs {
+		if vc.GuildID == serverID {
+			return vc.ChangeChannel(channelID, muted, deafened)
+		}
+	}
+
+	vc, err := discord.ChannelVoiceJoin(serverID, channelID, muted, deafened)
+	if err != nil {
+		return err
+	}
+
+	discord.VCs = append(discord.VCs, vc)
+	return nil
+}
+func (discord *ClientDiscord) VoiceLeave(serverID string) (err error) {
+	for i := 0; i < len(discord.VCs); i++ {
+		if discord.VCs[i].GuildID == serverID {
+			if err := discord.VCs[i].Disconnect(); err != nil {
+				return err
+			}
+			discord.VCs = append(discord.VCs[:i], discord.VCs[i+1:]...)
+			return nil
+		}
+	}
+
+	return services.Error("discord: VoiceLeave: unknown VC for server %s", serverID)
 }

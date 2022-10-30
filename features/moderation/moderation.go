@@ -13,15 +13,15 @@ var Log *logger.Logger
 var Cmds []*cmds.Cmd
 var Storage *services.Storage
 
-func Init(log *logger.Logger) error {
-	Log = log
+func Init() error {
 	Storage = &services.Storage{}
 	if err := Storage.LoadFrom("moderation"); err != nil {
+		Log.Error(err)
 		return err
 	}
 
 	Cmds = []*cmds.Cmd{
-		cmds.NewCmd("mod", "Provides various moderation utilities", nil).AddSubCmds(
+		cmds.NewCmd("mod", "Collection of moderation utilities", nil).AddSubCmds(
 			cmds.NewCmd("ban", "Bans a given user", handleBan).AddArgs(
 				cmds.NewCmdArg("user", "Who to actually ban", cmds.ArgTypeUser).SetRequired(),
 				cmds.NewCmdArg("reason", "Reason for the ban", "No reason provided."),
