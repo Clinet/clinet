@@ -21,7 +21,7 @@ func discordReady(session *discordgo.Session, event *discordgo.Ready) {
 }
 
 func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCreate) {
-	Log.Trace("--- discordMessageCreate(", event, ") ---", event.ID, event.GuildID, event.ChannelID, event.Member, event.Member.User)
+	Log.Trace("--- discordMessageCreate(", event, ") ---")
 	message, err := session.ChannelMessage(event.ChannelID, event.ID)
 	if err != nil {
 		Log.Error(message, err)

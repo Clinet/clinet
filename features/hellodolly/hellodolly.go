@@ -50,5 +50,5 @@ func handleHelloDolly(ctx *cmds.CmdCtx) *cmds.CmdResp {
 	line := rand.Intn(len(lines))
 
 	//Return the chosen line
-	return cmds.NewCmdRespEmbed("Hello Dolly", lines[line]).SetColor(0x1C1C1C)
+	return cmds.NewCmdRespEmbed("Hello Dolly", lines[line])
 }

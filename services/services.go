@@ -19,9 +19,13 @@ type Service interface {
 	MsgSend(msg *Message)   (ret *Message, err error) //Sends any type of message
 
 	//Users are who can send and receive messages, and can be actioned upon through various commands.
-	// Messages are returned that can be safely sent back to a service if a command was used.
-	UserBan(user *User, reason string, rule int)  (msg *Message, err error) //Bans a user for a given reason and/or rule
-	UserKick(user *User, reason string, rule int) (msg *Message, err error) //Kicks a user for a given reason and/or rule
+	GetUser(serverID, userID string)                 (ret *User, err error)  //Returns the specified user
+	GetUserPerms(serverID, channelID, userID string) (ret *Perms, err error) //Returns the specified user's permission map
+	UserBan(user *User, reason string, rule int)     (err error)             //Bans a user for a given reason and/or rule
+	UserKick(user *User, reason string, rule int)    (err error)             //Kicks a user for a given reason and/or rule
+
+	//Servers are organizations of channels, and contain their own global settings and features.
+	GetServer(serverID string) (ret *Server, err error) //Returns the specified server
 }
 
 func Error(format string, replacements ...interface{}) error {
@@ -34,9 +38,9 @@ func Error(format string, replacements ...interface{}) error {
 //Message holds a message from a service.
 // A text message should only hold content.
 // Adding fields, a title, an image, or a color creates a rich message.
-// If ServerID is not specified, presume ChannelID to be a DM channel with a user.
+// If ServerID is not specified, presume ChannelID to be a DM channel with a user and use Msg* methods.
 type Message struct {
-	AuthorID  string          `json:"authorID,omitempty"`
+	UserID  string            `json:"userID,omitempty"`
 	MessageID string          `json:"messageID,omitempty"`
 	ChannelID string          `json:"channelID,omitempty"`
 	ServerID  string          `json:"serverID,omitempty"`
@@ -51,8 +55,20 @@ type Message struct {
 func NewMessage() *Message {
 	return &Message{}
 }
+func (msg *Message) SetTitle(title string) *Message {
+	msg.Title = title
+	return msg
+}
 func (msg *Message) SetContent(content string) *Message {
 	msg.Content = content
+	return msg
+}
+func (msg *Message) SetColor(clr int) *Message {
+	msg.Color = &clr
+	return msg
+}
+func (msg *Message) SetImage(img string) *Message {
+	msg.Image = img
 	return msg
 }
 
@@ -62,8 +78,31 @@ type MessageField struct {
 }
 
 type User struct {
-	ServerID string `json:"serverID,omitempty"`
-	UserID   string `json:"userID,omitempty"`
+	ServerID string  `json:"serverID,omitempty"`
+	UserID   string  `json:"userID,omitempty"`
+	Username string  `json:"username,omitempty"`
+	Nickname string  `json:"nickname,omitempty"`
+	Roles    []*Role `json:"roles,omitempty"`
+}
+
+type Role struct {
+	RoleID string `json:"roleID,omitempty"`
+	Name   string `json:"name,omitempty"`
+}
+
+type Perms struct {
+	Administrator bool `json:"administrator,omitempty"`
+	Kick          bool `json:"kick,omitempty"`
+	Ban           bool `json:"ban,omitempty"`
+}
+func (p *Perms) CanAdministrate() bool {
+	return p.Administrator
+}
+func (p *Perms) CanKick() bool {
+	return p.CanAdministrate() || p.Kick
+}
+func (p *Perms) CanBan() bool {
+	return p.CanAdministrate() || p.Ban
 }
 
 type Channel struct {
@@ -72,5 +111,9 @@ type Channel struct {
 }
 
 type Server struct {
-	ServerID string `json:"serverID,omitempty"`
+	ServerID       string `json:"serverID,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Region         string `json:"region,omitempty"`
+	OwnerID        string `json:"ownerID,omitempty"`
+	DefaultChannel string `json:"defaultChannelID,omitempty"`
 }

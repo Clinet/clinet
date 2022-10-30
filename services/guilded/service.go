@@ -1,6 +1,8 @@
 package guilded
 
 import (
+	"fmt"
+
 	"github.com/Clinet/clinet/services"
 	"github.com/JoshuaDoes/guildrone"
 	"github.com/JoshuaDoes/logger"
@@ -57,6 +59,11 @@ func (guilded *ClientGuilded) MsgSend(msg *services.Message) (ret *services.Mess
 		return nil, services.Error("guilded: MsgSend(msg: %v): missing channel ID", msg)
 	}
 
+	isPrivate := false
+	if msg.ServerID == "" {
+		isPrivate = true
+	}
+
 	var guildedMsg *guildrone.ChatMessage
 	if msg.Title != "" || msg.Color != nil || msg.Image != "" {
 		retEmbed := guildrone.ChatEmbed{Description: msg.Content}
@@ -72,13 +79,13 @@ func (guilded *ClientGuilded) MsgSend(msg *services.Message) (ret *services.Mess
 			}
 		}
 
-		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, &guildrone.MessageCreate{Embeds: []guildrone.ChatEmbed{retEmbed}})
+		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, &guildrone.MessageCreate{IsPrivate: isPrivate, Embeds: []guildrone.ChatEmbed{retEmbed}})
 	} else {
 		if msg.Content == "" {
 			return nil, services.Error("guilded: MsgSend(msg: %v): missing content", msg)
 		}
 
-		guildedMsg, err = guilded.ChannelMessageCreate(msg.ChannelID, msg.Content)
+		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, &guildrone.MessageCreate{IsPrivate: isPrivate, Content: msg.Content})
 	}
 	if err != nil {
 		return nil, err
@@ -86,7 +93,7 @@ func (guilded *ClientGuilded) MsgSend(msg *services.Message) (ret *services.Mess
 
 	if guildedMsg != nil {
 		ret = &services.Message{
-			AuthorID: guildedMsg.CreatedBy,
+			UserID: guildedMsg.CreatedBy,
 			MessageID: guildedMsg.ID,
 			ChannelID: guildedMsg.ChannelID,
 			ServerID: guildedMsg.ServerID,
@@ -97,9 +104,60 @@ func (guilded *ClientGuilded) MsgSend(msg *services.Message) (ret *services.Mess
 	return ret, err
 }
 
-func (guilded *ClientGuilded) UserBan(user *services.User, reason string, rule int) (msg *services.Message, err error) {
-	return nil, nil
+func (guilded *ClientGuilded) GetUser(serverID, userID string) (ret *services.User, err error) {
+	user, err := guilded.ServerMemberGet(serverID, userID)
+	if err != nil {
+		return nil, err
+	}
+	userRoles := make([]*services.Role, len(user.RoleIds))
+	for i := 0; i < len(userRoles); i++ {
+		userRoles[i] = &services.Role{
+			RoleID: fmt.Sprintf("%d", user.RoleIds[i]),
+		}
+	}
+	return &services.User{
+		ServerID: serverID,
+		UserID: userID,
+		Username: user.User.Name,
+		Nickname: user.Nickname,
+		Roles: userRoles,
+	}, nil
 }
-func (guilded *ClientGuilded) UserKick(user *services.User, reason string, rule int) (msg *services.Message, err error) {
-	return nil, nil
+func (guilded *ClientGuilded) GetUserPerms(serverID, channelID, userID string) (perms *services.Perms, err error) {
+	server, err := guilded.GetServer(serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	perms = &services.Perms{}
+	//TODO: Permission mapping from Guilded
+
+	if server.OwnerID == userID {
+		perms.Administrator = true
+	}
+
+	return perms, nil
+}
+func (guilded *ClientGuilded) UserBan(user *services.User, reason string, rule int) (err error) {
+	Log.Trace("Ban(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	_, err = guilded.ServerMemberBanCreate(user.ServerID, user.UserID, reason)
+	return err
+}
+func (guilded *ClientGuilded) UserKick(user *services.User, reason string, rule int) (err error) {
+	Log.Trace("Kick(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	return guilded.ServerMemberKick(user.ServerID, user.UserID)
+}
+
+func (guilded *ClientGuilded) GetServer(serverID string) (server *services.Server, err error) {
+	srv, err := guilded.ServerGet(serverID)
+	if err != nil {
+		return nil, err
+	}
+	return &services.Server{
+		ServerID: serverID,
+		Name: srv.Name,
+		Region: srv.Timezone,
+		OwnerID: srv.OwnerID,
+		DefaultChannel: srv.DefaultChannelID,
+	}, nil
 }

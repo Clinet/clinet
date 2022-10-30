@@ -80,10 +80,6 @@ func (discord *ClientDiscord) MsgRemove(msg *services.Message) (err error) {
 	return nil
 }
 func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Message, err error) {
-	if msg.Context == nil {
-		return nil, services.Error("discord: MsgSend(msg: %v): missing context", msg)
-	}
-
 	msgContext := msg.Context
 	switch msgContext.(type) {
 	case *discordgo.Message:
@@ -95,7 +91,16 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 			return nil, services.Error("discord: MsgSend(msg: %v): missing interaction ID as message ID", msg)
 		}
 	default:
-		return nil, services.Error("discord: MsgSend(msg: %v): unknown MsgContext: %d", msg, msgContext)
+		//Sending a DM to a user should always be a regular message
+		if msg.ServerID == "" && msg.ChannelID != "" {
+			channelDM, err := discord.UserChannelCreate(msg.ChannelID)
+			if err != nil {
+				return nil, services.Error("discord: MsgSend(msg: %v): unable to create DM with userID: %s: %v", msg, msg.ChannelID, err)
+			}
+			msg.ChannelID = channelDM.ID
+		} else {
+			return nil, services.Error("discord: MsgSend(msg: %v): unknown MsgContext: %d", msg, msgContext)
+		}
 	}
 
 	var discordMsg *discordgo.Message
@@ -112,8 +117,6 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 		}
 
 		switch msgContext.(type) {
-		case *discordgo.Message:
-			discordMsg, err = discord.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{Embed: retEmbed.MessageEmbed})
 		case *discordgo.Interaction:
 			interactionResp := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -123,6 +126,8 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 			}
 			interaction := msg.Context.(*discordgo.Interaction)
 			err = discord.InteractionRespond(interaction, interactionResp)
+		default:
+			discordMsg, err = discord.ChannelMessageSendComplex(msg.ChannelID, &discordgo.MessageSend{Embed: retEmbed.MessageEmbed})
 		}
 	} else {
 		if msg.Content == "" {
@@ -130,8 +135,6 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 		}
 
 		switch msgContext.(type) {
-		case *discordgo.Message:
-			discordMsg, err = discord.ChannelMessageSend(msg.ChannelID, msg.Content)
 		case *discordgo.Interaction:
 			interactionResp := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -141,6 +144,8 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 			}
 			interaction := msg.Context.(*discordgo.Interaction)
 			err = discord.InteractionRespond(interaction, interactionResp)
+		default:
+			discordMsg, err = discord.ChannelMessageSend(msg.ChannelID, msg.Content)
 		}
 	}
 	if err != nil {
@@ -149,12 +154,12 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 
 	ret = msg
 	if discordMsg != nil {
-		ret.AuthorID = discordMsg.Author.ID
+		ret.UserID = discordMsg.Author.ID
 		ret.ServerID = discordMsg.GuildID
 	}
 	if discordMsg != nil {
 		ret = &services.Message{
-			AuthorID: discordMsg.Author.ID,
+			UserID: discordMsg.Author.ID,
 			MessageID: discordMsg.ID,
 			ChannelID: discordMsg.ChannelID,
 			ServerID: discordMsg.GuildID,
@@ -165,19 +170,137 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 	return ret, err
 }
 
-func (discord *ClientDiscord) UserBan(user *services.User, reason string, rule int) (msg *services.Message, err error) {
-	Log.Trace("Ban(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
-	err = discord.GuildBanCreateWithReason(user.ServerID, user.UserID, reason, 0)
+func (discord *ClientDiscord) GetUser(serverID, userID string) (ret *services.User, err error) {
+	user, err := discord.GuildMember(serverID, userID)
 	if err != nil {
-		return services.NewMessage().SetContent("Something went wrong while trying to ban them..."), err
+		return nil, err
 	}
-	return services.NewMessage().SetContent("And they're gone!"), nil
+
+	userRoles := make([]*services.Role, len(user.Roles))
+	for i := 0; i < len(userRoles); i++ {
+		role := &services.Role{
+			RoleID: user.Roles[i],
+		}
+		userRoles[i] = role
+	}
+	return &services.User{
+		ServerID: serverID,
+		UserID: userID,
+		Username: user.User.Username,
+		Nickname: user.Nick,
+		Roles: userRoles,
+	}, nil
 }
-func (discord *ClientDiscord) UserKick(user *services.User, reason string, rule int) (msg *services.Message, err error) {
-	Log.Trace("Kick(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
-	err = discord.GuildMemberDeleteWithReason(user.ServerID, user.UserID, reason)
+func (discord *ClientDiscord) GetUserPerms(serverID, channelID, userID string) (perms *services.Perms, err error) {
+	user, err := discord.GetUser(serverID, userID)
 	if err != nil {
-		return services.NewMessage().SetContent("Something went wrong while trying to kick them..."), err
+		return nil, err
 	}
-	return services.NewMessage().SetContent("And they're gone!"), nil
+
+	server, err := discord.GetServer(serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	guildRoles, err := discord.GuildRoles(serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	channel, err := discord.Channel(channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	perms = &services.Perms{}
+	for i := 0; i < len(guildRoles); i++ {
+		for j := 0; j < len(user.Roles); j++ {
+			if guildRoles[i].ID == user.Roles[j].RoleID {
+				guildRolePerms := guildRoles[i].Permissions
+				if guildRolePerms & discordgo.PermissionAdministrator != 0 {
+					perms.Administrator = true
+				}
+				if guildRolePerms & discordgo.PermissionKickMembers != 0 {
+					perms.Kick = true
+				}
+				if guildRolePerms & discordgo.PermissionBanMembers != 0 {
+					perms.Ban = true
+				}
+
+				for _, overwrite := range channel.PermissionOverwrites {
+					if overwrite.Type == discordgo.PermissionOverwriteTypeRole && overwrite.ID == guildRoles[i].ID {
+						if overwrite.Allow & discordgo.PermissionAdministrator != 0 {
+							perms.Administrator = true
+						}
+						if overwrite.Allow & discordgo.PermissionKickMembers != 0 {
+							perms.Kick = true
+						}
+						if overwrite.Allow & discordgo.PermissionBanMembers != 0 {
+							perms.Ban = true
+						}
+						if overwrite.Deny & discordgo.PermissionAdministrator != 0 {
+							perms.Administrator = false
+						}
+						if overwrite.Deny & discordgo.PermissionKickMembers != 0 {
+							perms.Kick = false
+						}
+						if overwrite.Deny & discordgo.PermissionBanMembers != 0 {
+							perms.Ban = false
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for _, overwrite := range channel.PermissionOverwrites {
+		if overwrite.Type == discordgo.PermissionOverwriteTypeMember && overwrite.ID == userID {
+			if overwrite.Allow & discordgo.PermissionAdministrator != 0 {
+				perms.Administrator = true
+			}
+			if overwrite.Allow & discordgo.PermissionKickMembers != 0 {
+				perms.Kick = true
+			}
+			if overwrite.Allow & discordgo.PermissionBanMembers != 0 {
+				perms.Ban = true
+			}
+			if overwrite.Deny & discordgo.PermissionAdministrator != 0 {
+				perms.Administrator = false
+			}
+			if overwrite.Deny & discordgo.PermissionKickMembers != 0 {
+				perms.Kick = false
+			}
+			if overwrite.Deny & discordgo.PermissionBanMembers != 0 {
+				perms.Ban = false
+			}
+		}
+	}
+
+	if server.OwnerID == userID {
+		perms.Administrator = true
+	}
+
+	return perms, nil
+}
+func (discord *ClientDiscord) UserBan(user *services.User, reason string, rule int) (err error) {
+	Log.Trace("Ban(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	return discord.GuildBanCreateWithReason(user.ServerID, user.UserID, reason, 0)
+}
+func (discord *ClientDiscord) UserKick(user *services.User, reason string, rule int) (err error) {
+	Log.Trace("Kick(", user.ServerID, ", ", user.UserID, ", ", reason, ", ", rule, ")")
+	return discord.GuildMemberDeleteWithReason(user.ServerID, user.UserID, reason)
+}
+
+func (discord *ClientDiscord) GetServer(serverID string) (server *services.Server, err error) {
+	guild, err := discord.Guild(serverID)
+	if err != nil {
+		return nil, err
+	}
+	return &services.Server{
+		ServerID: serverID,
+		Name: guild.Name,
+		Region: guild.Region,
+		OwnerID: guild.OwnerID,
+		DefaultChannel: guild.SystemChannelID,
+	}, nil
 }

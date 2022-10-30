@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/Clinet/clinet/services"
@@ -31,6 +32,8 @@ func (arg *CmdArg) GetInt() int {
 			return 0
 		}
 		return num
+	case int64:
+		return int(arg.Value.(int64))
 	}
 	return arg.Value.(int)
 }
@@ -42,10 +45,18 @@ func (arg *CmdArg) GetInt64() int64 {
 			return 0
 		}
 		return int64(num)
+	case int:
+		return int64(arg.Value.(int))
 	}
 	return arg.Value.(int64)
 }
 func (arg *CmdArg) GetString() string {
+	switch arg.Value.(type) {
+	case int:
+		return fmt.Sprintf("%d", arg.Value.(int))
+	case int64:
+		return fmt.Sprintf("%d", arg.Value.(int64))
+	}
 	return arg.Value.(string)
 }
 func (arg *CmdArg) GetUser() *services.User {

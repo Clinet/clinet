@@ -25,7 +25,7 @@ func guildedChatMessageCreated(session *guildrone.Session, event *guildrone.Chat
 	}
 
 	msg := &services.Message{
-		AuthorID: event.Message.CreatedBy,
+		UserID: event.Message.CreatedBy,
 		MessageID: event.Message.ID,
 		ChannelID: event.Message.ChannelID,
 		ServerID: event.Message.ServerID,

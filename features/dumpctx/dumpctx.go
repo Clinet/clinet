@@ -15,5 +15,5 @@ func init() {
 }
 
 func handleDumpCtx(ctx *cmds.CmdCtx) *cmds.CmdResp {
-	return cmds.NewCmdRespEmbed("Dump of ctx (*cmds.CmdCtx)", "```JSON\n" + ctx.String() + "```").SetColor(0x1C1C1C)
+	return cmds.NewCmdRespEmbed("Dump of ctx (*cmds.CmdCtx)", "```JSON\n" + ctx.String() + "```")
 }

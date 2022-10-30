@@ -72,7 +72,6 @@ func doBot() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Trace(moderation.Storage)
 		cmds.Commands = append(cmds.Commands, moderation.CmdRoot)
 	}
 

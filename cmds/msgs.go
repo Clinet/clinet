@@ -90,7 +90,7 @@ func CmdHandler(serviceMsg *services.Message, service services.Service) (string,
 
 	user := &services.User{
 		ServerID: serviceMsg.ServerID,
-		UserID: serviceMsg.AuthorID,
+		UserID: serviceMsg.UserID,
 	}
 	channel := &services.Channel{
 		ServerID: serviceMsg.ServerID,
