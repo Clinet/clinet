@@ -16,6 +16,7 @@ import (
 	"github.com/Clinet/clinet/features/voice"
 	"github.com/Clinet/clinet/services/discord"
 	"github.com/Clinet/clinet/services/guilded"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-wolfram"
 )
 
@@ -55,6 +56,7 @@ func doBot() {
 			Features: []*features.Feature{&features.Feature{Name: "example", Toggle: true}},
 			Discord: &discord.CfgDiscord{},
 			Guilded: &guilded.CfgGuilded{},
+			DuckDuckGo: &duckduckgo.Client{},
 			WolframAlpha: &wolfram.Client{},
 		}
 		templateCfg.SaveTo("config.template.json", config.ConfigTypeJSON)
@@ -86,6 +88,10 @@ func doBot() {
 	}
 
 	log.Debug("Enabling services...")
+	if features.IsEnabled("duckduckgo") {
+		convos.AuthDuckDuckGo(cfg.DuckDuckGo)
+		log.Trace("- DuckDuckGo")
+	}
 	if features.IsEnabled("wolframalpha") {
 		convos.AuthWolframAlpha(cfg.WolframAlpha)
 		log.Trace("- Wolfram|Alpha")

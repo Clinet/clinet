@@ -7,6 +7,7 @@ import (
 	"github.com/Clinet/clinet/features"
 	"github.com/Clinet/clinet/services/discord"
 	"github.com/Clinet/clinet/services/guilded"
+	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
 	"github.com/JoshuaDoes/go-wolfram"
 	"github.com/JoshuaDoes/json"
 	"github.com/JoshuaDoes/logger"
@@ -25,6 +26,7 @@ type Config struct {
 	Features     []*features.Feature `json:"features"`
 	Discord      *discord.CfgDiscord `json:"discord"`
 	Guilded      *guilded.CfgGuilded `json:"guilded"`
+	DuckDuckGo   *duckduckgo.Client  `json:"duckduckgo"`
 	WolframAlpha *wolfram.Client     `json:"wolframAlpha"`
 
 	path string //The path to the configuration file

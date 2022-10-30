@@ -1,40 +1,19 @@
-package discord
+package guilded
 
 import (
-	"strings"
-
-	"github.com/bwmarrin/discordgo"
 	"github.com/Clinet/clinet/cmds"
 	"github.com/Clinet/clinet/convos"
+	"github.com/Clinet/clinet/services"
 )
 
-func convoHandler(session *discordgo.Session, message *discordgo.Message) (cmdResps []*cmds.CmdResp, err error) {
+func convoHandler(message *services.Message, session *ClientGuilded) (cmdResps []*cmds.CmdResp, err error) {
 	if message == nil {
 		return nil, cmds.ErrCmdEmptyMsg
-	}
-	if message.Author.Bot {
-		return nil, nil
 	}
 	content := message.Content
 	if content == "" {
 		return nil, nil
 	}
-
-	//Determine interaction type and how it was called
-	prefix := ""
-	convo := false
-	if strings.Contains(content, "<@" + Discord.User.ID + ">") {
-		prefix = "<@" + Discord.User.ID + ">"
-		convo = true
-	} else if strings.Contains(content, "<@!" + Discord.User.ID + ">") {
-		prefix = "<@!" + Discord.User.ID + ">"
-		convo = true
-	}
-
-	if !convo {
-		return nil, nil
-	}
-	content = strings.ReplaceAll(content, prefix, "")
 
 	cmdResps = make([]*cmds.CmdResp, 0)
 

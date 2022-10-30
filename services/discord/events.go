@@ -29,8 +29,7 @@ func discordMessageCreate(session *discordgo.Session, event *discordgo.MessageCr
 
 	cmdResps, err := convoHandler(session, message)
 	if err != nil {
-		Log.Error(err, cmdResps)
-		return
+		Log.Error(err)
 	}
 
 	for i := 0; i < len(cmdResps); i++ {

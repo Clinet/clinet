@@ -91,11 +91,11 @@ func (discord *ClientDiscord) MsgSend(msg *services.Message) (ret *services.Mess
 	msgContext := msg.Context
 	switch msgContext.(type) {
 	case *discordgo.Message:
-		if msg.ChannelID != "" {
+		if msg.ChannelID == "" {
 			return nil, services.Error("discord: MsgSend(msg: %v): missing channel ID", msg)
 		}
 	case *discordgo.Interaction:
-		if msg.MessageID != "" {
+		if msg.MessageID == "" {
 			return nil, services.Error("discord: MsgSend(msg: %v): missing interaction ID as message ID", msg)
 		}
 	default:

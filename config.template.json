@@ -10,9 +10,13 @@
 		"ownerID": ""
 	},
 	"guilded": {
+		"botName": "",
 		"cmdPrefix": "",
 		"token": "",
 		"ownerID": ""
+	},
+	"duckduckgo": {
+		"AppName": ""
 	},
 	"wolframAlpha": {
 		"AppID": ""

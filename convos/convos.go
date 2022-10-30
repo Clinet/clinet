@@ -33,7 +33,7 @@ func (convo *Conversation) QueryText(queryText string) (*ConversationState) {
 		} else {
 			newState.Response = resp
 		}
-	}
+	}*/
 
 	//Query DuckDuckGo if no response yet
 	if newState.Response == nil && DuckDuckGo != nil {
@@ -43,7 +43,7 @@ func (convo *Conversation) QueryText(queryText string) (*ConversationState) {
 		} else {
 			newState.Response = resp
 		}
-	}*/
+	}
 
 	//Query Wolfram|Alpha if no response yet
 	if newState.Response == nil && WolframAlpha != nil {

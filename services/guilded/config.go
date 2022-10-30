@@ -5,6 +5,7 @@ var GuildedCfg *CfgGuilded
 //Configuration for Guilded sessions
 type CfgGuilded struct {
 	//Stuff for communication with Guilded
+	BotName   string `json:"botName"`
 	CmdPrefix string `json:"cmdPrefix"`
 	Token     string `json:"token"`
 

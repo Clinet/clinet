@@ -15,6 +15,7 @@ require (
 
 require (
 	github.com/FlameInTheDark/guildrone v0.3.5 // indirect
+	github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator v9.31.0+incompatible // indirect

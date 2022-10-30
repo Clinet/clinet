@@ -1,6 +1,8 @@
 package guilded
 
 import (
+	"strings"
+
 	"github.com/Clinet/clinet/cmds"
 	"github.com/Clinet/clinet/services"
 	"github.com/JoshuaDoes/guildrone"
@@ -28,18 +30,40 @@ func guildedChatMessageCreated(session *guildrone.Session, event *guildrone.Chat
 		UserID: event.Message.CreatedBy,
 		MessageID: event.Message.ID,
 		ChannelID: event.Message.ChannelID,
-		ServerID: event.Message.ServerID,
+		ServerID: event.ServerID,
 		Content: event.Message.Content,
 		Context: event.Message,
 	}
 
-	cmdName, cmdResps, err := cmds.CmdHandler(msg, Guilded)
-	if err != nil {
-		Log.Error(err)
-		msgErr := msg
-		msgErr.Content = err.Error()
-		Guilded.MsgSend(msgErr)
-		return
+	//Determine interaction type and how it was called
+	convo := false
+	prefix := "@" + GuildedCfg.BotName
+	if strings.Contains(msg.Content, prefix) {
+		convo = true
+		msg.Content = strings.ReplaceAll(msg.Content, prefix, "")
+	}
+
+	cmdResps := make([]*cmds.CmdResp, 0)
+	if convo {
+		resps, err := convoHandler(msg, Guilded)
+		if err != nil {
+			Log.Error(err)
+			msgErr := msg
+			msgErr.Content = err.Error()
+			Guilded.MsgSend(msgErr)
+			return
+		}
+		cmdResps = resps
+	} else {
+		_, resps, err := cmds.CmdHandler(msg, Guilded)
+		if err != nil {
+			Log.Error(err)
+			msgErr := msg
+			msgErr.Content = err.Error()
+			Guilded.MsgSend(msgErr)
+			return
+		}
+		cmdResps = resps
 	}
 
 	if len(cmdResps) == 0 {
@@ -53,8 +77,9 @@ func guildedChatMessageCreated(session *guildrone.Session, event *guildrone.Chat
 		}
 
 		cmdResps[i].OnReady(func(r *cmds.CmdResp) {
-			Log.Trace("Response to message for command " + cmdName + ": " + r.String())
+			Log.Trace("Response to message: " + r.String())
 			r.Context = event.Message
+			r.ServerID = event.ServerID
 			r.ChannelID = event.Message.ChannelID
 
 			msg, err := Guilded.MsgSend(r.Message)

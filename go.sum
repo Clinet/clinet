@@ -2,6 +2,8 @@ github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646 h1:KkKIDMzy
 github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646/go.mod h1:0ydUl+01209LCyzJk68BeRtCN1IMrNJgX4IBmwmC1f8=
 github.com/FlameInTheDark/guildrone v0.3.5 h1:mE6kFsunf9WNmHf8Ny5UNNu4e8l0jDmuUIB3RsJyJrE=
 github.com/FlameInTheDark/guildrone v0.3.5/go.mod h1:NeOo6E/ZOJjxmYsAj8JgGZfXjxAnEq2/dn7vR+2hXOU=
+github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4 h1:Xnyp6friexiRjOXnWPHtab+QsWGAJ+ZJ4lRwSYWKSuQ=
+github.com/JoshuaDoes/duckduckgolang v0.0.0-20180207042607-60cbd040f6f4/go.mod h1:ayOZWVLVr/9vO5CBOLNxRUtXyQnkXcX/b8HPDXecE00=
 github.com/JoshuaDoes/go-wolfram v0.0.0-20181104014914-c99b0fd7d862 h1:ItozwF1a8/letoSOaWpM+OhF8gs3U6GsNii7RL7i9Ok=
 github.com/JoshuaDoes/go-wolfram v0.0.0-20181104014914-c99b0fd7d862/go.mod h1:Lqk5bQShPry7mxpbuZK1trcUGY6gZPbZmJFhFokMIaM=
 github.com/JoshuaDoes/guildrone v0.0.0-20221023025614-2f9452d4c143 h1:yKwgetXkdOlFu2pln8l7zgno+LF8Ht+HngrUkZo+z0I=

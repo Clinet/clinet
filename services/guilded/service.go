@@ -38,7 +38,7 @@ func (guilded *ClientGuilded) Login(cfg interface{}) (err error) {
 	}
 
 	Log.Info("Registering Guilded event handlers...")
-	guildedClient.AddHandler(guildedReady)
+	guildedClient.AddHandler(guildedReady) //Not working yet?
 	guildedClient.AddHandler(guildedChatMessageCreated)
 
 	Log.Info("Connecting to Guilded...")
@@ -83,13 +83,21 @@ func (guilded *ClientGuilded) MsgSend(msg *services.Message) (ret *services.Mess
 			}
 		}
 
-		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, &guildrone.MessageCreate{IsPrivate: isPrivate, Embeds: []guildrone.ChatEmbed{retEmbed}})
+		mc := &guildrone.MessageCreate{Embeds: []guildrone.ChatEmbed{retEmbed}}
+		if isPrivate {
+			mc.IsPrivate = true
+		}
+		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, mc)
 	} else {
 		if msg.Content == "" {
 			return nil, services.Error("guilded: MsgSend(msg: %v): missing content", msg)
 		}
 
-		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, &guildrone.MessageCreate{IsPrivate: isPrivate, Content: msg.Content})
+		mc := &guildrone.MessageCreate{Content: msg.Content}
+		if isPrivate {
+			mc.IsPrivate = true
+		}
+		guildedMsg, err = guilded.ChannelMessageCreateComplex(msg.ChannelID, mc)
 	}
 	if err != nil {
 		return nil, err
