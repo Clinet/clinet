@@ -4,14 +4,15 @@ import (
 	"github.com/Clinet/clinet/cmds"
 )
 
-var CmdRoot *cmds.Cmd
+var Cmds []*cmds.Cmd
 
 func init() {
-	CmdRoot = cmds.NewCmd("dumpctx", "DEBUG: Dumps command context as built by Clinet", nil)
-	CmdRoot.AddSubCmds(
-		cmds.NewCmd("sub1", "Test subcommand 1", handleDumpCtx),
-		cmds.NewCmd("sub2", "Test subcommand 2", handleDumpCtx),
-	)
+	Cmds = []*cmds.Cmd{
+		cmds.NewCmd("dumpctx", "DEBUG: Dumps command context as built by Clinet", nil).AddSubCmds(
+			cmds.NewCmd("sub1", "Test subcommand 1", handleDumpCtx),
+			cmds.NewCmd("sub2", "Test subcommand 2", handleDumpCtx),
+		),
+	}
 }
 
 func handleDumpCtx(ctx *cmds.CmdCtx) *cmds.CmdResp {

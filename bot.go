@@ -62,17 +62,17 @@ func doBot() {
 
 	log.Debug("Registering features...")
 	if features.IsEnabled("dumpctx") {
-		cmds.Commands = append(cmds.Commands, dumpctx.CmdRoot)
+		cmds.Commands = append(cmds.Commands, dumpctx.Cmds...)
 	}
 	if features.IsEnabled("hellodolly") {
-		cmds.Commands = append(cmds.Commands, hellodolly.CmdRoot)
+		cmds.Commands = append(cmds.Commands, hellodolly.Cmds...)
 	}
 	if features.IsEnabled("moderation") {
 		err = moderation.Init(log)
 		if err != nil {
 			log.Fatal(err)
 		}
-		cmds.Commands = append(cmds.Commands, moderation.CmdRoot)
+		cmds.Commands = append(cmds.Commands, moderation.Cmds...)
 	}
 
 	log.Debug("Enabling services...")

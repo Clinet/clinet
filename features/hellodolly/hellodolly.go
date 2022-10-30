@@ -7,10 +7,12 @@ import (
 	"github.com/Clinet/clinet/cmds"
 )
 
-var CmdRoot *cmds.Cmd
+var Cmds []*cmds.Cmd
 
 func init() {
-	CmdRoot = cmds.NewCmd("hellodolly", "Responds with a random lyric from Louis Armstrong's Hello, Dolly", handleHelloDolly)
+	Cmds = []*cmds.Cmd{
+		cmds.NewCmd("hellodolly", "Responds with a random lyric from Louis Armstrong's Hello, Dolly", handleHelloDolly),
+	}
 }
 
 var lyrics = `Hello, Dolly

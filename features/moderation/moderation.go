@@ -10,7 +10,7 @@ import (
 
 //Needed for the cmds framework
 var Log *logger.Logger
-var CmdRoot *cmds.Cmd
+var Cmds []*cmds.Cmd
 var Storage *services.Storage
 
 func Init(log *logger.Logger) error {
@@ -20,28 +20,30 @@ func Init(log *logger.Logger) error {
 		return err
 	}
 
-	CmdRoot = cmds.NewCmd("mod", "Provides various moderation utilities", nil).AddSubCmds(
-		cmds.NewCmd("ban", "Bans a given user", handleBan).AddArgs(
-			cmds.NewCmdArg("user", "Who to actually ban", cmds.ArgTypeUser).SetRequired(),
-			cmds.NewCmdArg("reason", "Reason for the ban", "No reason provided."),
-			cmds.NewCmdArg("rule", "Rule broken that led to ban", -1),
+	Cmds = []*cmds.Cmd{
+		cmds.NewCmd("mod", "Provides various moderation utilities", nil).AddSubCmds(
+			cmds.NewCmd("ban", "Bans a given user", handleBan).AddArgs(
+				cmds.NewCmdArg("user", "Who to actually ban", cmds.ArgTypeUser).SetRequired(),
+				cmds.NewCmdArg("reason", "Reason for the ban", "No reason provided."),
+				cmds.NewCmdArg("rule", "Rule broken that led to ban", -1),
+			),
+			cmds.NewCmd("hackban", "Hackbans a given user ID", handleBan).AddArgs(
+				cmds.NewCmdArg("user", "ID of the user to ban", "").SetRequired(),
+				cmds.NewCmdArg("reason", "Reason for the ban", "No reason provided."),
+				cmds.NewCmdArg("rule", "Rule broken that led to ban", -1),
+			),
+			cmds.NewCmd("kick", "Kicks a given user", handleKick).AddArgs(
+				cmds.NewCmdArg("user", "Who to actually kick", cmds.ArgTypeUser).SetRequired(),
+				cmds.NewCmdArg("reason", "Reason for the kick", "No reason provided."),
+				cmds.NewCmdArg("rule", "Rule broken that led to kick", -1),
+			),
+			cmds.NewCmd("warn", "Warns a given user", handleWarn).AddArgs(
+				cmds.NewCmdArg("user", "Who to actually warn", cmds.ArgTypeUser).SetRequired(),
+				cmds.NewCmdArg("reason", "Reason for the warning", "No reason provided."),
+				cmds.NewCmdArg("rule", "Rule broken that led to warning", -1),
+			),
 		),
-		cmds.NewCmd("hackban", "Hackbans a given user ID", handleBan).AddArgs(
-			cmds.NewCmdArg("user", "ID of the user to ban", "").SetRequired(),
-			cmds.NewCmdArg("reason", "Reason for the ban", "No reason provided."),
-			cmds.NewCmdArg("rule", "Rule broken that led to ban", -1),
-		),
-		cmds.NewCmd("kick", "Kicks a given user", handleKick).AddArgs(
-			cmds.NewCmdArg("user", "Who to actually kick", cmds.ArgTypeUser).SetRequired(),
-			cmds.NewCmdArg("reason", "Reason for the kick", "No reason provided."),
-			cmds.NewCmdArg("rule", "Rule broken that led to kick", -1),
-		),
-		cmds.NewCmd("warn", "Warns a given user", handleWarn).AddArgs(
-			cmds.NewCmdArg("user", "Who to actually warn", cmds.ArgTypeUser).SetRequired(),
-			cmds.NewCmdArg("reason", "Reason for the warning", "No reason provided."),
-			cmds.NewCmdArg("rule", "Rule broken that led to warning", -1),
-		),
-	)
+	}
 	return nil
 }
 
