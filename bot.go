@@ -6,42 +6,34 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Clinet/clinet/cmds"
-	"github.com/Clinet/clinet/config"
-	"github.com/Clinet/clinet/convos"
-	"github.com/Clinet/clinet/features"
-	"github.com/Clinet/clinet/features/dumpctx"
-	"github.com/Clinet/clinet/features/hellodolly"
-	"github.com/Clinet/clinet/features/moderation"
-	"github.com/Clinet/clinet/features/voice"
-	"github.com/Clinet/clinet/services/discord"
-	"github.com/Clinet/clinet/services/guilded"
-	duckduckgo "github.com/JoshuaDoes/duckduckgolang"
-	"github.com/JoshuaDoes/go-wolfram"
+	//Clinet bot framework
+	"github.com/Clinet/clinet_bot"
+	"github.com/Clinet/clinet_config"
+	"github.com/Clinet/clinet_features"
+
+	//Clinet's features
+	"github.com/Clinet/clinet_features_dumpctx"
+	"github.com/Clinet/clinet_features_hellodolly"
+	"github.com/Clinet/clinet_features_moderation"
+	"github.com/Clinet/clinet_features_voice"
+
+	//Clinet's services
+	"github.com/Clinet/clinet_convos_duckduckgo"
+	"github.com/Clinet/clinet_convos_wolframalpha"
+	"github.com/Clinet/clinet_services_discord"
+	"github.com/Clinet/clinet_services_guilded"
 )
 
-//Global error value because functions are mean
-var err error
-
-var (
-	cfg *config.Config
-)
+var clinet *bot.Bot
 
 func doBot() {
+	log.Trace("--- doBot() ---")
+
 	//For some reason we don't automatically exit as planned when we return to main()
 	defer os.Exit(0)
 
-	//Assign the logger to each package
-	config.Log = log
-	discord.Log = log
-	guilded.Log = log
-	moderation.Log = log
-	voice.Log = log
-
-	log.Trace("--- doBot() ---")
-
 	log.Info("Loading configuration...")
-	cfg, err = config.LoadConfig(configFile, config.ConfigTypeJSON)
+	cfg, err := config.LoadConfig(configFile, config.ConfigTypeJSON)
 	if err != nil {
 		log.Error("Error loading configuration: ", err)
 		return
@@ -52,68 +44,41 @@ func doBot() {
 
 	if writeConfigTemplate {
 		log.Info("Updating configuration template...")
-		var templateCfg *config.Config = &config.Config{
-			Features: []*features.Feature{&features.Feature{Name: "example", Toggle: true}},
-			Discord: &discord.CfgDiscord{},
-			Guilded: &guilded.CfgGuilded{},
-			DuckDuckGo: &duckduckgo.Client{},
-			WolframAlpha: &wolfram.Client{},
-		}
+		templateCfg := config.NewConfig()
+		templateCfg.Features = append(templateCfg.Features, &features.Feature{Name: "example", Toggle: true})
 		templateCfg.SaveTo("config.template.json", config.ConfigTypeJSON)
 	}
 
-	log.Debug("Setting feature toggles...")
-	features.SetFeatures(cfg.Features)
+	clinet = bot.NewBot(cfg)
+	defer clinet.Shutdown()
 
 	log.Debug("Registering features...")
-	if features.IsEnabled("dumpctx") {
-		cmds.Commands = append(cmds.Commands, dumpctx.Cmds...)
-	}
-	if features.IsEnabled("hellodolly") {
-		cmds.Commands = append(cmds.Commands, hellodolly.Cmds...)
-	}
-	if features.IsEnabled("moderation") {
-		err = moderation.Init()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cmds.Commands = append(cmds.Commands, moderation.Cmds...)
-	}
-	if features.IsEnabled("voice") {
-		err = voice.Init()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cmds.Commands = append(cmds.Commands, voice.Cmds...)
-	}
-
-	log.Debug("Enabling services...")
-	if features.IsEnabled("duckduckgo") {
-		convos.AuthDuckDuckGo(cfg.DuckDuckGo)
-		log.Trace("- DuckDuckGo")
-	}
-	if features.IsEnabled("wolframalpha") {
-		convos.AuthWolframAlpha(cfg.WolframAlpha)
-		log.Trace("- Wolfram|Alpha")
-	}
-
-	//Load modules
-	log.Info("Loading modules...")
-	loadModules()
-
-	//Start Discord
-	log.Info("Starting Discord...")
-	if err := discord.Discord.Login(cfg.Discord); err != nil {
+	if err := clinet.RegisterFeature(dumpctx.Feature); err != nil {
 		log.Fatal(err)
 	}
-	defer discord.Discord.Shutdown()
-
-	//Start Guilded
-	log.Info("Starting Guilded...")
-	if err := guilded.Guilded.Login(cfg.Guilded); err != nil {
+	if err := clinet.RegisterFeature(hellodolly.Feature); err != nil {
 		log.Fatal(err)
 	}
-	defer guilded.Guilded.Shutdown()
+	if err := clinet.RegisterFeature(moderation.Feature); err != nil {
+		log.Fatal(err)
+	}
+	if err := clinet.RegisterFeature(voice.Feature); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := clinet.RegisterConvoService("duckduckgo", duckduckgo.DuckDuckGo); err != nil {
+		log.Fatal(err)
+	}
+	if err := clinet.RegisterConvoService("wolframalpha", wolframalpha.WolframAlpha); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := clinet.RegisterService("discord", discord.Discord); err != nil {
+		log.Fatal(err)
+	}
+	if err := clinet.RegisterService("guilded", guilded.Guilded); err != nil {
+		log.Fatal(err)
+	}
 
 	log.Debug("Waiting for SIGINT syscall signal...")
 	sc := make(chan os.Signal, 1)

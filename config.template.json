@@ -4,21 +4,5 @@
 			"name": "example",
 			"toggle": true
 		}
-	],
-	"discord": {
-		"token": "",
-		"ownerID": ""
-	},
-	"guilded": {
-		"botName": "",
-		"cmdPrefix": "",
-		"token": "",
-		"ownerID": ""
-	},
-	"duckduckgo": {
-		"AppName": ""
-	},
-	"wolframAlpha": {
-		"AppID": ""
-	}
+	]
 }

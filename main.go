@@ -18,7 +18,7 @@ var (
 
 	//Logging
 	log       *logger.Logger
-	logPrefix string = "WATCHDOG"
+	logPrefix string = "watchdog"
 )
 
 func init() {
@@ -33,7 +33,7 @@ func init() {
 
 	//Create the logger
 	if isBot {
-		logPrefix = "BOT" //We're the bot process, report as such
+		logPrefix = "bot" //We're the bot process, report as such
 	}
 	log = logger.NewLogger(logPrefix, verbosity)
 }
