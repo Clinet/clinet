@@ -15,6 +15,8 @@ var (
 func init() {
 	watchdog.Header = "Clinet © JoshuaDoes 2017-2022."
 	watchdog.Footer = "Good-bye!"
+	watchdog.ImmediateSpawn = false //We want to display Header for a short time
+	watchdog.KillOldMain = true //We want to be the only live instance of this bot
 }
 
 func main() {
