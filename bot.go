@@ -6,6 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	//Logging
+	"github.com/JoshuaDoes/logger"
+
 	//Clinet bot framework
 	"github.com/Clinet/clinet_bot"
 	"github.com/Clinet/clinet_config"
@@ -25,8 +28,10 @@ import (
 )
 
 var clinet *bot.Bot
+var log    *logger.Logger
 
 func doBot() {
+	log = logger.NewLogger("bot", verbosity)
 	log.Trace("--- doBot() ---")
 
 	//For some reason we don't automatically exit as planned when we return to main()
