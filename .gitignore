@@ -1,6 +1,7 @@
 # Bot configuration
-config.json
-config.json.bak
+*.json
+*.json.old
+*.json.bak
 
 # Bot save states
 state/

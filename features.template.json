@@ -1,0 +1,40 @@
+{
+	"features": [
+		{
+			"toggle": true,
+			"name": "duckduckgo"
+		},
+		{
+			"toggle": true,
+			"name": "wolframalpha"
+		},
+		{
+			"toggle": true,
+			"name": "dumpctx"
+		},
+		{
+			"toggle": true,
+			"name": "hellodolly"
+		},
+		{
+			"toggle": true,
+			"name": "moderation"
+		},
+		{
+			"toggle": true,
+			"name": "voice"
+		},
+		{
+			"toggle": true,
+			"name": "essentials"
+		},
+		{
+			"toggle": true,
+			"name": "discord"
+		},
+		{
+			"toggle": true,
+			"name": "guilded"
+		}
+	]
+}
