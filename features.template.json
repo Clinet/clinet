@@ -1,40 +1,44 @@
 {
-	"features": [
-		{
+	"features": {
+		"chatgpt": {
 			"toggle": true,
-			"name": "duckduckgo"
+			"name": "chatgpt"
 		},
-		{
-			"toggle": true,
-			"name": "wolframalpha"
-		},
-		{
-			"toggle": true,
-			"name": "dumpctx"
-		},
-		{
-			"toggle": true,
-			"name": "hellodolly"
-		},
-		{
-			"toggle": true,
-			"name": "moderation"
-		},
-		{
-			"toggle": true,
-			"name": "voice"
-		},
-		{
-			"toggle": true,
-			"name": "essentials"
-		},
-		{
+		"discord": {
 			"toggle": true,
 			"name": "discord"
 		},
-		{
+		"duckduckgo": {
+			"toggle": true,
+			"name": "duckduckgo"
+		},
+		"dumpctx": {
+			"toggle": true,
+			"name": "dumpctx"
+		},
+		"essentials": {
+			"toggle": true,
+			"name": "essentials"
+		},
+		"guilded": {
 			"toggle": true,
 			"name": "guilded"
+		},
+		"hellodolly": {
+			"toggle": true,
+			"name": "hellodolly"
+		},
+		"moderation": {
+			"toggle": true,
+			"name": "moderation"
+		},
+		"voice": {
+			"toggle": true,
+			"name": "voice"
+		},
+		"wolframalpha": {
+			"toggle": true,
+			"name": "wolframalpha"
 		}
-	]
+	}
 }

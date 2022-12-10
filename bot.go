@@ -22,6 +22,7 @@ import (
 	"github.com/Clinet/clinet_features_voice"
 
 	//Clinet's services
+	"github.com/Clinet/clinet_convos_chatgpt"
 	"github.com/Clinet/clinet_convos_duckduckgo"
 	"github.com/Clinet/clinet_convos_wolframalpha"
 	"github.com/Clinet/clinet_services_discord"
@@ -66,6 +67,8 @@ func doBot() {
 	logFatalError(clinet.RegisterFeature(duckduckgo.Feature))
 	log.Trace("- wolframalpha")
 	logFatalError(clinet.RegisterFeature(wolframalpha.Feature))
+	log.Trace("- chatgpt")
+	logFatalError(clinet.RegisterFeature(chatgpt.Feature))
 
 	//Register the features to handle commands
 	log.Debug("Registering features...")
