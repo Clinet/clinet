@@ -1,6 +1,6 @@
 module github.com/Clinet/clinet
 
-go 1.19
+go 1.21.6
 
 require (
 	github.com/Clinet/clinet_bot v0.0.0-20221121090305-99cd089c1bdf
